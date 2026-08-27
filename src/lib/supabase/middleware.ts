@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const ROLE_HOME: Record<string, string> = {
   admin: "/admin",
   teacher: "/ogretmen",
+  moderator: "/ogretmen",
   student: "/ogrenci",
   parent: "/ogrenci/rapor",
 };
@@ -96,6 +97,12 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = role ? ROLE_HOME[role] ?? "/" : "/";
       return NextResponse.redirect(url);
+    }
+
+    // Admin, ogrenci ve ogretmen panellerini onizlemek icin serbestce
+    // gezebilir (kendi paneline geri atilmaz).
+    if (role === "admin") {
+      return supabaseResponse;
     }
 
     const allowedPrefix = role ? ROLE_HOME[role]?.split("/")[1] : undefined;

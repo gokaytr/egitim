@@ -2,10 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
 import { NewUserForm } from "./new-user-form";
 import { AdminAllowlistForm } from "./admin-allowlist-form";
+import { RoleSelect } from "./role-select";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Yönetici",
   teacher: "Öğretmen",
+  moderator: "Moderatör",
   student: "Öğrenci",
   parent: "Veli",
 };
@@ -13,6 +15,7 @@ const ROLE_LABEL: Record<string, string> = {
 const ROLE_TONE: Record<string, "default" | "green" | "amber" | "red"> = {
   admin: "red",
   teacher: "amber",
+  moderator: "amber",
   student: "green",
   parent: "default",
 };
@@ -47,6 +50,7 @@ export default async function KullanicilarPage() {
               <th className="px-5 py-3 font-medium">Ad Soyad</th>
               <th className="px-5 py-3 font-medium">E-posta</th>
               <th className="px-5 py-3 font-medium">Rol</th>
+              <th className="px-5 py-3 font-medium">Rolü Değiştir</th>
               <th className="px-5 py-3 font-medium">Sınıf / Hedef</th>
               <th className="px-5 py-3 font-medium">Kayıt Tarihi</th>
             </tr>
@@ -58,6 +62,9 @@ export default async function KullanicilarPage() {
                 <td className="px-5 py-3 text-slate-600">{u.email}</td>
                 <td className="px-5 py-3">
                   <Badge tone={ROLE_TONE[u.role]}>{ROLE_LABEL[u.role] ?? u.role}</Badge>
+                </td>
+                <td className="px-5 py-3">
+                  <RoleSelect userId={u.id} currentRole={u.role} />
                 </td>
                 <td className="px-5 py-3 text-slate-600">
                   {u.grade_level ? `${u.grade_level}. sınıf` : "-"} {u.exam_target ? `· ${u.exam_target}` : ""}

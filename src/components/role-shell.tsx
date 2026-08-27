@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type NavItem = { href: string; label: string };
@@ -19,6 +19,28 @@ export function RoleShell({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [isAdminPreviewing, setIsAdminPreviewing] = useState(false);
+
+  // Admin, ogrenci/ogretmen panellerini onizlerken (kendi paneli disinda
+  // gezinirken) ust tarafta admin paneline donme baglantisi gosteriyoruz.
+  useEffect(() => {
+    let cancelled = false;
+    async function checkAdminPreview() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      if (!cancelled && profile?.role === "admin" && !pathname.startsWith("/admin")) {
+        setIsAdminPreviewing(true);
+      }
+    }
+    checkAdminPreview();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -56,7 +78,17 @@ export function RoleShell({
           Çıkış yap
         </button>
       </aside>
-      <main className="flex-1 bg-slate-50 p-6 md:p-10">{children}</main>
+      <div className="flex flex-1 flex-col">
+        {isAdminPreviewing && (
+          <div className="flex items-center justify-between bg-amber-50 px-6 py-2 text-sm text-amber-800">
+            <span>Bu paneli admin olarak önizliyorsun.</span>
+            <Link href="/admin" className="font-medium underline">
+              Admin paneline dön
+            </Link>
+          </div>
+        )}
+        <main className="flex-1 bg-slate-50 p-6 md:p-10">{children}</main>
+      </div>
     </div>
   );
 }
