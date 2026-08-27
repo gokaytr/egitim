@@ -12,6 +12,18 @@ const ROLE_HOME: Record<string, string> = {
 const PROTECTED_PREFIXES = ["/admin", "/ogretmen", "/ogrenci", "/basvuru-bekleniyor"];
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const isAdminPath = path.startsWith("/admin");
+  const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p));
+
+  // Anasayfa, giriş, kayıt gibi herkese açık sayfalarda Supabase'e hiç
+  // istek atmıyoruz - her sayfa yüklemesinde gereksiz bir ağ round-trip'i
+  // eklemek, tüm siteyi yavaşlatıyordu. Sadece korumalı rotalarda oturum
+  // doğrulaması yapılır.
+  if (!isProtected) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -36,10 +48,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
-  const isAdminPath = path.startsWith("/admin");
-  const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p));
 
   // /admin, diger panellerden farkli davraniyor: admin olmayan biri (giris
   // yapmamis ya da baska rolde) buraya geldiginde login ekranina degil,
@@ -66,53 +74,51 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  if (isProtected && !user) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/giris";
     url.searchParams.set("redirect", path);
     return NextResponse.redirect(url);
   }
 
-  if (user && isProtected) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, teacher_pending")
-      .eq("id", user.id)
-      .single();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, teacher_pending")
+    .eq("id", user.id)
+    .single();
 
-    const role = profile?.role;
+  const role = profile?.role;
 
-    // Onay bekleyen ogretmen basvurulari, admin onaylayana kadar sadece
-    // bekleme sayfasini gorebilir.
-    if (profile?.teacher_pending) {
-      if (path !== "/basvuru-bekleniyor") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/basvuru-bekleniyor";
-        return NextResponse.redirect(url);
-      }
-      return supabaseResponse;
-    }
-
-    if (path === "/basvuru-bekleniyor") {
+  // Onay bekleyen ogretmen basvurulari, admin onaylayana kadar sadece
+  // bekleme sayfasini gorebilir.
+  if (profile?.teacher_pending) {
+    if (path !== "/basvuru-bekleniyor") {
       const url = request.nextUrl.clone();
-      url.pathname = role ? ROLE_HOME[role] ?? "/" : "/";
+      url.pathname = "/basvuru-bekleniyor";
       return NextResponse.redirect(url);
     }
+    return supabaseResponse;
+  }
 
-    // Admin, ogrenci ve ogretmen panellerini onizlemek icin serbestce
-    // gezebilir (kendi paneline geri atilmaz).
-    if (role === "admin") {
-      return supabaseResponse;
-    }
+  if (path === "/basvuru-bekleniyor") {
+    const url = request.nextUrl.clone();
+    url.pathname = role ? ROLE_HOME[role] ?? "/" : "/";
+    return NextResponse.redirect(url);
+  }
 
-    const allowedPrefix = role ? ROLE_HOME[role]?.split("/")[1] : undefined;
-    const requestedPrefix = path.split("/")[1];
+  // Admin, ogrenci ve ogretmen panellerini onizlemek icin serbestce
+  // gezebilir (kendi paneline geri atilmaz).
+  if (role === "admin") {
+    return supabaseResponse;
+  }
 
-    if (role && allowedPrefix && requestedPrefix !== allowedPrefix) {
-      const url = request.nextUrl.clone();
-      url.pathname = ROLE_HOME[role] ?? "/";
-      return NextResponse.redirect(url);
-    }
+  const allowedPrefix = role ? ROLE_HOME[role]?.split("/")[1] : undefined;
+  const requestedPrefix = path.split("/")[1];
+
+  if (role && allowedPrefix && requestedPrefix !== allowedPrefix) {
+    const url = request.nextUrl.clone();
+    url.pathname = ROLE_HOME[role] ?? "/";
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

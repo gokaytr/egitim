@@ -14,6 +14,7 @@ type Question = {
 export function QuizRunner({ topicId, questions }: { topicId: string; questions: Question[] }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     correct: number;
     wrong: number;
@@ -23,6 +24,7 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
 
   async function handleSubmit() {
     setSubmitting(true);
+    setError(null);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
 
@@ -36,34 +38,56 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
       return { question_id: q.id, selected_option: selected, is_correct: isCorrect };
     });
 
-    const { data: attempt } = await supabase
-      .from("student_attempts")
-      .insert({
-        student_id: userData.user?.id,
-        topic_id: topicId,
-        total_questions: questions.length,
-        correct_count: correct,
-        wrong_count: wrong,
-        empty_count: empty,
-        finished_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+    try {
+      const { data: attempt, error: attemptError } = await supabase
+        .from("student_attempts")
+        .insert({
+          student_id: userData.user?.id,
+          topic_id: topicId,
+          total_questions: questions.length,
+          correct_count: correct,
+          wrong_count: wrong,
+          empty_count: empty,
+          finished_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
 
-    if (attempt) {
+      if (attemptError || !attempt) {
+        throw new Error(attemptError?.message ?? "Deneme kaydedilemedi.");
+      }
+
       await supabase.from("answer_logs").insert(logs.map((l) => ({ ...l, attempt_id: attempt.id })));
 
-      const res = await fetch("/api/ai/diagnose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId: attempt.id }),
-      });
-      const json = await res.json();
-      setResult({ correct, wrong, empty, diagnosis: json.diagnosis });
-    } else {
-      setResult({ correct, wrong, empty });
+      // AI analizi 20 saniyede yanıt vermezse ekranı sonsuza kadar
+      // bekletmemek için zaman aşımıyla yarıştırıyoruz. Analiz başarısız
+      // olsa bile sonuçlar (doğru/yanlış/boş) her zaman gösterilir.
+      try {
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Analiz zaman aşımına uğradı.")), 20000)
+        );
+        const res = (await Promise.race([
+          fetch("/api/ai/diagnose", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ attemptId: attempt.id }),
+          }),
+          timeout,
+        ])) as Response;
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? "Analiz alınamadı.");
+        setResult({ correct, wrong, empty, diagnosis: json.diagnosis });
+      } catch (diagErr) {
+        console.error("AI analizi başarısız", diagErr);
+        setError("Sonuçların kaydedildi ama AI analizi şu anda üretilemedi. Daha sonra tekrar deneyebilirsin.");
+        setResult({ correct, wrong, empty });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Test kaydedilirken bir hata oluştu.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   }
 
   if (result) {
@@ -73,6 +97,7 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
         <p className="text-sm text-slate-600">
           Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
         </p>
+        {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
         {result.diagnosis && (
           <div className="mt-4 rounded-xl bg-indigo-50 p-4">
             <Badge tone={result.diagnosis.weakness_level === "major" ? "red" : result.diagnosis.weakness_level === "minor" ? "amber" : "green"}>
@@ -114,6 +139,7 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
           </div>
         </Card>
       ))}
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <Button onClick={handleSubmit} disabled={submitting} className="w-fit">
         {submitting ? "Değerlendiriliyor..." : "Testi Bitir"}
       </Button>
