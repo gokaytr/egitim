@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +21,15 @@ function GirisForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Google girisi /api/auth/callback route'unda basarisiz olursa buraya
+  // ?error=oauth&detail=... ile geri donuyor - gercek sebebi burada gosteriyoruz.
+  useEffect(() => {
+    if (searchParams.get("error") === "oauth") {
+      setError(searchParams.get("detail") || "Google ile giriş başarısız oldu.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
