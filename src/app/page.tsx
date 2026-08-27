@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EducationBackground } from "@/components/education-background";
 
 const FEATURES = [
   {
@@ -45,21 +46,24 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-3xl px-6 py-16 text-center md:py-24">
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
-          1. sınıftan YKS&apos;ye, kişiye özel dijital dershanen
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-lg text-slate-600">
-          Türkiye müfredatına göre eksiğini tespit eden, çalışma programı çıkaran ve gerektiğinde
-          özel derse yönlendiren yapay zeka destekli sınav hazırlık platformu.
-        </p>
-        <div className="mt-8 flex justify-center gap-3">
-          <Link href="/kayit" className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
-            Öğrenci olarak başla
-          </Link>
-          <Link href="/giris" className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-            Zaten hesabım var
-          </Link>
+      <section className="relative overflow-hidden">
+        <EducationBackground />
+        <div className="relative mx-auto max-w-3xl px-6 py-16 text-center md:py-24">
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
+            1. sınıftan YKS&apos;ye, kişiye özel dijital dershanen
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-lg text-slate-600">
+            Türkiye müfredatına göre eksiğini tespit eden, çalışma programı çıkaran ve gerektiğinde
+            özel derse yönlendiren yapay zeka destekli sınav hazırlık platformu.
+          </p>
+          <div className="mt-8 flex justify-center gap-3">
+            <Link href="/kayit" className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
+              Öğrenci olarak başla
+            </Link>
+            <Link href="/giris" className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+              Zaten hesabım var
+            </Link>
+          </div>
         </div>
       </section>
 
