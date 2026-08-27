@@ -23,24 +23,21 @@ export default function KayitPage() {
     setLoading(true);
     const supabase = createClient();
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-    if (signUpError || !data.user) {
-      setError(signUpError?.message ?? "Kayıt başarısız oldu.");
-      setLoading(false);
-      return;
-    }
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      full_name: fullName,
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
-      role,
-      grade_level: role === "student" ? Number(gradeLevel) : null,
-      exam_target: role === "student" ? examTarget : null,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role,
+          grade_level: role === "student" ? gradeLevel : "",
+          exam_target: role === "student" ? examTarget : "",
+        },
+      },
     });
 
-    if (profileError) {
-      setError(profileError.message);
+    if (signUpError || !data.user) {
+      setError(signUpError?.message ?? "Kayıt başarısız oldu.");
       setLoading(false);
       return;
     }
