@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui";
+import { GoogleButton } from "@/components/google-button";
 
 const ROLE_HOME: Record<string, string> = {
   admin: "/admin",
@@ -59,6 +60,13 @@ function GirisForm() {
           {loading ? "Giriş yapılıyor..." : "Giriş yap"}
         </Button>
       </form>
+
+      <div className="my-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs text-slate-400">veya</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+      <GoogleButton label="Google ile giriş yap" />
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Hesabın yok mu? <Link href="/kayit" className="font-medium text-indigo-600">Kayıt ol</Link>

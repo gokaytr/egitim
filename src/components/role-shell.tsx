@@ -28,7 +28,7 @@ export function RoleShell({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white p-5 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white p-5 md:flex">
         <div className="mb-8 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
           <span className="text-lg font-semibold">Odak</span>

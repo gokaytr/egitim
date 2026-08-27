@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
+import { GoogleButton } from "@/components/google-button";
 
 export default function KayitPage() {
   const router = useRouter();
@@ -97,6 +98,13 @@ export default function KayitPage() {
             {loading ? "Kayıt yapılıyor..." : "Kayıt ol"}
           </Button>
         </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs text-slate-400">veya</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+        <GoogleButton label="Google ile kayıt ol" />
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Zaten hesabın var mı? <Link href="/giris" className="font-medium text-indigo-600">Giriş yap</Link>

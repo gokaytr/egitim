@@ -30,7 +30,7 @@ const FEATURES = [
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between px-6 py-5 md:px-16">
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-5 backdrop-blur md:px-16">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
           <span className="text-lg font-semibold">Odak</span>
