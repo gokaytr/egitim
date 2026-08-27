@@ -37,7 +37,33 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
+  const isAdminPath = path.startsWith("/admin");
   const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p));
+
+  // /admin, diger panellerden farkli davraniyor: admin olmayan biri (giris
+  // yapmamis ya da baska rolde) buraya geldiginde login ekranina degil,
+  // dogrudan anasayfaya atiliyor - admin panelinin varligi bile belli olmasin.
+  if (isAdminPath) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+  }
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
