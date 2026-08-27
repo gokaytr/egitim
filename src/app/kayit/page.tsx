@@ -30,34 +30,50 @@ export default function KayitPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const supabase = createClient();
 
-    // "teacher_request" gercek bir rol degil - trigger bunu gorunce hesabi
-    // "student" rolunde ama teacher_pending=true olarak olusturuyor, admin
-    // onayladiginda role="teacher" olarak degistiriliyor.
-    const metadataRole = role === "teacher_request" ? "teacher_pending" : role;
+    try {
+      const supabase = createClient();
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: metadataRole,
-          grade_level: role === "student" ? gradeLevel : "",
-          exam_target: role === "student" ? examTarget : "",
-        },
-      },
-    });
+      // "teacher_request" gercek bir rol degil - trigger bunu gorunce hesabi
+      // "student" rolunde ama teacher_pending=true olarak olusturuyor, admin
+      // onayladiginda role="teacher" olarak degistiriliyor.
+      const metadataRole = role === "teacher_request" ? "teacher_pending" : role;
 
-    if (signUpError || !data.user) {
-      setError(signUpError?.message ?? "Kayıt başarısız oldu.");
+      // Supabase bazen aglar/dus zamanlarinda hic cevap vermeyebiliyor - 15
+      // saniyeden uzun surerse butonun sonsuza kadar donup kalmasi yerine
+      // kullaniciya hata gosteriyoruz.
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("İstek zaman aşımına uğradı, tekrar dener misin?")), 15000)
+      );
+
+      const { data, error: signUpError } = await Promise.race([
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: metadataRole,
+              grade_level: role === "student" ? gradeLevel : "",
+              exam_target: role === "student" ? examTarget : "",
+            },
+          },
+        }),
+        timeout,
+      ]);
+
+      if (signUpError || !data.user) {
+        setError(signUpError?.message ?? "Kayıt başarısız oldu.");
+        setLoading(false);
+        return;
+      }
+
+      router.push(REDIRECT_AFTER_SIGNUP[role]);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
       setLoading(false);
-      return;
     }
-
-    router.push(REDIRECT_AFTER_SIGNUP[role]);
-    router.refresh();
   }
 
   return (

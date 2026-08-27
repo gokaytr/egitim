@@ -13,18 +13,23 @@ export function GoogleButton({ label = "Google ile devam et" }: { label?: string
   async function handleClick() {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
-    });
+    try {
+      const supabase = createClient();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback`,
+        },
+      });
 
-    // Basarili olursa tarayici zaten Google'a yonlendiriliyor, buraya hic
-    // dusmuyoruz. Buraya dusuyorsak bir sey ters gitmis demektir.
-    if (oauthError) {
-      setError(oauthError.message);
+      // Basarili olursa tarayici zaten Google'a yonlendiriliyor, buraya hic
+      // dusmuyoruz. Buraya dusuyorsak bir sey ters gitmis demektir.
+      if (oauthError) {
+        setError(oauthError.message);
+        setLoading(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
       setLoading(false);
     }
   }

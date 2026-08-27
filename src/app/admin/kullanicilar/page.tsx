@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
 import { NewUserForm } from "./new-user-form";
+import { AdminAllowlistForm } from "./admin-allowlist-form";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Yönetici",
@@ -23,6 +24,11 @@ export default async function KullanicilarPage() {
     .select("id, full_name, email, role, grade_level, exam_target, created_at")
     .order("created_at", { ascending: false });
 
+  const { data: allowlist } = await supabase
+    .from("admin_allowlist")
+    .select("email")
+    .order("email", { ascending: true });
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -31,6 +37,8 @@ export default async function KullanicilarPage() {
       </div>
 
       <NewUserForm />
+
+      <AdminAllowlistForm emails={allowlist?.map((a) => a.email) ?? []} />
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-left text-sm">

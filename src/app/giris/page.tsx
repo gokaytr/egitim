@@ -35,30 +35,44 @@ function GirisForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const supabase = createClient();
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError || !data.user) {
-      setError("E-posta veya şifre hatalı.");
-      setLoading(false);
-      return;
-    }
+    try {
+      const supabase = createClient();
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, teacher_pending")
-      .eq("id", data.user.id)
-      .single();
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("İstek zaman aşımına uğradı, tekrar dener misin?")), 15000)
+      );
 
-    if (profile?.teacher_pending) {
-      router.push("/basvuru-bekleniyor");
+      const { data, error: signInError } = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        timeout,
+      ]);
+
+      if (signInError || !data.user) {
+        setError("E-posta veya şifre hatalı.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, teacher_pending")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profile?.teacher_pending) {
+        router.push("/basvuru-bekleniyor");
+        router.refresh();
+        return;
+      }
+
+      const redirect = searchParams.get("redirect");
+      router.push(redirect || ROLE_HOME[profile?.role ?? "student"] || "/");
       router.refresh();
-      return;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
+      setLoading(false);
     }
-
-    const redirect = searchParams.get("redirect");
-    router.push(redirect || ROLE_HOME[profile?.role ?? "student"] || "/");
-    router.refresh();
   }
 
   return (
