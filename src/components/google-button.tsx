@@ -8,19 +8,29 @@ import { createClient } from "@/lib/supabase/client";
 // rolüne göre yönlendiriliyor (yeni kullanıcılar varsayılan olarak "student" rolüyle açılır).
 export function GoogleButton({ label = "Google ile devam et" }: { label?: string }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleClick() {
     setLoading(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
+
+    // Basarili olursa tarayici zaten Google'a yonlendiriliyor, buraya hic
+    // dusmuyoruz. Buraya dusuyorsak bir sey ters gitmis demektir.
+    if (oauthError) {
+      setError(oauthError.message);
+      setLoading(false);
+    }
   }
 
   return (
+    <div className="flex flex-col gap-2">
     <button
       type="button"
       onClick={handleClick}
@@ -35,5 +45,7 @@ export function GoogleButton({ label = "Google ile devam et" }: { label?: string
       </svg>
       {loading ? "Yönlendiriliyor..." : label}
     </button>
+    {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
   );
 }
