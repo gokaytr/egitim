@@ -21,9 +21,13 @@ export async function GET(request: NextRequest) {
     if (!error && data.user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, teacher_pending")
         .eq("id", data.user.id)
         .single();
+
+      if (profile?.teacher_pending) {
+        return NextResponse.redirect(`${origin}/basvuru-bekleniyor`);
+      }
 
       const target = ROLE_HOME[profile?.role ?? "student"] ?? "/ogrenci";
       return NextResponse.redirect(`${origin}${target}`);

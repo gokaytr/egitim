@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
+import { NewUserForm } from "./new-user-form";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Yönetici",
@@ -26,8 +27,10 @@ export default async function KullanicilarPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Kullanıcılar</h1>
-        <p className="text-sm text-slate-500">Tüm admin, öğretmen ve öğrenci hesapları</p>
+        <p className="text-sm text-slate-500">Tüm admin, öğretmen, öğrenci ve veli hesapları</p>
       </div>
+
+      <NewUserForm />
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-left text-sm">

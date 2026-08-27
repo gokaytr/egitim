@@ -35,7 +35,18 @@ function GirisForm() {
       return;
     }
 
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, teacher_pending")
+      .eq("id", data.user.id)
+      .single();
+
+    if (profile?.teacher_pending) {
+      router.push("/basvuru-bekleniyor");
+      router.refresh();
+      return;
+    }
+
     const redirect = searchParams.get("redirect");
     router.push(redirect || ROLE_HOME[profile?.role ?? "student"] || "/");
     router.refresh();

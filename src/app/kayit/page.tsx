@@ -7,12 +7,20 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
 
+type SignupRole = "student" | "parent" | "teacher_request";
+
+const REDIRECT_AFTER_SIGNUP: Record<SignupRole, string> = {
+  student: "/ogrenci",
+  parent: "/ogrenci/rapor",
+  teacher_request: "/basvuru-bekleniyor",
+};
+
 export default function KayitPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"student" | "teacher">("student");
+  const [role, setRole] = useState<SignupRole>("student");
   const [gradeLevel, setGradeLevel] = useState("9");
   const [examTarget, setExamTarget] = useState("TYT");
   const [error, setError] = useState<string | null>(null);
@@ -24,13 +32,18 @@ export default function KayitPage() {
     setLoading(true);
     const supabase = createClient();
 
+    // "teacher_request" gercek bir rol degil - trigger bunu gorunce hesabi
+    // "student" rolunde ama teacher_pending=true olarak olusturuyor, admin
+    // onayladiginda role="teacher" olarak degistiriliyor.
+    const metadataRole = role === "teacher_request" ? "teacher_pending" : role;
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          role,
+          role: metadataRole,
           grade_level: role === "student" ? gradeLevel : "",
           exam_target: role === "student" ? examTarget : "",
         },
@@ -43,7 +56,7 @@ export default function KayitPage() {
       return;
     }
 
-    router.push(role === "teacher" ? "/ogretmen" : "/ogrenci");
+    router.push(REDIRECT_AFTER_SIGNUP[role]);
     router.refresh();
   }
 
@@ -60,10 +73,17 @@ export default function KayitPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Ben bir...</label>
-            <Select value={role} onChange={(e) => setRole(e.target.value as "student" | "teacher")}>
+            <Select value={role} onChange={(e) => setRole(e.target.value as SignupRole)}>
               <option value="student">Öğrenciyim</option>
-              <option value="teacher">Öğretmenim</option>
+              <option value="parent">Veliyim</option>
+              <option value="teacher_request">Öğretmenim</option>
             </Select>
+            {role === "teacher_request" && (
+              <p className="mt-1.5 text-xs text-amber-600">
+                Öğretmen hesapları admin onayından sonra aktif olur. Kayıt olduktan sonra onay bekleme
+                sayfasına yönlendirileceksin.
+              </p>
+            )}
           </div>
           {role === "student" && (
             <div className="grid grid-cols-2 gap-3">

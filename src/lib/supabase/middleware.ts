@@ -8,7 +8,7 @@ const ROLE_HOME: Record<string, string> = {
   parent: "/ogrenci/rapor",
 };
 
-const PROTECTED_PREFIXES = ["/admin", "/ogretmen", "/ogrenci"];
+const PROTECTED_PREFIXES = ["/admin", "/ogretmen", "/ogrenci", "/basvuru-bekleniyor"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -49,11 +49,29 @@ export async function updateSession(request: NextRequest) {
   if (user && isProtected) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, teacher_pending")
       .eq("id", user.id)
       .single();
 
     const role = profile?.role;
+
+    // Onay bekleyen ogretmen basvurulari, admin onaylayana kadar sadece
+    // bekleme sayfasini gorebilir.
+    if (profile?.teacher_pending) {
+      if (path !== "/basvuru-bekleniyor") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/basvuru-bekleniyor";
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse;
+    }
+
+    if (path === "/basvuru-bekleniyor") {
+      const url = request.nextUrl.clone();
+      url.pathname = role ? ROLE_HOME[role] ?? "/" : "/";
+      return NextResponse.redirect(url);
+    }
+
     const allowedPrefix = role ? ROLE_HOME[role]?.split("/")[1] : undefined;
     const requestedPrefix = path.split("/")[1];
 
