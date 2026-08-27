@@ -3,34 +3,25 @@
 import { useEffect, useRef } from "react";
 
 // Anasayfa hero bolumunun arkasinda suzulen, birbirine ince cizgilerle
-// baglanan matematik/fen formullerinden olusan canli bir efekt. Disaridan
-// kutuphane kullanmiyor (kucuk bundle, tam kontrol). prefers-reduced-motion
-// aciksa hareketsiz/soluk bir kare ile birakiyoruz.
+// baglanan matematik/fen formullerinden olusan hafif canli bir efekt.
+// Disaridan kutuphane kullanmiyor (kucuk bundle, tam kontrol).
+// prefers-reduced-motion aciksa hareketsiz/soluk bir kare ile birakiyoruz.
 
 const SYMBOLS = [
-  // Tekil semboller
-  "π", "Σ", "√", "∫", "∞", "Δ", "λ", "θ", "÷", "±", "≈", "≠", "≤", "≥", "∂", "∇", "%",
-  // Gercek formuller / denklemler (LGS-TYT-AYT karisimi: matematik, fizik, kimya)
+  // Tekil semboller (daha sik gorunur, kisa)
+  "π", "Σ", "√", "∫", "∞", "Δ", "λ", "θ", "÷", "±", "≈", "∂", "∇", "%",
+  // Gercek formuller / denklemler (LGS-TYT-AYT karisimi)
   "a²+b²=c²",
-  "x²+y²=r²",
   "E=mc²",
   "F=ma",
   "y=mx+b",
-  "√2 ≈ 1,41",
   "sin θ = y/r",
-  "cos θ = x/r",
   "f(x)=x²",
   "∫f(x)dx",
-  "lim x→∞",
-  "n!",
   "H₂O",
   "PV=nRT",
-  "V=IR",
-  "d=v·t",
   "π ≈ 3,14",
   "log₂8=3",
-  "aˣ·aʸ=aˣ⁺ʸ",
-  "Σ(1..n)",
 ];
 
 type Particle = {
@@ -40,7 +31,6 @@ type Particle = {
   vy: number;
   symbol: string;
   size: number;
-  weight: number;
 };
 
 export function EducationBackground() {
@@ -71,16 +61,21 @@ export function EducationBackground() {
       canvas.style.height = `${height}px`;
       ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.max(24, Math.min(46, Math.round((width * height) / 26000)));
-      particles = Array.from({ length: count }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.2,
-        vy: (Math.random() - 0.5) * 0.2,
-        symbol: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-        size: 15 + Math.random() * 16,
-        weight: Math.random() < 0.5 ? 600 : 700,
-      }));
+      const count = Math.max(14, Math.min(24, Math.round((width * height) / 42000)));
+      particles = Array.from({ length: count }, () => {
+        const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        // Uzun formuller kucuk, kisa semboller biraz daha buyuk yazilsin
+        const isLong = symbol.length > 4;
+        const size = isLong ? 11 + Math.random() * 6 : 15 + Math.random() * 11;
+        return {
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.18,
+          vy: (Math.random() - 0.5) * 0.18,
+          symbol,
+          size,
+        };
+      });
     }
 
     function drawFrame() {
@@ -95,8 +90,8 @@ export function EducationBackground() {
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 170) {
-            ctx.strokeStyle = `rgba(79, 70, 229, ${0.2 * (1 - dist / 170)})`;
+          if (dist < 150) {
+            ctx.strokeStyle = `rgba(79, 70, 229, ${0.13 * (1 - dist / 150)})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -107,8 +102,8 @@ export function EducationBackground() {
       }
 
       for (const p of particles) {
-        ctx.font = `${p.weight} ${p.size}px system-ui, sans-serif`;
-        ctx.fillStyle = "rgba(67, 56, 202, 0.38)";
+        ctx.font = `500 ${p.size}px system-ui, sans-serif`;
+        ctx.fillStyle = "rgba(79, 70, 229, 0.22)";
         ctx.fillText(p.symbol, p.x, p.y);
       }
     }
