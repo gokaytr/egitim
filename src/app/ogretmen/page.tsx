@@ -1,19 +1,22 @@
-import { createClient } from "@/lib/supabase/server";
 import { StatCard, Card, Badge } from "@/components/ui";
+import { TeacherSwitcher } from "@/components/teacher-switcher";
+import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
+import { createClient } from "@/lib/supabase/server";
 
-export default async function OgretmenDashboard() {
+export default async function OgretmenDashboard({ searchParams }: { searchParams: Promise<{ teacherId?: string }> }) {
+  const { teacherId: requestedTeacherId } = await searchParams;
+  const { teacherId, isAdminPreview, candidates } = await resolveEffectiveTeacher(requestedTeacherId);
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
 
   const [{ count: myLessonCount }, { count: myQuestionCount }, { data: referrals }, { data: mySubjects }] = await Promise.all([
-    supabase.from("lesson_contents").select("*", { count: "exact", head: true }).eq("teacher_id", userData.user?.id),
-    supabase.from("questions").select("*", { count: "exact", head: true }).eq("created_by", userData.user?.id),
+    supabase.from("lesson_contents").select("*", { count: "exact", head: true }).eq("teacher_id", teacherId),
+    supabase.from("questions").select("*", { count: "exact", head: true }).eq("created_by", teacherId),
     supabase
       .from("tutor_referrals")
       .select("id, status, topics(name), profiles!tutor_referrals_student_id_fkey(full_name)")
       .in("status", ["pending", "matched"])
       .limit(5),
-    supabase.from("teacher_subjects").select("subjects(name)").eq("teacher_id", userData.user?.id),
+    supabase.from("teacher_subjects").select("subjects(name)").eq("teacher_id", teacherId),
   ]);
 
   type SubjectRow = { subjects: { name: string } | { name: string }[] | null };
@@ -27,6 +30,8 @@ export default async function OgretmenDashboard() {
         <h1 className="text-2xl font-semibold text-slate-900">Genel Bakış</h1>
         <p className="text-sm text-slate-500">Konu anlatımların ve sorularının özeti</p>
       </div>
+
+      {isAdminPreview && <TeacherSwitcher candidates={candidates} currentId={teacherId} />}
 
       {branchNames.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">

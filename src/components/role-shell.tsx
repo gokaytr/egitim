@@ -60,9 +60,23 @@ export function RoleShell({
     router.refresh();
   }
 
-  const roleTitle = currentRole ? titleByRole?.[currentRole] : undefined;
+  // Admin bir onizleme sayfasindaysa (orn. /ogrenci/rapor) nav/baslik admin'in
+  // kendi rolune gore degil, hangi paneli onizledigine gore secilmeli - yoksa
+  // veli/ogretmen ekranlarinda hep admin'in kendi (kisitli) nav'i gorunuyordu.
+  const effectiveRole =
+    currentRole === "admin" && isAdminPreviewing
+      ? pathname.startsWith("/ogrenci/rapor")
+        ? "parent"
+        : pathname.startsWith("/ogretmen")
+          ? "teacher"
+          : pathname.startsWith("/ogrenci")
+            ? "student"
+            : currentRole
+      : currentRole;
+
+  const roleTitle = effectiveRole ? titleByRole?.[effectiveRole] : undefined;
   const displayTitle = roleTitle ?? title;
-  const roleNav = currentRole ? navItemsByRole?.[currentRole] : undefined;
+  const roleNav = effectiveRole ? navItemsByRole?.[effectiveRole] : undefined;
   const displayNav = roleNav ?? navItems;
 
   return (

@@ -8,11 +8,16 @@ function failRedirect(origin: string, detail: string) {
   return NextResponse.redirect(url);
 }
 
+const ROLE_HOME: Record<string, string> = {
+  admin: "/admin",
+  teacher: "/ogretmen",
+  moderator: "/ogretmen",
+  student: "/ogrenci",
+  parent: "/ogrenci/rapor",
+};
+
 // Google (ve ileride eklenebilecek diğer OAuth sağlayıcıları) girişinden dönen
-// kullanıcıyı oturuma çevirir. Hangi panele gideceğine burada karar vermiyoruz
-// (bu, ek bir profiles sorgusu demekti) - middleware zaten her korumalı
-// sayfada rolü kontrol edip yanlış yere düşersen doğrusuna yönlendiriyor,
-// biz sadece herhangi bir korumalı sayfaya (/ogrenci) yönlendiriyoruz.
+// kullanıcıyı oturuma çevirir.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
 
@@ -35,5 +40,15 @@ export async function GET(request: NextRequest) {
     return failRedirect(origin, error?.message ?? "Oturum oluşturulamadı.");
   }
 
-  return NextResponse.redirect(`${origin}/ogrenci`);
+  // Rolüne göre dogru panele gonder - admin/ogretmen/veli hesaplari da
+  // Google ile giris yapabildigi icin burada da /giris'teki gibi rol bazli
+  // yonlendirme yapiyoruz, aksi halde herkes /ogrenci'ye dusup oradan
+  // kendi paneline atilmayi bekliyordu.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .single();
+
+  return NextResponse.redirect(`${origin}${ROLE_HOME[profile?.role ?? ""] ?? "/ogrenci"}`);
 }

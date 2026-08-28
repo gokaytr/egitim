@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
 import { TutorReferralActions } from "@/components/tutor-referral-actions";
+import { TeacherSwitcher } from "@/components/teacher-switcher";
+import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Bekliyor",
@@ -18,9 +20,10 @@ const STATUS_TONE: Record<string, "default" | "green" | "amber" | "red"> = {
   cancelled: "red",
 };
 
-export default async function OzelDersPage() {
+export default async function OzelDersPage({ searchParams }: { searchParams: Promise<{ teacherId?: string }> }) {
+  const { teacherId: requestedTeacherId } = await searchParams;
+  const { teacherId, isAdminPreview, candidates } = await resolveEffectiveTeacher(requestedTeacherId);
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
 
   const [{ data: referrals, error }, { data: myAssignments }] = await Promise.all([
     supabase
@@ -29,7 +32,7 @@ export default async function OzelDersPage() {
         "id, status, requested_at, tutor_id, topics(name, subject_id), profiles!tutor_referrals_student_id_fkey(full_name), tutor_sessions(id, scheduled_at, duration_minutes, teacher_notes, meeting_link, status)"
       )
       .order("requested_at", { ascending: false }),
-    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", userData.user?.id),
+    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", teacherId),
   ]);
 
   const myBranchIds = new Set((myAssignments ?? []).map((a) => a.subject_id));
@@ -48,7 +51,7 @@ export default async function OzelDersPage() {
   });
 
   const myUpcomingSessions = (referrals ?? [])
-    .filter((r) => r.tutor_id === userData.user?.id)
+    .filter((r) => r.tutor_id === teacherId)
     .flatMap((r) => {
       const student = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
       const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
@@ -65,6 +68,8 @@ export default async function OzelDersPage() {
           Öğrencilerin özel ders ihtiyacı belirlenen konularını üstlenip ders saatini planlayabilirsin.
         </p>
       </div>
+
+      {isAdminPreview && <TeacherSwitcher candidates={candidates} currentId={teacherId} />}
 
       {myUpcomingSessions.length > 0 && (
         <Card>
@@ -116,7 +121,7 @@ export default async function OzelDersPage() {
                 referralId={r.id}
                 status={r.status}
                 tutorId={r.tutor_id}
-                currentUserId={userData.user?.id}
+                currentUserId={teacherId}
                 sessions={r.tutor_sessions ?? []}
               />
             </Card>
