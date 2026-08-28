@@ -44,6 +44,10 @@ export const DOC_SECTIONS: DocSection[] = [
         body: "Sağ üstte, Sistem Bilgisi ikonunun solunda turuncu 'Yapılacaklar' bağlantısıyla açılan sayfa, yönetim ekibinin kendi iş takibi içindir. Her göreve Beklemede / Devam Ediyor / Tamamlandı durumu atanır, PDF veya Word dosyası eklenebilir (dosyalar özel bir depoda tutulur, sadece admin görebilir).",
       },
       {
+        title: "Öğrenci Raporları",
+        body: "Öğrenci Raporları sayfasından, veli önizlemesinden farklı olarak platformdaki TÜM öğrencilerden istediğini seçip; çalışma programını/hedeflerini, hangi soruları çözüp hangilerini çözmesi gerektiğini, geçmiş sınav/test sonuçlarını, konu anlatımı izleme geçmişini ve eksik analizlerini tek ekranda görebilirsin.",
+      },
+      {
         title: "Demo hesaplar",
         body: "Test amaçlı, aşağıda listelenen demo veli ve demo öğretmen hesapları platformda hazır bulunuyor. Öğrenci tarafında da 'reinvita' kullanıcı adıyla giren örnek bir öğrenci hesabı mevcut ve demo veliye bağlı.",
       },
@@ -86,8 +90,8 @@ export const DOC_SECTIONS: DocSection[] = [
         body: "Admin sana bir veya birden fazla branş (ders) atadıysa, Genel Bakış sayfasının üstünde branşların listelenir. Konu Ekle ve Müfredat ekranlarındaki ders/konu seçimi otomatik olarak branşlarınla sınırlanır; Özel Ders ekranında da branşınla eşleşen talepler 'Branşın' etiketiyle öne çıkar.",
       },
       {
-        title: "Öğrenci görünürlüğü",
-        body: "Öğretmen olarak öğrencilerin ders bazlı ilerlemesini, çözdükleri soru sayısını ve genel durumlarını veli raporlama ekranına benzer şekilde admin panelindeki önizlemelerden takip edebilirsin.",
+        title: "Öğrenci Raporları",
+        body: "Öğrenci Raporları sayfasından platformdaki tüm öğrencilerden birini seçip; çalışma programını, geçmiş sınav sonuçlarını, konu anlatımı izleme geçmişini ve eksik analizlerini görebilirsin.",
       },
     ],
   },
@@ -105,11 +109,19 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Özel ders talep etme",
-        body: "Raporlama sayfasındaki Özel Ders Durumu kartından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Talep, ilgili konunun branşına atanmış öğretmenlerin Özel Ders ekranında 'Branşın' etiketiyle öne çıkarılmış şekilde, ayrıca admin panelinin Genel Bakış ekranındaki 'Bekleyen Özel Ders Talepleri' listesinde görünür. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem Genel Durum sayfasında 'Yaklaşan Özel Ders' olarak hem Raporlama'daki Özel Ders Durumu kartında canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
+        body: "Sol menüdeki ayrı 'Özel Ders Talebi' sayfasından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Talep, ilgili konunun branşına atanmış öğretmenlerin Özel Ders ekranında 'Branşın' etiketiyle öne çıkarılmış şekilde, ayrıca admin panelinin Genel Bakış ekranındaki 'Bekleyen Özel Ders Talepleri' listesinde görünür. Henüz sonuçlanmamış bir talepten 'Vazgeç' diyerek her zaman geri çekilebilirsin. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem Genel Durum sayfasında 'Yaklaşan Özel Ders' olarak hem Özel Ders Talebi sayfasında canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
       },
       {
         title: "Öğrenciye hedef atama",
-        body: "Raporlama sayfasındaki Çalışma Programı / Hedefler kartından, bir konu seçip hedef soru sayısı ve süre belirleyerek öğrencine doğrudan hedef atayabilirsin. Bu hedef, öğrencinin kendi ekranında 'Hedeflerim' olarak görünür.",
+        body: "Raporlama sayfasındaki Çalışma Programı / Hedefler kartından, bir konu seçip hedef soru sayısı ve süre belirleyerek öğrencine doğrudan hedef atayabilirsin (soru ata). Bu hedef, öğrencinin kendi ekranında 'Hedeflerim' olarak, doğrudan soru çözme sayfasına götüren bir bağlantıyla görünür.",
+      },
+      {
+        title: "Seviye Tespit Sınavı ve otomatik program",
+        body: "Öğrencin hiç soru çözmediyse Raporlama sayfasında bir 'Seviye Tespit Sınavı' kartı görünür - tek tıkla, sınıf seviyesine uygun farklı derslerden birkaç konuyu deneme amaçlı hedef olarak atar. Öğrenci bu konuların testlerini çözdükçe sistem otomatik eksik tespiti yapar; ardından 'Eksiklere Göre Otomatik Program Oluştur' butonuyla, çıkan eksiklere göre (önemli eksikte daha yüklü, hafif eksikte daha az soru/süre) yeni çalışma hedefleri otomatik eklenir.",
+      },
+      {
+        title: "Geçmiş sınav sonuçları",
+        body: "Raporlama sayfasındaki 'Geçmiş Sınav Sonuçları' kartından öğrencinin bugüne kadar çözdüğü her test/denemeyi, doğru/yanlış/boş sayılarıyla ve başarı yüzdesiyle görebilirsin.",
       },
     ],
   },

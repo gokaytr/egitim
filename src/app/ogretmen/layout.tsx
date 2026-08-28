@@ -7,6 +7,7 @@ const NAV = [
   { href: "/ogretmen/soru-ekle", label: "Soru Ekle" },
   { href: "/ogretmen/soru-onay", label: "Soru Onayı" },
   { href: "/ogretmen/ozel-ders", label: "Özel Ders" },
+  { href: "/ogretmen/ogrenci-raporlari", label: "Öğrenci Raporları" },
 ];
 
 export default function OgretmenLayout({ children }: { children: React.ReactNode }) {

@@ -1,10 +1,6 @@
 import Link from "next/link";
-import { Card, Badge } from "@/components/ui";
-import { ReportHeader } from "@/components/report-header";
-import { ParentGoalAssignForm } from "@/components/parent-goal-assign-form";
-import { ParentPlacementTestButton } from "@/components/parent-placement-test-button";
-import { ParentAutoStudyPlanButton } from "@/components/parent-auto-study-plan-button";
-import { loadReportData, firstOf } from "@/lib/reports/report-data";
+import { Card, Badge, StatCard } from "@/components/ui";
+import { firstOf, type ReportData } from "@/lib/reports/report-data";
 
 const WEAKNESS_TONE: Record<string, "green" | "amber" | "red"> = {
   none: "green",
@@ -22,46 +18,36 @@ const SOURCE_TONE: Record<string, "default" | "green" | "amber" | "red"> = {
   auto: "default",
 };
 
-export default async function RaporlamaPage({ searchParams }: { searchParams: Promise<{ studentId?: string }> }) {
-  const { studentId } = await searchParams;
-  const data = await loadReportData(studentId);
+const REFERRAL_LABEL: Record<string, string> = {
+  pending: "Bekliyor",
+  matched: "Öğretmen bulundu",
+  scheduled: "Randevu planlandı",
+  completed: "Tamamlandı",
+  cancelled: "İptal edildi",
+};
 
-  if ("needsSetup" in data) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{data.pageTitle}</h1>
-        </div>
-        <Card>
-          <p className="text-sm text-slate-500">
-            {data.role === "parent" ? "Henüz bağlı bir öğrenci yok." : "Henüz öğrenci kaydı yok."}
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
+// Admin/ogretmen genel ogrenci raporlari ekraninda kullanilan, salt-okunur
+// (veli formlari olmadan) tam rapor gorunumu - calisma programi, gecmis
+// sinav sonuclari, izleme gecmisi, eksik analizleri ve ozel ders talepleri.
+export function StudentReportView({ data }: { data: ReportData }) {
   return (
     <div className="flex flex-col gap-6">
-      <ReportHeader data={data} />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Çözülen Soru" value={data.totalSolved} hint={`${data.totalCorrect} doğru · ${data.totalWrong} yanlış`} />
+        <StatCard label="Başarı Oranı" value={data.accuracy !== null ? `%${data.accuracy}` : "-"} />
+        <StatCard label="İzlenen Konu Anlatımı" value={data.distinctContentViewed} />
+        <StatCard label="Hedeflenen Kalan Soru" value={data.targetQuestionsRemaining} />
+      </div>
 
-      {data.role === "parent" && data.totalSolved === 0 && (
-        <Card className="border-amber-200 bg-amber-50">
-          <h2 className="mb-1 font-semibold text-slate-900">Seviye Tespit Sınavı</h2>
-          <p className="mb-3 text-sm text-slate-600">
-            {data.studentProfile?.full_name?.split(" ")[0] ?? "Öğrenci"} henüz hiç soru çözmedi. İstersen sınıf seviyesine
-            uygun, farklı derslerden birkaç konuyu "seviye tespiti" olarak çalışma programına ekleyip performansını ve
-            bilgi birikimini ölçebilirsin - sonuçlara göre çalışması ve çözmesi gereken konular otomatik önerilir.
-          </p>
-          <ParentPlacementTestButton studentId={data.studentId} gradeLevel={data.studentProfile?.grade_level ?? null} />
-        </Card>
-      )}
+      <Card>
+        <h2 className="mb-3 font-semibold text-slate-900">Genel Durum Raporu</h2>
+        {data.overviewParagraphs.map((p, i) => (
+          <p key={i} className="mb-1.5 text-sm text-slate-700 last:mb-0">{p}</p>
+        ))}
+      </Card>
 
       <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Çalışma Programı / Hedefler</h2>
-        <p className="mb-2 text-xs text-slate-500">
-          Özel ders talebi ve randevuları artık ayrı "Özel Ders Talebi" sekmesinde.
-        </p>
         {!data.planItems.length && <p className="text-sm text-slate-500">Henüz çalışma programına konu eklenmemiş.</p>}
         <ul className="flex flex-col gap-2">
           {data.planItems.map((p) => {
@@ -79,7 +65,7 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
                   </Badge>
                   {topic?.id && (
                     <Link href={`/ogrenci/konu/${topic.id}`} className="font-medium text-indigo-600 underline">
-                      Soruları çöz →
+                      Konuya git →
                     </Link>
                   )}
                 </div>
@@ -87,12 +73,6 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
             );
           })}
         </ul>
-        {data.role === "parent" && (
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-            <ParentGoalAssignForm studentId={data.studentId} />
-            <ParentAutoStudyPlanButton studentId={data.studentId} />
-          </div>
-        )}
       </Card>
 
       <Card>
@@ -110,9 +90,7 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
                   <span>
                     {a.correct_count ?? 0} doğru · {a.wrong_count ?? 0} yanlış · {a.empty_count ?? 0} boş
                   </span>
-                  {score !== null && (
-                    <Badge tone={score >= 75 ? "green" : score >= 50 ? "amber" : "red"}>%{score}</Badge>
-                  )}
+                  {score !== null && <Badge tone={score >= 75 ? "green" : score >= 50 ? "amber" : "red"}>%{score}</Badge>}
                   <span className="text-slate-400">{new Date(a.started_at).toLocaleDateString("tr-TR")}</span>
                 </div>
               </li>
@@ -140,7 +118,7 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
 
       <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Eksikler / Analiz Geçmişi</h2>
-        {!data.diagnoses.length && <p className="text-sm text-slate-500">Henüz analiz yok, bir konu testi çözerek başlayabilirsin.</p>}
+        {!data.diagnoses.length && <p className="text-sm text-slate-500">Henüz analiz yok.</p>}
         <ul className="flex flex-col gap-3">
           {data.diagnoses.map((d) => {
             const topic = firstOf(d.topics);
@@ -152,6 +130,27 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
                   <span className="ml-auto text-xs text-slate-400">{new Date(d.created_at).toLocaleDateString("tr-TR")}</span>
                 </div>
                 <p className="whitespace-pre-line text-sm text-slate-600">{d.ai_summary}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 font-semibold text-slate-900">Özel Ders Talepleri</h2>
+        {!data.referrals.length && <p className="text-sm text-slate-500">Şu ana kadar özel ders talebi yok.</p>}
+        <ul className="flex flex-col gap-2">
+          {data.referrals.map((r) => {
+            const topic = firstOf(r.topics);
+            return (
+              <li key={r.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <span>{topic?.name ?? "Genel"}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">{new Date(r.requested_at).toLocaleDateString("tr-TR")}</span>
+                  <Badge tone={r.status === "pending" ? "amber" : r.status === "completed" ? "green" : "default"}>
+                    {REFERRAL_LABEL[r.status] ?? r.status}
+                  </Badge>
+                </div>
               </li>
             );
           })}

@@ -21,12 +21,8 @@ export function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 
 export type ReportCandidate = { id: string; full_name: string };
 
-export type ReportData = {
-  role: string | undefined;
-  pageTitle: string;
-  candidates: ReportCandidate[];
+export type StudentReportCore = {
   studentId: string;
-  showAddChild: boolean;
   studentProfile: { full_name: string; grade_level: number | null; exam_target: string | null } | null;
   overallLabel: string;
   overallTone: "green" | "amber" | "red";
@@ -37,6 +33,16 @@ export type ReportData = {
   accuracy: number | null;
   distinctContentViewed: number;
   targetQuestionsRemaining: number;
+  attempts: {
+    id: string;
+    started_at: string;
+    finished_at: string | null;
+    total_questions: number | null;
+    correct_count: number | null;
+    wrong_count: number | null;
+    empty_count: number | null;
+    topics: { name: string } | { name: string }[] | null;
+  }[];
   referrals: {
     id: string;
     status: string;
@@ -53,6 +59,7 @@ export type ReportData = {
   planItems: {
     id: string;
     status: string;
+    source: string;
     target_minutes: number | null;
     target_questions: number | null;
     topics: { id: string; name: string } | { id: string; name: string }[] | null;
@@ -77,50 +84,26 @@ export type ReportData = {
   overviewParagraphs: string[];
 };
 
+export type ReportData = StudentReportCore & {
+  role: string | undefined;
+  pageTitle: string;
+  candidates: ReportCandidate[];
+  showAddChild: boolean;
+};
+
 export type ReportNeedsSetup = {
   needsSetup: true;
   role: string | undefined;
   pageTitle: string;
 };
 
-export async function loadReportData(requestedStudentId?: string): Promise<ReportData | ReportNeedsSetup> {
+// Belirli bir ogrencinin butun rapor verisini (calisma programi, gecmis
+// sinav/test sonuclari, izleme gecmisi, eksik analizleri, aktivite akisi)
+// cekip hesapliyor. Kim gorebilir sorusuna karismiyor - onu cagiran taraf
+// (loadReportData / loadStaffStudentReport) RLS + kendi erisim mantigiyla
+// cozuyor.
+export async function loadStudentReportCore(studentId: string): Promise<StudentReportCore> {
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  const { data: callerProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userData.user?.id)
-    .single();
-
-  const role = callerProfile?.role;
-
-  let candidates: ReportCandidate[] = [];
-  let pageTitle = "İlerleme Raporu";
-  let showAddChild = false;
-
-  if (role === "parent" || role === "admin") {
-    // Admin de veli onizlemesinde artik tum ogrenci listesinden serbestce
-    // secim yapmiyor - gercek bir veli gibi, admin panelinden kendisine
-    // baglanmis ogrenci(ler)in verisini goruyor (parent_student_links).
-    const { data: links } = await supabase
-      .from("parent_student_links")
-      .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name)")
-      .eq("parent_id", userData.user?.id);
-    candidates = (links ?? [])
-      .map((l) => (Array.isArray(l.profiles) ? l.profiles[0] : l.profiles))
-      .filter((p): p is ReportCandidate => !!p);
-    pageTitle = role === "admin" ? "Veli Görünümü (Admin Önizleme)" : "Veli Raporu";
-    showAddChild = role === "parent";
-  }
-
-  const studentId =
-    (requestedStudentId && candidates.some((c) => c.id === requestedStudentId) ? requestedStudentId : candidates[0]?.id) ??
-    (role === "parent" || role === "admin" ? undefined : userData.user?.id);
-
-  if ((role === "parent" || role === "admin") && !studentId) {
-    return { needsSetup: true, role, pageTitle };
-  }
 
   const [
     { data: studentProfile },
@@ -144,7 +127,7 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
       .limit(20),
     supabase
       .from("study_plan_items")
-      .select("id, status, target_minutes, target_questions, topics(id, name), study_plans!inner(student_id, status)")
+      .select("id, status, source, target_minutes, target_questions, topics(id, name), study_plans!inner(student_id, status)")
       .eq("study_plans.student_id", studentId),
     supabase
       .from("tutor_referrals")
@@ -263,11 +246,7 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
   });
 
   return {
-    role,
-    pageTitle,
-    candidates,
-    studentId: studentId as string,
-    showAddChild,
+    studentId,
     studentProfile,
     overallLabel,
     overallTone,
@@ -278,6 +257,7 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
     accuracy,
     distinctContentViewed,
     targetQuestionsRemaining,
+    attempts: attempts ?? [],
     referrals: referrals ?? [],
     planItems: planItems ?? [],
     diagnoses: diagnoses ?? [],
@@ -286,5 +266,90 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
     lastActivity,
     dailyGroups,
     overviewParagraphs,
+  };
+}
+
+export async function loadReportData(requestedStudentId?: string): Promise<ReportData | ReportNeedsSetup> {
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userData.user?.id)
+    .single();
+
+  const role = callerProfile?.role;
+
+  let candidates: ReportCandidate[] = [];
+  let pageTitle = "İlerleme Raporu";
+  let showAddChild = false;
+
+  if (role === "parent" || role === "admin") {
+    // Admin de veli onizlemesinde artik tum ogrenci listesinden serbestce
+    // secim yapmiyor - gercek bir veli gibi, admin panelinden kendisine
+    // baglanmis ogrenci(ler)in verisini goruyor (parent_student_links).
+    // (Admin'in TUM ogrencileri gorebildigi genel raporlama ekrani ayri:
+    // loadStaffStudentReport / /admin/ogrenci-raporlari.)
+    const { data: links } = await supabase
+      .from("parent_student_links")
+      .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name)")
+      .eq("parent_id", userData.user?.id);
+    candidates = (links ?? [])
+      .map((l) => (Array.isArray(l.profiles) ? l.profiles[0] : l.profiles))
+      .filter((p): p is ReportCandidate => !!p);
+    pageTitle = role === "admin" ? "Veli Görünümü (Admin Önizleme)" : "Veli Raporu";
+    showAddChild = role === "parent";
+  }
+
+  const studentId =
+    (requestedStudentId && candidates.some((c) => c.id === requestedStudentId) ? requestedStudentId : candidates[0]?.id) ??
+    (role === "parent" || role === "admin" ? undefined : userData.user?.id);
+
+  if ((role === "parent" || role === "admin") && !studentId) {
+    return { needsSetup: true, role, pageTitle };
+  }
+
+  const core = await loadStudentReportCore(studentId as string);
+
+  return {
+    ...core,
+    role,
+    pageTitle,
+    candidates,
+    showAddChild,
+  };
+}
+
+// Admin/ogretmen genel ogrenci raporlari ekrani icin: butun ogrenci
+// listesinden serbestce secim yapabiliyorlar (veli onizlemesinden farkli
+// olarak parent_student_links'e bagli degil - staff-wide RLS zaten butun
+// tablolarda admin/ogretmen/moderator icin acik).
+export async function loadStaffStudentReport(requestedStudentId?: string): Promise<ReportData | ReportNeedsSetup> {
+  const supabase = await createClient();
+
+  const { data: students } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("role", "student")
+    .order("full_name");
+
+  const candidates: ReportCandidate[] = students ?? [];
+  const pageTitle = "Öğrenci Raporları";
+
+  const studentId = (requestedStudentId && candidates.some((c) => c.id === requestedStudentId) ? requestedStudentId : candidates[0]?.id) ?? undefined;
+
+  if (!studentId) {
+    return { needsSetup: true, role: "staff", pageTitle };
+  }
+
+  const core = await loadStudentReportCore(studentId);
+
+  return {
+    ...core,
+    role: "staff",
+    pageTitle,
+    candidates,
+    showAddChild: false,
   };
 }

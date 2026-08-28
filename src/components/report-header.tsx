@@ -27,7 +27,7 @@ export function ReportHeader({ data }: { data: ReportData }) {
         <StudentSwitcher
           candidates={data.candidates}
           currentId={data.studentId}
-          label={data.role === "admin" ? "Öğrenci seç" : "Çocuk seç"}
+          label={data.role === "parent" ? "Çocuk seç" : "Öğrenci seç"}
         />
       )}
 
