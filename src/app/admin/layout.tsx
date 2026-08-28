@@ -8,10 +8,12 @@ const NAV = [
   { href: "/admin/mufredat", label: "Müfredat / Konu Ekle" },
   { href: "/admin/sorular", label: "Soru Onayı" },
   { href: "/admin/soru-ekle", label: "Soru Ekle" },
+  { href: "/admin/gorevler", label: "Yapılacaklar" },
   { href: "/admin/genel-ayarlar", label: "Genel Ayarlar" },
 ];
 
-const PREVIEW_LINKS = [
+const TOP_BAR_LINKS = [
+  { href: "/admin/gorevler", label: "Yapılacaklar", tone: "accent" as const },
   { href: "/ogrenci", label: "Öğrenci Ekranı" },
   { href: "/ogretmen", label: "Öğretmen Ekranı" },
   { href: "/ogrenci/rapor", label: "Veli Görünümü" },
@@ -19,7 +21,7 @@ const PREVIEW_LINKS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleShell title="Yönetici Paneli" navItems={NAV} helpHref="/admin/sistem-bilgisi" topBarLinks={PREVIEW_LINKS}>
+    <RoleShell title="Yönetici Paneli" navItems={NAV} helpHref="/admin/sistem-bilgisi" topBarLinks={TOP_BAR_LINKS}>
       {children}
     </RoleShell>
   );

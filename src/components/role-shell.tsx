@@ -6,7 +6,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GradeBackground, gradeBackgroundVariant } from "@/components/grade-background";
 
-type NavItem = { href: string; label: string };
+type NavItem = { href: string; label: string; tone?: "default" | "accent" };
 
 export function RoleShell({
   title,
@@ -132,7 +132,11 @@ export function RoleShell({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                  className={
+                    link.tone === "accent"
+                      ? "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                      : "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                  }
                 >
                   {link.label}
                 </Link>

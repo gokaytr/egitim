@@ -40,6 +40,10 @@ export const DOC_SECTIONS: DocSection[] = [
         body: "Genel Ayarlar sayfasından platform adı ve destek e-postası gibi temel bilgileri düzenleyebilirsin. Bakım modu anahtarı şimdilik yalnızca bilgi amaçlı, herhangi bir sayfayı otomatik kapatmıyor.",
       },
       {
+        title: "Yapılacaklar (görev yönetimi)",
+        body: "Sağ üstte, Sistem Bilgisi ikonunun solunda turuncu 'Yapılacaklar' bağlantısıyla açılan sayfa, yönetim ekibinin kendi iş takibi içindir. Her göreve Beklemede / Devam Ediyor / Tamamlandı durumu atanır, PDF veya Word dosyası eklenebilir (dosyalar özel bir depoda tutulur, sadece admin görebilir).",
+      },
+      {
         title: "Demo hesaplar",
         body: "Test amaçlı, aşağıda listelenen demo veli ve demo öğretmen hesapları platformda hazır bulunuyor. Öğrenci tarafında da 'reinvita' kullanıcı adıyla giren örnek bir öğrenci hesabı mevcut ve demo veliye bağlı.",
       },
