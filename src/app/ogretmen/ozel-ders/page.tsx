@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
 import { TutorReferralActions } from "@/components/tutor-referral-actions";
-import { TeacherSwitcher } from "@/components/teacher-switcher";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -22,7 +21,7 @@ const STATUS_TONE: Record<string, "default" | "green" | "amber" | "red"> = {
 
 export default async function OzelDersPage({ searchParams }: { searchParams: Promise<{ teacherId?: string }> }) {
   const { teacherId: requestedTeacherId } = await searchParams;
-  const { teacherId, isAdminPreview, candidates } = await resolveEffectiveTeacher(requestedTeacherId);
+  const { teacherId } = await resolveEffectiveTeacher(requestedTeacherId);
   const supabase = await createClient();
 
   const [{ data: referrals, error }, { data: myAssignments }] = await Promise.all([
@@ -68,8 +67,6 @@ export default async function OzelDersPage({ searchParams }: { searchParams: Pro
           Öğrencilerin özel ders ihtiyacı belirlenen konularını üstlenip ders saatini planlayabilirsin.
         </p>
       </div>
-
-      {isAdminPreview && <TeacherSwitcher candidates={candidates} currentId={teacherId} />}
 
       {myUpcomingSessions.length > 0 && (
         <Card>

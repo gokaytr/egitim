@@ -1,11 +1,10 @@
 import { StatCard, Card, Badge } from "@/components/ui";
-import { TeacherSwitcher } from "@/components/teacher-switcher";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function OgretmenDashboard({ searchParams }: { searchParams: Promise<{ teacherId?: string }> }) {
   const { teacherId: requestedTeacherId } = await searchParams;
-  const { teacherId, isAdminPreview, candidates } = await resolveEffectiveTeacher(requestedTeacherId);
+  const { teacherId } = await resolveEffectiveTeacher(requestedTeacherId);
   const supabase = await createClient();
 
   const [{ count: myLessonCount }, { count: myQuestionCount }, { data: referrals }, { data: mySubjects }] = await Promise.all([
@@ -30,8 +29,6 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
         <h1 className="text-2xl font-semibold text-slate-900">Genel Bakış</h1>
         <p className="text-sm text-slate-500">Konu anlatımların ve sorularının özeti</p>
       </div>
-
-      {isAdminPreview && <TeacherSwitcher candidates={candidates} currentId={teacherId} />}
 
       {branchNames.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
