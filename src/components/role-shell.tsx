@@ -12,32 +12,40 @@ export function RoleShell({
   navItems,
   children,
   helpHref,
+  navItemsByRole,
+  titleByRole,
 }: {
   title: string;
   navItems: NavItem[];
   children: ReactNode;
   helpHref?: string;
+  navItemsByRole?: Partial<Record<string, NavItem[]>>;
+  titleByRole?: Partial<Record<string, string>>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const [isAdminPreviewing, setIsAdminPreviewing] = useState(false);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
 
   // Admin, ogrenci/ogretmen panellerini onizlerken (kendi paneli disinda
   // gezinirken) ust tarafta admin paneline donme baglantisi gosteriyoruz.
+  // Ayni cagriyla, rol bazli baslik/nav degistirmek icin de rolu tutuyoruz.
   useEffect(() => {
     let cancelled = false;
-    async function checkAdminPreview() {
+    async function loadRole() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-      if (!cancelled && profile?.role === "admin" && !pathname.startsWith("/admin")) {
+      if (cancelled) return;
+      setCurrentRole(profile?.role ?? null);
+      if (profile?.role === "admin" && !pathname.startsWith("/admin")) {
         setIsAdminPreviewing(true);
       }
     }
-    checkAdminPreview();
+    loadRole();
     return () => {
       cancelled = true;
     };
@@ -50,6 +58,11 @@ export function RoleShell({
     router.refresh();
   }
 
+  const roleTitle = currentRole ? titleByRole?.[currentRole] : undefined;
+  const displayTitle = roleTitle ?? title;
+  const roleNav = currentRole ? navItemsByRole?.[currentRole] : undefined;
+  const displayNav = roleNav ?? navItems;
+
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white p-5 md:flex">
@@ -57,9 +70,9 @@ export function RoleShell({
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
           <span className="text-lg font-semibold">Odak</span>
         </div>
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
         <nav className="flex flex-col gap-1">
-          {navItems.map((item) => (
+          {displayNav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -82,7 +95,7 @@ export function RoleShell({
       </aside>
       <div className="flex flex-1 flex-col">
         {(isAdminPreviewing || helpHref) && (
-          <div className="flex items-center justify-between px-6 py-2">
+          <div className="flex items-center justify-between px-6 py-3">
             <div>
               {isAdminPreviewing && (
                 <div className="flex items-center gap-3 rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-800">
@@ -98,7 +111,7 @@ export function RoleShell({
                 href={helpHref}
                 title="Sistem Bilgisi"
                 aria-label="Sistem Bilgisi"
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                className="flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-100"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path
@@ -107,6 +120,7 @@ export function RoleShell({
                     clipRule="evenodd"
                   />
                 </svg>
+                Sistem Bilgisi
               </Link>
             )}
           </div>

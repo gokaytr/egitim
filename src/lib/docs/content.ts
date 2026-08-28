@@ -33,7 +33,11 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Önizleme ekranları",
-        body: "Admin panelinden Üye Ekranı, Öğretmen Ekranı ve Veli Görünümü'nü doğrudan önizleyebilirsin - ayrı bir hesapla giriş yapmana gerek yok.",
+        body: "Önizleme sayfasından, üstteki sekmelerle Üye Ekranı, Öğretmen Ekranı ve Veli Görünümü arasında geçiş yaparak hepsini tek sayfada önizleyebilirsin - ayrı bir hesapla giriş yapmana gerek yok.",
+      },
+      {
+        title: "Genel Ayarlar",
+        body: "Genel Ayarlar sayfasından platform adı ve destek e-postası gibi temel bilgileri düzenleyebilirsin. Bakım modu anahtarı şimdilik yalnızca bilgi amaçlı, herhangi bir sayfayı otomatik kapatmıyor.",
       },
       {
         title: "Demo hesaplar",
@@ -85,7 +89,7 @@ export const DOC_SECTIONS: DocSection[] = [
     items: [
       {
         title: "Raporlama ekranı",
-        body: "Veli girişinde; öğrencinin kaç soru çözdüğü, doğru/yanlış/boş dağılımı, kaç konu anlatımı izlediği, özel ders ihtiyacı olup olmadığı ve genel durumu (zayıf/orta/iyi) tek ekranda özetlenir.",
+        body: "Veli girişinde açılan tek sayfa; önce öğrencinin ayrıntılı yazılı genel durum raporunu ve son aktivitesini, ardından özel ders durumunu, çalışma programını/hedeflerini, konu anlatımı izleme geçmişini, eksikleri ve en altta gün gün aktivite akışını gösterir.",
       },
       {
         title: "Birden fazla öğrenci",
@@ -93,7 +97,11 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Özel ders talep etme",
-        body: "Genel Raporlama sekmesindeki Özel Ders Durumu kartından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem Genel Bakış sekmesinde 'Yaklaşan Özel Ders' olarak hem Genel Raporlama'da canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
+        body: "Özel Ders Durumu kartından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem sayfanın üstünde 'Yaklaşan Özel Ders' olarak hem Özel Ders Durumu kartında canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
+      },
+      {
+        title: "Öğrenciye hedef atama",
+        body: "Çalışma Programı / Hedefler kartından, bir konu seçip hedef soru sayısı ve süre belirleyerek öğrencine doğrudan hedef atayabilirsin. Bu hedef, öğrencinin kendi ekranında 'Hedeflerim' olarak görünür.",
       },
     ],
   },
@@ -103,7 +111,7 @@ export const DOC_SECTIONS: DocSection[] = [
     items: [
       {
         title: "Ders ve konu seçimi",
-        body: "Öğrenci girişinde önce ders kartları (Türkçe, Matematik, Fen Bilimleri vb.), sonra o dersin konuları listelenir. Bir konuya girince varsa konu anlatımı, ardından o konunun soruları gösterilir.",
+        body: "Öğrenci girişinde önce (varsa) velinin atadığı hedefler, ardından ders kartları (Türkçe, Matematik, Fen Bilimleri vb.), sonra o dersin konuları listelenir. Bir konuya girince varsa konu anlatımı, ardından o konunun soruları gösterilir. Öğrenci ekranında ayrıntılı raporlama gösterilmez - bu veli ve admin ekranlarına özeldir.",
       },
       {
         title: "Quiz ve değerlendirme",
