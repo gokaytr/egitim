@@ -1,6 +1,7 @@
 import { Card, Badge } from "@/components/ui";
 import { ReportHeader } from "@/components/report-header";
 import { ParentTutorRequestForm } from "@/components/parent-tutor-request-form";
+import { ParentTutorCancelButton } from "@/components/parent-tutor-cancel-button";
 import { loadReportData, firstOf } from "@/lib/reports/report-data";
 
 const REFERRAL_LABEL: Record<string, string> = {
@@ -66,6 +67,11 @@ export default async function OzelDersTalebiPage({ searchParams }: { searchParam
                         Canlı ders linki
                       </a>
                     )}
+                  </div>
+                )}
+                {data.role === "parent" && ["pending", "matched", "scheduled"].includes(r.status) && (
+                  <div className="mt-1.5">
+                    <ParentTutorCancelButton referralId={r.id} />
                   </div>
                 )}
               </li>
