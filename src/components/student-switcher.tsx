@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Select } from "@/components/ui";
 
 type Candidate = { id: string; full_name: string };
 
 export function StudentSwitcher({ candidates, currentId, label }: { candidates: Candidate[]; currentId: string; label: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   if (candidates.length <= 1) return null;
@@ -14,7 +15,7 @@ export function StudentSwitcher({ candidates, currentId, label }: { candidates: 
   function handleChange(id: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("studentId", id);
-    router.push(`/ogrenci/rapor?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
   }
 
   return (

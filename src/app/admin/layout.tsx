@@ -16,7 +16,7 @@ const NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleShell title="Yönetici Paneli" navItems={NAV}>
+    <RoleShell title="Yönetici Paneli" navItems={NAV} helpHref="/admin/sistem-bilgisi">
       {children}
     </RoleShell>
   );

@@ -11,10 +11,12 @@ export function RoleShell({
   title,
   navItems,
   children,
+  helpHref,
 }: {
   title: string;
   navItems: NavItem[];
   children: ReactNode;
+  helpHref?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -79,12 +81,34 @@ export function RoleShell({
         </button>
       </aside>
       <div className="flex flex-1 flex-col">
-        {isAdminPreviewing && (
-          <div className="flex items-center justify-between bg-amber-50 px-6 py-2 text-sm text-amber-800">
-            <span>Bu paneli admin olarak önizliyorsun.</span>
-            <Link href="/admin" className="font-medium underline">
-              Admin paneline dön
-            </Link>
+        {(isAdminPreviewing || helpHref) && (
+          <div className="flex items-center justify-between px-6 py-2">
+            <div>
+              {isAdminPreviewing && (
+                <div className="flex items-center gap-3 rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-800">
+                  <span>Bu paneli admin olarak önizliyorsun.</span>
+                  <Link href="/admin" className="font-medium underline">
+                    Admin paneline dön
+                  </Link>
+                </div>
+              )}
+            </div>
+            {helpHref && (
+              <Link
+                href={helpHref}
+                title="Sistem Bilgisi"
+                aria-label="Sistem Bilgisi"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10A8 8 0 112 10a8 8 0 0116 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9zm1-3a1 1 0 100 2 1 1 0 000-2z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </Link>
+            )}
           </div>
         )}
         <main className="flex-1 bg-slate-50 p-6 md:p-10">{children}</main>

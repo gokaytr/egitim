@@ -10,7 +10,7 @@ const NAV = [
 
 export default function OgretmenLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleShell title="Öğretmen Paneli" navItems={NAV}>
+    <RoleShell title="Öğretmen Paneli" navItems={NAV} helpHref="/ogretmen/nasil-calisir">
       {children}
     </RoleShell>
   );
