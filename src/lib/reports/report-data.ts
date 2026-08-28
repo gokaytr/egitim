@@ -55,7 +55,7 @@ export type ReportData = {
     status: string;
     target_minutes: number | null;
     target_questions: number | null;
-    topics: { name: string } | { name: string }[] | null;
+    topics: { id: string; name: string } | { id: string; name: string }[] | null;
   }[];
   diagnoses: {
     id: string;
@@ -149,7 +149,7 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
       .limit(20),
     supabase
       .from("study_plan_items")
-      .select("id, status, target_minutes, target_questions, topics(name), study_plans!inner(student_id, status)")
+      .select("id, status, target_minutes, target_questions, topics(id, name), study_plans!inner(student_id, status)")
       .eq("study_plans.student_id", studentId),
     supabase
       .from("tutor_referrals")

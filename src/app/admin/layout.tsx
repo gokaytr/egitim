@@ -12,7 +12,7 @@ const NAV = [
 ];
 
 const PREVIEW_LINKS = [
-  { href: "/ogrenci", label: "Üye Ekranı" },
+  { href: "/ogrenci", label: "Öğrenci Ekranı" },
   { href: "/ogretmen", label: "Öğretmen Ekranı" },
   { href: "/ogrenci/rapor", label: "Veli Görünümü" },
 ];

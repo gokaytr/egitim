@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { Card, Badge } from "@/components/ui";
 import { ReportHeader } from "@/components/report-header";
-import { ParentTutorRequestForm } from "@/components/parent-tutor-request-form";
 import { ParentGoalAssignForm } from "@/components/parent-goal-assign-form";
 import { loadReportData, firstOf } from "@/lib/reports/report-data";
 
@@ -8,14 +8,6 @@ const WEAKNESS_TONE: Record<string, "green" | "amber" | "red"> = {
   none: "green",
   minor: "amber",
   major: "red",
-};
-
-const REFERRAL_LABEL: Record<string, string> = {
-  pending: "Bekliyor",
-  matched: "Öğretmen bulundu",
-  scheduled: "Randevu planlandı",
-  completed: "Tamamlandı",
-  cancelled: "İptal edildi",
 };
 
 export default async function RaporlamaPage({ searchParams }: { searchParams: Promise<{ studentId?: string }> }) {
@@ -42,44 +34,10 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
       <ReportHeader data={data} />
 
       <Card>
-        <h2 className="mb-3 font-semibold text-slate-900">Özel Ders Durumu</h2>
-        {!data.referrals.length && <p className="text-sm text-slate-500">Şu ana kadar özel ders ihtiyacı çıkmadı.</p>}
-        <ul className="flex flex-col gap-2">
-          {data.referrals.map((r) => {
-            const topic = firstOf(r.topics);
-            const session = (r.tutor_sessions ?? [])[0];
-            return (
-              <li key={r.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>{topic?.name ?? "Genel"}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">{new Date(r.requested_at).toLocaleDateString("tr-TR")}</span>
-                    <Badge tone={r.status === "pending" ? "amber" : r.status === "completed" ? "green" : "default"}>
-                      {REFERRAL_LABEL[r.status] ?? r.status}
-                    </Badge>
-                  </div>
-                </div>
-                {session?.scheduled_at && (
-                  <div className="mt-1.5 flex items-center gap-3 text-xs text-slate-500">
-                    <span>
-                      {new Date(session.scheduled_at).toLocaleString("tr-TR")} · {session.duration_minutes} dk
-                    </span>
-                    {session.meeting_link && (
-                      <a href={session.meeting_link} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 underline">
-                        Canlı ders linki
-                      </a>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {data.role === "parent" && <ParentTutorRequestForm studentId={data.studentId} />}
-      </Card>
-
-      <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Çalışma Programı / Hedefler</h2>
+        <p className="mb-2 text-xs text-slate-500">
+          Özel ders talebi ve randevuları artık ayrı "Özel Ders Talebi" sekmesinde.
+        </p>
         {!data.planItems.length && <p className="text-sm text-slate-500">Henüz çalışma programına konu eklenmemiş.</p>}
         <ul className="flex flex-col gap-2">
           {data.planItems.map((p) => {
@@ -92,6 +50,11 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
                   <Badge tone={p.status === "done" ? "green" : p.status === "in_progress" ? "amber" : "default"}>
                     {p.status === "done" ? "Tamamlandı" : p.status === "in_progress" ? "Devam ediyor" : "Başlanmadı"}
                   </Badge>
+                  {topic?.id && (
+                    <Link href={`/ogrenci/konu/${topic.id}`} className="font-medium text-indigo-600 underline">
+                      Soruları çöz →
+                    </Link>
+                  )}
                 </div>
               </li>
             );

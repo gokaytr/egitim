@@ -7,6 +7,17 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
 
+// middleware.ts'teki ROLE_HOME ile ayni esleme - middleware server-only
+// import'lar icerdigi icin buradan dogrudan import edilemiyor, kucuk bir
+// kopyasi yeterli (roller degisirse ikisi de guncellenmeli).
+const ROLE_HOME: Record<string, string> = {
+  admin: "/admin",
+  teacher: "/ogretmen",
+  moderator: "/ogretmen",
+  student: "/ogrenci",
+  parent: "/ogrenci/rapor",
+};
+
 function GirisForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -54,7 +65,21 @@ function GirisForm() {
       // tam sayfa yönlendirme (router.push değil) session cookie'sinin bir
       // sonraki sunucu render'ında kesin taze okunmasını garanti ediyor.
       const redirect = searchParams.get("redirect");
-      window.location.href = redirect || "/ogrenci";
+      if (redirect) {
+        window.location.href = redirect;
+        return;
+      }
+
+      // Redirect parametresi yoksa (dogrudan /giris'e gelindiyse) rolune gore
+      // dogru panele gonder - admin/ogretmen/veli her zaman /ogrenci'ye
+      // dusup oradan kendi paneline yonlendirilmeyi beklemesin.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      window.location.href = ROLE_HOME[profile?.role ?? ""] ?? "/ogrenci";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
       setLoading(false);

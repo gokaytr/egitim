@@ -28,7 +28,7 @@ export default async function OgrenciDashboard() {
     supabase.from("subjects").select("id, name, category, topics(count)").order("name"),
     supabase
       .from("study_plan_items")
-      .select("id, status, target_minutes, target_questions, topics(name), study_plans!inner(student_id, status)")
+      .select("id, status, target_minutes, target_questions, topics(id, name), study_plans!inner(student_id, status)")
       .eq("study_plans.student_id", userData.user?.id)
       .neq("status", "done"),
   ]);
@@ -72,6 +72,11 @@ export default async function OgrenciDashboard() {
                     <Badge tone={p.status === "in_progress" ? "amber" : "default"}>
                       {p.status === "in_progress" ? "Devam ediyor" : "Başlanmadı"}
                     </Badge>
+                    {topic?.id && (
+                      <Link href={`/ogrenci/konu/${topic.id}`} className="font-medium text-indigo-600 underline">
+                        Soruları çöz →
+                      </Link>
+                    )}
                   </div>
                 </li>
               );

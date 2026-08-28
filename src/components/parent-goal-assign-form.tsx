@@ -65,7 +65,11 @@ export function ParentGoalAssignForm({ studentId }: { studentId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
-      <label className="text-sm font-medium text-slate-700">Öğrenciye yeni hedef ata</label>
+      <label className="text-sm font-medium text-slate-700">Öğrenciye soru ata</label>
+      <p className="-mt-1 text-xs text-slate-500">
+        Bir konu seç, kaç soru ve kaç dakika çalışması gerektiğini belirle. Atanan konu öğrencinin
+        panelinde "Hedeflerim" altında, doğrudan soru çözme sayfasına götüren bir bağlantıyla görünür.
+      </p>
       <TopicSelect value={topicId} onChange={setTopicId} />
       <div className="grid grid-cols-2 gap-2">
         <Input
@@ -85,7 +89,7 @@ export function ParentGoalAssignForm({ studentId }: { studentId: string }) {
         />
       </div>
       <Button type="submit" disabled={loading} className="self-start">
-        {loading ? "Ekleniyor..." : "Hedef Ekle"}
+        {loading ? "Atanıyor..." : "Soru Ata"}
       </Button>
       {status && <p className="text-sm text-slate-600">{status}</p>}
     </form>
