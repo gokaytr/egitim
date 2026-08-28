@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getShowDemoData } from "@/lib/site-settings";
 
 // Ogretmen panelini admin onizlerken "ben" (auth.uid()) admin'in kendisi
 // oluyor - bu da butun "benim" sorgularinin (branslarim, derslerim, vb.)
@@ -7,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 // ogretmenler icin ise kendi id'sini donduruyor.
 
 export type TeacherCandidate = { id: string; full_name: string };
+type TeacherCandidateRow = TeacherCandidate & { is_demo: boolean };
 
 export type EffectiveTeacher = {
   teacherId: string | undefined;
@@ -27,10 +29,12 @@ export async function resolveEffectiveTeacher(requestedTeacherId?: string): Prom
   if (callerProfile?.role === "admin") {
     const { data: teachers } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, full_name, is_demo")
       .eq("role", "teacher")
       .order("full_name");
-    const candidates = teachers ?? [];
+    const showDemoData = await getShowDemoData();
+    const allTeachers = (teachers ?? []) as TeacherCandidateRow[];
+    const candidates: TeacherCandidate[] = showDemoData ? allTeachers : allTeachers.filter((t) => !t.is_demo);
     const teacherId =
       (requestedTeacherId && candidates.some((c) => c.id === requestedTeacherId) ? requestedTeacherId : candidates[0]?.id) ??
       undefined;

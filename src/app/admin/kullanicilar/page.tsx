@@ -5,6 +5,7 @@ import { AdminAllowlistForm } from "./admin-allowlist-form";
 import { RoleSelect } from "./role-select";
 import { TeacherSubjectManager } from "@/components/teacher-subject-manager";
 import { TeacherStudentManager } from "@/components/teacher-student-manager";
+import { getShowDemoData } from "@/lib/site-settings";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Yönetici",
@@ -26,7 +27,7 @@ export default async function KullanicilarPage() {
   const supabase = await createClient();
   const { data: users } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, grade_level, exam_target, created_at")
+    .select("id, full_name, email, role, grade_level, exam_target, created_at, is_demo")
     .order("created_at", { ascending: false });
 
   const { data: allowlist } = await supabase
@@ -34,8 +35,11 @@ export default async function KullanicilarPage() {
     .select("email")
     .order("email", { ascending: true });
 
-  const teachers = (users ?? []).filter((u) => u.role === "teacher");
-  const students = (users ?? []).filter((u) => u.role === "student");
+  const showDemoData = await getShowDemoData();
+  const visibleUsers = showDemoData ? (users ?? []) : (users ?? []).filter((u) => !u.is_demo);
+
+  const teachers = visibleUsers.filter((u) => u.role === "teacher");
+  const students = visibleUsers.filter((u) => u.role === "student");
   const [{ data: subjects }, { data: assignments }, { data: teacherStudentAssignments }] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("teacher_subjects").select("teacher_id, subject_id"),
@@ -78,7 +82,7 @@ export default async function KullanicilarPage() {
             </tr>
           </thead>
           <tbody>
-            {users?.map((u) => (
+            {visibleUsers.map((u) => (
               <tr key={u.id} className="border-b border-slate-50 last:border-0">
                 <td className="px-5 py-3 font-medium text-slate-900">{u.full_name}</td>
                 <td className="px-5 py-3 text-slate-600">{u.email}</td>
@@ -96,7 +100,7 @@ export default async function KullanicilarPage() {
             ))}
           </tbody>
         </table>
-        {!users?.length && <p className="p-5 text-sm text-slate-500">Henüz kullanıcı yok.</p>}
+        {!visibleUsers.length && <p className="p-5 text-sm text-slate-500">Henüz kullanıcı yok.</p>}
       </Card>
     </div>
   );

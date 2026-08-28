@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Input } from "@/components/ui";
 
-type Settings = { site_name: string; support_email: string | null; maintenance_mode: boolean };
+type Settings = { site_name: string; support_email: string | null; maintenance_mode: boolean; show_demo_data: boolean };
 
 export function SiteSettingsForm({ settings }: { settings: Settings }) {
   const router = useRouter();
   const [siteName, setSiteName] = useState(settings.site_name);
   const [supportEmail, setSupportEmail] = useState(settings.support_email ?? "");
   const [maintenanceMode, setMaintenanceMode] = useState(settings.maintenance_mode);
+  const [showDemoData, setShowDemoData] = useState(settings.show_demo_data);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -26,6 +27,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         site_name: siteName,
         support_email: supportEmail || null,
         maintenance_mode: maintenanceMode,
+        show_demo_data: showDemoData,
       })
       .eq("id", true);
     setLoading(false);
@@ -52,6 +54,10 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} />
           Bakım modu (şu an yalnızca bilgi amaçlı bir bayrak; sayfaları otomatik kapatmaz)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={showDemoData} onChange={(e) => setShowDemoData(e.target.checked)} />
+          Demo/test verilerini göster (öğrenci, öğretmen, veli hesapları ve içerikleri) — kapatınca listelerden gizlenir, silinmez.
         </label>
         <Button type="submit" disabled={loading} className="self-start">
           {loading ? "Kaydediliyor..." : "Kaydet"}

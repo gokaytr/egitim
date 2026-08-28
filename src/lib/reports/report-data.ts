@@ -9,6 +9,7 @@ import {
   type ActivityEvent,
 } from "@/lib/reports/activity-feed";
 import { buildOverviewSummary } from "@/lib/reports/overview-summary";
+import { getShowDemoData } from "@/lib/site-settings";
 
 // Veli raporlama ekraninin ("Genel Bakis" / "Gunluk Aktivite" / "Genel
 // Raporlama" - artik ayri sayfalar) ortak veri yukleyicisi. Ucu sayfa da
@@ -19,7 +20,7 @@ export function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-export type ReportCandidate = { id: string; full_name: string };
+export type ReportCandidate = { id: string; full_name: string; is_demo: boolean };
 
 export type StudentReportCore = {
   studentId: string;
@@ -294,11 +295,13 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
     // loadStaffStudentReport / /admin/ogrenci-raporlari.)
     const { data: links } = await supabase
       .from("parent_student_links")
-      .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name)")
+      .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name, is_demo)")
       .eq("parent_id", userData.user?.id);
     candidates = (links ?? [])
       .map((l) => (Array.isArray(l.profiles) ? l.profiles[0] : l.profiles))
       .filter((p): p is ReportCandidate => !!p);
+    const showDemoDataParent = await getShowDemoData();
+    candidates = showDemoDataParent ? candidates : candidates.filter((c) => !c.is_demo);
     pageTitle = role === "admin" ? "Veli Görünümü (Admin Önizleme)" : "Veli Raporu";
     showAddChild = role === "parent";
   }
@@ -342,16 +345,19 @@ export async function loadStaffStudentReport(requestedStudentId?: string): Promi
   if (callerProfile?.role === "teacher") {
     const { data: assigned } = await supabase
       .from("teacher_students")
-      .select("profiles!teacher_students_student_id_fkey(id, full_name)")
+      .select("profiles!teacher_students_student_id_fkey(id, full_name, is_demo)")
       .eq("teacher_id", userData.user?.id);
     candidates = (assigned ?? [])
       .map((row) => (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles))
       .filter((p): p is ReportCandidate => !!p)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "tr"));
   } else {
-    const { data: students } = await supabase.from("profiles").select("id, full_name").eq("role", "student").order("full_name");
+    const { data: students } = await supabase.from("profiles").select("id, full_name, is_demo").eq("role", "student").order("full_name");
     candidates = students ?? [];
   }
+
+  const showDemoDataStaff = await getShowDemoData();
+  candidates = showDemoDataStaff ? candidates : candidates.filter((c) => !c.is_demo);
 
   const pageTitle = "Öğrenci Raporları";
 

@@ -4,21 +4,45 @@ import { Card, Badge } from "@/components/ui";
 
 export default async function OgretmenSoruOnayPage() {
   const supabase = await createClient();
-  const { data: pending } = await supabase
-    .from("questions")
-    .select("id, body, options, correct_option, source, difficulty, topics(name)")
-    .eq("is_approved", false)
-    .order("created_at", { ascending: false });
+  const { data: userData } = await supabase.auth.getUser();
+  const { data: subjectRows } = await supabase
+    .from("teacher_subjects")
+    .select("subject_id")
+    .eq("teacher_id", userData.user?.id ?? "");
+  const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
+
+  let pending: {
+    id: string;
+    body: string;
+    options: unknown;
+    correct_option: string;
+    source: string;
+    difficulty: number;
+    topics: { name: string; subject_id: string } | { name: string; subject_id: string }[] | null;
+  }[] = [];
+
+  if (subjectIds.length > 0) {
+    const { data } = await supabase
+      .from("questions")
+      .select("id, body, options, correct_option, source, difficulty, topics!inner(name, subject_id)")
+      .eq("is_approved", false)
+      .in("topics.subject_id", subjectIds)
+      .order("created_at", { ascending: false });
+    pending = data ?? [];
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Soru Onayı</h1>
-        <p className="text-sm text-slate-500">Yapay zekanın ürettiği sorular, öğrencilere gösterilmeden önce burada onaylanır.</p>
+        <p className="text-sm text-slate-500">Yapay zekanın sizin branşınızda ürettiği sorular, öğrencilere gösterilmeden önce burada onaylanır.</p>
       </div>
 
       <div className="flex flex-col gap-4">
-        {pending?.map((q) => {
+        {subjectIds.length === 0 && (
+          <p className="text-sm text-amber-700">Size henüz bir branş atanmamış. Soru onaylayabilmeniz için admin panelinden bir branş atanması gerekiyor.</p>
+        )}
+        {pending.map((q) => {
           const topic = Array.isArray(q.topics) ? q.topics[0] : q.topics;
           const options = q.options as Record<string, string>;
           return (
@@ -40,7 +64,7 @@ export default async function OgretmenSoruOnayPage() {
             </Card>
           );
         })}
-        {!pending?.length && <p className="text-sm text-slate-500">Onay bekleyen soru yok.</p>}
+        {subjectIds.length > 0 && !pending.length && <p className="text-sm text-slate-500">Onay bekleyen soru yok.</p>}
       </div>
     </div>
   );

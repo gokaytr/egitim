@@ -6,7 +6,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GradeBackground, gradeBackgroundVariant } from "@/components/grade-background";
 
-type NavItem = { href: string; label: string; tone?: "default" | "accent" };
+type NavItem = { href: string; label: string; tone?: "default" | "accent" | "emerald" | "amber"; dot?: boolean };
 
 export function RoleShell({
   title,
@@ -93,19 +93,29 @@ export function RoleShell({
         </div>
         <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
         <nav className="flex flex-col gap-1">
-          {displayNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                pathname === item.href
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {displayNav.map((item) => {
+            const isActive = pathname === item.href;
+            const inactiveTone =
+              item.tone === "emerald"
+                ? "text-emerald-700 hover:bg-emerald-50"
+                : item.tone === "amber"
+                  ? "text-amber-700 hover:bg-amber-50"
+                  : "text-slate-600 hover:bg-slate-100";
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive ? "bg-indigo-50 text-indigo-700" : inactiveTone
+                }`}
+              >
+                <span>{item.label}</span>
+                {item.dot && (
+                  <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" aria-label="Onay bekleyen soru var" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
         <button
           onClick={handleLogout}

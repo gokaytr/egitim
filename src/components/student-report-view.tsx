@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, Badge, StatCard } from "@/components/ui";
 import { firstOf, type ReportData } from "@/lib/reports/report-data";
+import { StudentReportCharts } from "@/components/report-charts";
 
 const WEAKNESS_TONE: Record<string, "green" | "amber" | "red"> = {
   none: "green",
@@ -38,6 +39,11 @@ export function StudentReportView({ data }: { data: ReportData }) {
         <StatCard label="İzlenen Konu Anlatımı" value={data.distinctContentViewed} />
         <StatCard label="Hedeflenen Kalan Soru" value={data.targetQuestionsRemaining} />
       </div>
+
+      <Card>
+        <h2 className="mb-3 font-semibold text-slate-900">Grafiklerle Rapor</h2>
+        <StudentReportCharts data={data} />
+      </Card>
 
       <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Genel Durum Raporu</h2>

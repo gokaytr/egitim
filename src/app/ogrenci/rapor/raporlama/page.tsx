@@ -5,6 +5,7 @@ import { ParentGoalAssignForm } from "@/components/parent-goal-assign-form";
 import { ParentPlacementTestButton } from "@/components/parent-placement-test-button";
 import { ParentAutoStudyPlanButton } from "@/components/parent-auto-study-plan-button";
 import { loadReportData, firstOf } from "@/lib/reports/report-data";
+import { StudentReportCharts } from "@/components/report-charts";
 
 const WEAKNESS_TONE: Record<string, "green" | "amber" | "red"> = {
   none: "green",
@@ -44,6 +45,11 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
   return (
     <div className="flex flex-col gap-6">
       <ReportHeader data={data} />
+
+      <Card>
+        <h2 className="mb-3 font-semibold text-slate-900">Grafiklerle Rapor</h2>
+        <StudentReportCharts data={data} />
+      </Card>
 
       {data.role === "parent" && data.totalSolved === 0 && (
         <Card className="border-amber-200 bg-amber-50">
