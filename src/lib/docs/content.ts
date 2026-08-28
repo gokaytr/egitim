@@ -16,16 +16,16 @@ export const DOC_SECTIONS: DocSection[] = [
         body: "Kullanıcılar sekmesinden tüm hesapları görebilir, rollerini değiştirebilirsin. Öğretmen başvuruları ayrı bir sekmede onay bekler; onaylanan hesap otomatik olarak 'teacher' rolüne geçer.",
       },
       {
-        title: "Müfredat ve konu yönetimi",
-        body: "Müfredat sekmesinden ders (Türkçe, Matematik, Fen Bilimleri, Sosyal Bilgiler, İngilizce vb.) ve konu ekleyip düzenleyebilirsin. Öğrenciler derslerini kartlar halinde, konularını da o dersin altında görür.",
+        title: "Müfredat, sınıf ve kurs yönetimi",
+        body: "Müfredat sekmesi önce sınıf düzeyine (1-12) göre gruplanır. Buradan yeni ders (Türkçe, Matematik, Kimya vb.) ekleyebilir, hangi sınıfa ait yeni bir konu oluşturabilir ve konuyu isteğe bağlı olarak bir veya birden fazla kursla (LGS, TYT, AYT, YKS, KPSS, ALES) etiketleyebilirsin. Yeni bir kurs eklemek de (örneğin 'YDT') aynı sekmeden yapılır. Aynı konu ekleme formu öğretmen panelinde de var; ders/kurs listesi yönetimi ise yalnızca admin panelinde.",
       },
       {
         title: "Soru ekleme",
-        body: "Soru Ekle sekmesinden bir konu seçip elle soru ekleyebilir, yapay zekaya (ücretsiz kural tabanlı değil, Anthropic API ile) taslak sorular ürettirebilir veya kopyala-yapıştır ile ya da PDF/Word dosyası yükleyerek toplu soru içe aktarabilirsin. AI ile üretilen sorular önce Soru Onayı sekmesinden onaylanmalı.",
+        body: "Soru Ekle sekmesinde iki sekme var: ilk sekmede solda elle soru ekleme, sağda kopyala-yapıştır ya da PDF/Word dosyası yükleyerek toplu soru içe aktarma bulunur. İkinci sekme olan 'Yapay Zeka ile Soru Üret' henüz test aşamasında (Anthropic API kullanıyor, ücretli ve bazen hata verebiliyor) - üretilen sorular önce Soru Onayı sekmesinden onaylanmalı.",
       },
       {
         title: "Soru onayı",
-        body: "Soru Onayı sekmesi, yapay zekanın ürettiği ve henüz onaylanmamış soruları listeler. Onaylamadan öğrenciye gösterilmezler.",
+        body: "Soru Onayı sekmesi, yapay zekanın ürettiği ve henüz onaylanmamış soruları listeler. Onaylamadan öğrenciye gösterilmezler. Aynı onay ekranı artık öğretmen panelinde de var, öğretmenler de bekleyen soruları onaylayıp reddedebilir.",
       },
       {
         title: "Veli bağlantıları",
@@ -46,8 +46,16 @@ export const DOC_SECTIONS: DocSection[] = [
     heading: "Öğretmen",
     items: [
       {
+        title: "Müfredat / Konu Ekle",
+        body: "Müfredat / Konu Ekle sayfasından, önce sınıf (1-12) ve ders seçip yeni bir konu oluşturabilir, konuyu isteğe bağlı olarak LGS/TYT/AYT/YKS/KPSS/ALES gibi kurslarla etiketleyebilirsin. Yeni ders veya yeni kurs eklemek admin panelinden yapılır.",
+      },
+      {
         title: "Soru ekleme yöntemleri",
-        body: "Soru Ekle sayfasında üç yöntem var: (1) Elle soru ekleme - soru metni, 4 şık, doğru cevap ve opsiyonel görsel/açıklama gir. (2) Yapay zeka ile üretim - zorluk ve adet belirle, üretilen sorular admin onayına düşer. (3) Toplu içe aktarma - belirli bir formatta metni yapıştır ya da PDF/Word dosyası yükle (dosyadan metin otomatik çıkarılır), sistem soruları ayrıştırıp önizleme gösterir, onayladığın soruları tek seferde ekler. Not: JPEG/taranmış görsellerden otomatik soru okuma şimdilik desteklenmiyor; sadece gerçek metin içeren dosyalar (PDF/Word/TXT) veya yapıştırılan metin kullanılabilir.",
+        body: "Soru Ekle sayfasında iki sekme var: ilk sekmede solda elle soru ekleme (soru metni, 4 şık, doğru cevap, opsiyonel görsel/açıklama), sağda kopyala-yapıştır ya da PDF/Word/TXT dosyası yükleyerek toplu soru içe aktarma bulunur - dosyadan metin otomatik çıkarılır, sistem soruları ayrıştırıp önizleme gösterir. İkinci sekme 'Yapay Zeka ile Soru Üret' henüz test aşamasında. Not: JPEG/taranmış görsellerden otomatik soru okuma şimdilik desteklenmiyor.",
+      },
+      {
+        title: "Soru onayı",
+        body: "Soru Onayı sayfasından, yapay zekanın ürettiği ve henüz onaylanmamış soruları onaylayabilir ya da reddedebilirsin.",
       },
       {
         title: "Konu anlatımı ekleme",
@@ -63,7 +71,7 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Özel ders ihtiyacı ve programlama",
-        body: "Değerlendirme sonucu 'özel ders öner' çıkan öğrenciler için bir talep oluşur ve Özel Ders sayfasında listelenir. Bekleyen bir talebi 'Üstlen' diyerek üzerine alabilir, ardından tarih/saat ve süre belirleyip dersi planlayabilirsin. Ders gerçekleştikten sonra 'Tamamlandı' olarak işaretlenir.",
+        body: "Bir talep, değerlendirme sonucu 'özel ders öner' çıktığında otomatik oluşabildiği gibi, veli de kendi ekranından öğrencisi için doğrudan özel ders talep edebilir. Tüm talepler Özel Ders sayfasında listelenir; bekleyen bir talebi 'Üstlen' diyerek onaylamış olursun, ardından tarih/saat, süre ve istersen kendi Google Meet/Zoom linkini girip dersi planlarsın. Planlanan ders hem senin 'Programım' listende hem öğrenci/velinin ekranında (canlı ders linkiyle birlikte) görünür. Ders gerçekleştikten sonra 'Tamamlandı' olarak işaretlenir.",
       },
       {
         title: "Öğrenci görünürlüğü",
@@ -82,6 +90,10 @@ export const DOC_SECTIONS: DocSection[] = [
       {
         title: "Birden fazla öğrenci",
         body: "Bir veli hesabına birden fazla öğrenci bağlanabilir; ekranın üstündeki öğrenci seçiciden aralarında geçiş yapılabilir. Yeni bir çocuk eklemek için öğrencinin platformdaki e-posta adresini girmek yeterli.",
+      },
+      {
+        title: "Özel ders talep etme",
+        body: "Genel Raporlama sekmesindeki Özel Ders Durumu kartından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem Genel Bakış sekmesinde 'Yaklaşan Özel Ders' olarak hem Genel Raporlama'da canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
       },
     ],
   },
