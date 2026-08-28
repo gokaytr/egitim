@@ -7,6 +7,8 @@ const NAV = [
   { href: "/admin/ogretmen-basvurulari", label: "Öğretmen Başvuruları" },
   { href: "/admin/mufredat", label: "Müfredat" },
   { href: "/admin/sorular", label: "Soru Onayı" },
+  { href: "/admin/soru-ekle", label: "Soru Ekle" },
+  { href: "/admin/sistem-bilgisi", label: "Sistem Bilgisi" },
   { href: "/ogrenci", label: "Üye Ekranı (önizleme)" },
   { href: "/ogretmen", label: "Öğretmen Ekranı (önizleme)" },
   { href: "/ogrenci/rapor", label: "Veli Görünümü (önizleme)" },

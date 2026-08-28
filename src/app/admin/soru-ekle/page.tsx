@@ -6,7 +6,7 @@ import { ManualQuestionForm } from "@/components/manual-question-form";
 import { AiQuestionGenerate } from "@/components/ai-question-generate";
 import { BulkQuestionImport } from "@/components/bulk-question-import";
 
-export default function SoruEklePage() {
+export default function AdminSoruEklePage() {
   const [topicId, setTopicId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
 
@@ -16,7 +16,8 @@ export default function SoruEklePage() {
         <h1 className="text-2xl font-semibold text-slate-900">Soru Ekle</h1>
         <p className="text-sm text-slate-500">
           Elle soru ekleyin, yapay zekaya taslak sorular ürettirin veya kopyala-yapıştır ile ya da PDF/Word
-          dosyası yükleyerek toplu soru içe aktarın.
+          dosyası yükleyerek toplu soru içe aktarın. Bu ekran öğretmen panelindeki soru ekleme ekranıyla
+          aynı işlevi görür.
         </p>
       </div>
 
