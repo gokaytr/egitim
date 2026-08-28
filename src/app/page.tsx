@@ -43,11 +43,11 @@ export default function Home() {
           alt=""
           fill
           priority
-          className="object-cover opacity-[0.14]"
+          className="object-cover opacity-40"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/85 via-white/92 to-white" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100/40 via-transparent to-sky-100/40" />
+        <div className="absolute inset-0 bg-white/60" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100/25 via-transparent to-sky-100/25" />
       </div>
 
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/70 bg-white/70 px-6 py-5 backdrop-blur md:px-16">
