@@ -5,7 +5,7 @@ export default async function OgretmenDashboard() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const [{ count: myLessonCount }, { count: myQuestionCount }, { data: referrals }] = await Promise.all([
+  const [{ count: myLessonCount }, { count: myQuestionCount }, { data: referrals }, { data: mySubjects }] = await Promise.all([
     supabase.from("lesson_contents").select("*", { count: "exact", head: true }).eq("teacher_id", userData.user?.id),
     supabase.from("questions").select("*", { count: "exact", head: true }).eq("created_by", userData.user?.id),
     supabase
@@ -13,7 +13,13 @@ export default async function OgretmenDashboard() {
       .select("id, status, topics(name), profiles!tutor_referrals_student_id_fkey(full_name)")
       .in("status", ["pending", "matched"])
       .limit(5),
+    supabase.from("teacher_subjects").select("subjects(name)").eq("teacher_id", userData.user?.id),
   ]);
+
+  type SubjectRow = { subjects: { name: string } | { name: string }[] | null };
+  const branchNames = ((mySubjects ?? []) as SubjectRow[])
+    .map((row) => (Array.isArray(row.subjects) ? row.subjects[0]?.name : row.subjects?.name))
+    .filter((n): n is string => !!n);
 
   return (
     <div className="flex flex-col gap-6">
@@ -21,6 +27,15 @@ export default async function OgretmenDashboard() {
         <h1 className="text-2xl font-semibold text-slate-900">Genel Bakış</h1>
         <p className="text-sm text-slate-500">Konu anlatımların ve sorularının özeti</p>
       </div>
+
+      {branchNames.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-slate-700">Branşların:</span>
+          {branchNames.map((name) => (
+            <Badge key={name}>{name}</Badge>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <StatCard label="Eklediğim Konu Anlatımı" value={myLessonCount ?? 0} />

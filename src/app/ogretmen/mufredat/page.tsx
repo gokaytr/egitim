@@ -8,12 +8,19 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 
 export default async function OgretmenMufredatPage() {
   const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
 
-  const [{ data: subjects }, { data: courses }, { data: rawTopics }] = await Promise.all([
+  const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: myAssignments }] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
     supabase.from("topics").select("id, name, grade_level, exam_types, subjects(name)").order("grade_level"),
+    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", userData.user?.id),
   ]);
+
+  // Ogretmene brans atanmissa, konu ekleme formundaki ders secimi kendi
+  // branslariyla sinirlandirilir; hic atama yoksa herkes gorunmeye devam eder.
+  const myBranchIds = new Set((myAssignments ?? []).map((a) => a.subject_id));
+  const availableSubjects = myBranchIds.size > 0 ? (subjects ?? []).filter((s) => myBranchIds.has(s.id)) : subjects ?? [];
 
   const topics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({
     id: t.id,
@@ -33,7 +40,7 @@ export default async function OgretmenMufredatPage() {
         </p>
       </div>
 
-      <TopicAddForm subjects={subjects ?? []} courses={courses ?? []} />
+      <TopicAddForm subjects={availableSubjects} courses={courses ?? []} />
 
       <CurriculumBrowser topics={topics} />
     </div>

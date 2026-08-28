@@ -22,12 +22,30 @@ export default async function OzelDersPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const { data: referrals, error } = await supabase
-    .from("tutor_referrals")
-    .select(
-      "id, status, requested_at, tutor_id, topics(name), profiles!tutor_referrals_student_id_fkey(full_name), tutor_sessions(id, scheduled_at, duration_minutes, teacher_notes, meeting_link, status)"
-    )
-    .order("requested_at", { ascending: false });
+  const [{ data: referrals, error }, { data: myAssignments }] = await Promise.all([
+    supabase
+      .from("tutor_referrals")
+      .select(
+        "id, status, requested_at, tutor_id, topics(name, subject_id), profiles!tutor_referrals_student_id_fkey(full_name), tutor_sessions(id, scheduled_at, duration_minutes, teacher_notes, meeting_link, status)"
+      )
+      .order("requested_at", { ascending: false }),
+    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", userData.user?.id),
+  ]);
+
+  const myBranchIds = new Set((myAssignments ?? []).map((a) => a.subject_id));
+
+  function isMyBranch(topic: { subject_id?: string } | undefined) {
+    return !!topic?.subject_id && myBranchIds.has(topic.subject_id);
+  }
+
+  const sortedReferrals = [...(referrals ?? [])].sort((a, b) => {
+    const aTopic = Array.isArray(a.topics) ? a.topics[0] : a.topics;
+    const bTopic = Array.isArray(b.topics) ? b.topics[0] : b.topics;
+    const aMine = isMyBranch(aTopic) ? 1 : 0;
+    const bMine = isMyBranch(bTopic) ? 1 : 0;
+    if (aMine !== bMine) return bMine - aMine;
+    return new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime();
+  });
 
   const myUpcomingSessions = (referrals ?? [])
     .filter((r) => r.tutor_id === userData.user?.id)
@@ -79,7 +97,7 @@ export default async function OzelDersPage() {
       )}
 
       <div className="flex flex-col gap-4">
-        {referrals?.map((r) => {
+        {sortedReferrals.map((r) => {
           const student = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
           const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
           return (
@@ -89,7 +107,10 @@ export default async function OzelDersPage() {
                   <p className="font-medium text-slate-900">{student?.full_name ?? "Öğrenci"}</p>
                   <p className="text-sm text-slate-500">{topic?.name ?? "Genel"}</p>
                 </div>
-                <Badge tone={STATUS_TONE[r.status] ?? "default"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                <div className="flex items-center gap-2">
+                  {isMyBranch(topic) && <Badge tone="green">Branşın</Badge>}
+                  <Badge tone={STATUS_TONE[r.status] ?? "default"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                </div>
               </div>
               <TutorReferralActions
                 referralId={r.id}

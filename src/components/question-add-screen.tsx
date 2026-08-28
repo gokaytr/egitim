@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { TopicSelect } from "@/components/topic-select";
+import { useMyAssignedSubjectIds } from "@/hooks/use-my-assigned-subject-ids";
 import { ManualQuestionForm } from "@/components/manual-question-form";
 import { AiQuestionGenerate } from "@/components/ai-question-generate";
 import { BulkQuestionImport } from "@/components/bulk-question-import";
 import { Card, Badge } from "@/components/ui";
 
 export function QuestionAddScreen() {
+  const subjectIds = useMyAssignedSubjectIds();
   const [topicId, setTopicId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [tab, setTab] = useState<"add" | "ai">("add");
@@ -17,7 +19,7 @@ export function QuestionAddScreen() {
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
         <div className="max-w-md">
-          <TopicSelect value={topicId} onChange={setTopicId} />
+          <TopicSelect value={topicId} onChange={setTopicId} subjectIds={subjectIds} />
         </div>
       </div>
 

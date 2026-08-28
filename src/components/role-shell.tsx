@@ -14,6 +14,7 @@ export function RoleShell({
   helpHref,
   navItemsByRole,
   titleByRole,
+  topBarLinks,
 }: {
   title: string;
   navItems: NavItem[];
@@ -21,6 +22,7 @@ export function RoleShell({
   helpHref?: string;
   navItemsByRole?: Partial<Record<string, NavItem[]>>;
   titleByRole?: Partial<Record<string, string>>;
+  topBarLinks?: NavItem[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -94,7 +96,7 @@ export function RoleShell({
         </button>
       </aside>
       <div className="flex flex-1 flex-col">
-        {(isAdminPreviewing || helpHref) && (
+        {(isAdminPreviewing || helpHref || topBarLinks?.length) && (
           <div className="flex items-center justify-between px-6 py-3">
             <div>
               {isAdminPreviewing && (
@@ -106,7 +108,17 @@ export function RoleShell({
                 </div>
               )}
             </div>
-            {helpHref && (
+            <div className="flex items-center gap-2">
+              {topBarLinks?.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              {helpHref && (
               <Link
                 href={helpHref}
                 title="Sistem Bilgisi"
@@ -122,7 +134,8 @@ export function RoleShell({
                 </svg>
                 Sistem Bilgisi
               </Link>
-            )}
+              )}
+            </div>
           </div>
         )}
         <main className="flex-1 bg-slate-50 p-6 md:p-10">{children}</main>

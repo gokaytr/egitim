@@ -1,7 +1,10 @@
 import { RoleShell } from "@/components/role-shell";
 
 const NAV_STUDENT = [{ href: "/ogrenci", label: "Genel Bakış" }];
-const NAV_PARENT: { href: string; label: string }[] = [];
+const NAV_PARENT = [
+  { href: "/ogrenci/rapor", label: "Genel Durum" },
+  { href: "/ogrenci/rapor/raporlama", label: "Raporlama" },
+];
 
 export default function OgrenciLayout({ children }: { children: React.ReactNode }) {
   return (

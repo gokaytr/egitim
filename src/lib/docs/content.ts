@@ -13,7 +13,7 @@ export const DOC_SECTIONS: DocSection[] = [
     items: [
       {
         title: "Kullanıcı yönetimi",
-        body: "Kullanıcılar sekmesinden tüm hesapları görebilir, rollerini değiştirebilirsin. Öğretmen başvuruları ayrı bir sekmede onay bekler; onaylanan hesap otomatik olarak 'teacher' rolüne geçer.",
+        body: "Kullanıcılar sekmesinden tüm hesapları görebilir, rollerini değiştirebilirsin. Öğretmen başvuruları ayrı bir sekmede onay bekler; onaylanan hesap otomatik olarak 'teacher' rolüne geçer. Aynı sayfadaki Öğretmen Branş Atamaları tablosundan, hangi öğretmenin hangi derse (branşa) atandığını işaretleyebilirsin - bir öğretmen birden fazla branşa atanabilir. Atanan branşlar, o öğretmenin konu ekleme ve özel ders ekranlarında öne çıkar.",
       },
       {
         title: "Müfredat, sınıf ve kurs yönetimi",
@@ -33,7 +33,7 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Önizleme ekranları",
-        body: "Önizleme sayfasından, üstteki sekmelerle Üye Ekranı, Öğretmen Ekranı ve Veli Görünümü arasında geçiş yaparak hepsini tek sayfada önizleyebilirsin - ayrı bir hesapla giriş yapmana gerek yok.",
+        body: "Sayfanın sağ üstünde, Sistem Bilgisi ikonunun solunda sıralanan Üye Ekranı / Öğretmen Ekranı / Veli Görünümü bağlantılarına tıklayarak bu ekranları ayrı bir hesapla giriş yapmadan doğrudan önizleyebilirsin.",
       },
       {
         title: "Genel Ayarlar",
@@ -78,6 +78,10 @@ export const DOC_SECTIONS: DocSection[] = [
         body: "Bir talep, değerlendirme sonucu 'özel ders öner' çıktığında otomatik oluşabildiği gibi, veli de kendi ekranından öğrencisi için doğrudan özel ders talep edebilir. Tüm talepler Özel Ders sayfasında listelenir; bekleyen bir talebi 'Üstlen' diyerek onaylamış olursun, ardından tarih/saat, süre ve istersen kendi Google Meet/Zoom linkini girip dersi planlarsın. Planlanan ders hem senin 'Programım' listende hem öğrenci/velinin ekranında (canlı ders linkiyle birlikte) görünür. Ders gerçekleştikten sonra 'Tamamlandı' olarak işaretlenir.",
       },
       {
+        title: "Branşın",
+        body: "Admin sana bir veya birden fazla branş (ders) atadıysa, Genel Bakış sayfasının üstünde branşların listelenir. Konu Ekle ve Müfredat ekranlarındaki ders/konu seçimi otomatik olarak branşlarınla sınırlanır; Özel Ders ekranında da branşınla eşleşen talepler 'Branşın' etiketiyle öne çıkar.",
+      },
+      {
         title: "Öğrenci görünürlüğü",
         body: "Öğretmen olarak öğrencilerin ders bazlı ilerlemesini, çözdükleri soru sayısını ve genel durumlarını veli raporlama ekranına benzer şekilde admin panelindeki önizlemelerden takip edebilirsin.",
       },
@@ -89,7 +93,7 @@ export const DOC_SECTIONS: DocSection[] = [
     items: [
       {
         title: "Raporlama ekranı",
-        body: "Veli girişinde açılan tek sayfa; önce öğrencinin ayrıntılı yazılı genel durum raporunu ve son aktivitesini, ardından özel ders durumunu, çalışma programını/hedeflerini, konu anlatımı izleme geçmişini, eksikleri ve en altta gün gün aktivite akışını gösterir.",
+        body: "Veli girişinde açılan 'Genel Durum' sayfası; öğrencinin ayrıntılı yazılı genel durum raporunu, özet istatistikleri ve en son 10 aktivitesini (tarih ve yaptığı işlemle birlikte) gösterir. Sol menüdeki 'Raporlama' sayfasında ise özel ders durumu, çalışma programı/hedefler, konu anlatımı izleme geçmişi ve eksikler/analiz geçmişi yer alır.",
       },
       {
         title: "Birden fazla öğrenci",
@@ -97,11 +101,11 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Özel ders talep etme",
-        body: "Özel Ders Durumu kartından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem sayfanın üstünde 'Yaklaşan Özel Ders' olarak hem Özel Ders Durumu kartında canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
+        body: "Raporlama sayfasındaki Özel Ders Durumu kartından, istersen bir konu seçerek doğrudan özel ders talebinde bulunabilirsin. Talep, ilgili konunun branşına atanmış öğretmenlerin Özel Ders ekranında 'Branşın' etiketiyle öne çıkarılmış şekilde, ayrıca admin panelinin Genel Bakış ekranındaki 'Bekleyen Özel Ders Talepleri' listesinde görünür. Bir öğretmen talebi üstlenip ders saatini planladığında, ders hem Genel Durum sayfasında 'Yaklaşan Özel Ders' olarak hem Raporlama'daki Özel Ders Durumu kartında canlı ders linkiyle (Google Meet/Zoom) birlikte görünür.",
       },
       {
         title: "Öğrenciye hedef atama",
-        body: "Çalışma Programı / Hedefler kartından, bir konu seçip hedef soru sayısı ve süre belirleyerek öğrencine doğrudan hedef atayabilirsin. Bu hedef, öğrencinin kendi ekranında 'Hedeflerim' olarak görünür.",
+        body: "Raporlama sayfasındaki Çalışma Programı / Hedefler kartından, bir konu seçip hedef soru sayısı ve süre belirleyerek öğrencine doğrudan hedef atayabilirsin. Bu hedef, öğrencinin kendi ekranında 'Hedeflerim' olarak görünür.",
       },
     ],
   },

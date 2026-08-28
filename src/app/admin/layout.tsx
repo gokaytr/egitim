@@ -9,12 +9,17 @@ const NAV = [
   { href: "/admin/sorular", label: "Soru Onayı" },
   { href: "/admin/soru-ekle", label: "Soru Ekle" },
   { href: "/admin/genel-ayarlar", label: "Genel Ayarlar" },
-  { href: "/admin/onizleme", label: "Önizleme" },
+];
+
+const PREVIEW_LINKS = [
+  { href: "/ogrenci", label: "Üye Ekranı" },
+  { href: "/ogretmen", label: "Öğretmen Ekranı" },
+  { href: "/ogrenci/rapor", label: "Veli Görünümü" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleShell title="Yönetici Paneli" navItems={NAV} helpHref="/admin/sistem-bilgisi">
+    <RoleShell title="Yönetici Paneli" navItems={NAV} helpHref="/admin/sistem-bilgisi" topBarLinks={PREVIEW_LINKS}>
       {children}
     </RoleShell>
   );

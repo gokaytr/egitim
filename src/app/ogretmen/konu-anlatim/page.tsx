@@ -4,8 +4,10 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Input, Textarea } from "@/components/ui";
 import { TopicSelect } from "@/components/topic-select";
+import { useMyAssignedSubjectIds } from "@/hooks/use-my-assigned-subject-ids";
 
 export default function KonuAnlatimPage() {
+  const subjectIds = useMyAssignedSubjectIds();
   const [topicId, setTopicId] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -54,7 +56,7 @@ export default function KonuAnlatimPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
-            <TopicSelect value={topicId} onChange={setTopicId} />
+            <TopicSelect value={topicId} onChange={setTopicId} subjectIds={subjectIds} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Başlık</label>

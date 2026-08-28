@@ -3,6 +3,7 @@ import { Card, Badge } from "@/components/ui";
 import { NewUserForm } from "./new-user-form";
 import { AdminAllowlistForm } from "./admin-allowlist-form";
 import { RoleSelect } from "./role-select";
+import { TeacherSubjectManager } from "@/components/teacher-subject-manager";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Yönetici",
@@ -32,6 +33,12 @@ export default async function KullanicilarPage() {
     .select("email")
     .order("email", { ascending: true });
 
+  const teachers = (users ?? []).filter((u) => u.role === "teacher");
+  const [{ data: subjects }, { data: assignments }] = await Promise.all([
+    supabase.from("subjects").select("id, name").order("name"),
+    supabase.from("teacher_subjects").select("teacher_id, subject_id"),
+  ]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -42,6 +49,12 @@ export default async function KullanicilarPage() {
       <NewUserForm />
 
       <AdminAllowlistForm emails={allowlist?.map((a) => a.email) ?? []} />
+
+      <TeacherSubjectManager
+        teachers={teachers.map((t) => ({ id: t.id, full_name: t.full_name }))}
+        subjects={subjects ?? []}
+        assignments={assignments ?? []}
+      />
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-left text-sm">
