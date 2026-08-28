@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Badge } from "@/components/ui";
+import { DrawingCanvas } from "@/components/drawing-canvas";
 
 type Question = {
   id: string;
@@ -10,6 +11,7 @@ type Question = {
   options: Record<string, string>;
   correct_option: string;
   option_error_tags?: Record<string, string> | null;
+  image_url?: string | null;
 };
 
 export function QuizRunner({ topicId, questions }: { topicId: string; questions: Question[] }) {
@@ -128,6 +130,7 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
       {questions.map((q, i) => (
         <Card key={q.id}>
           <p className="font-medium text-slate-900">{i + 1}. {q.body}</p>
+          {q.image_url && <DrawingCanvas backgroundImageUrl={q.image_url} />}
           <div className="mt-3 flex flex-col gap-2">
             {Object.entries(q.options).map(([key, val]) => (
               <label key={key} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${answers[q.id] === key ? "border-indigo-500 bg-indigo-50" : "border-slate-200"}`}>

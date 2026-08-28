@@ -99,41 +99,82 @@ export function ruleBasedDiagnosis(params: {
   // --- Çalışılması gereken alt-konular ------------------------------------
   const concepts = [...new Set(wrongAnswers.map((w) => guessConcept(w.questionBody, topicName)))].slice(0, 4);
 
-  // --- Özet metin -----------------------------------------------------
+  // --- Özet metin: bilinçli olarak birden fazla cümleye yayılmış, öğretmen
+  // geri bildirimi gibi okunan uzun bir metin (common_error_pattern ayrıca
+  // ayrı bir rozet olarak gösterildiği için burada tekrar edilmiyor). -----
   const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-  const lines: string[] = [];
+  const paragraphs: string[] = [];
 
+  // 1) Giriş + genel performans değerlendirmesi (birkaç cümle)
   if (weakness_level === "none") {
-    lines.push(`Harika gidiyorsun! "${topicName}" konusunda ${total} sorudan ${correctCount} tanesini doğru yaptın (%${percent}). Bu konuda eksiğin görünmüyor.`);
+    paragraphs.push(
+      `Harika gidiyorsun! "${topicName}" konusunda çözdüğün ${total} sorunun ${correctCount} tanesini doğru yaptın, bu da %${percent} başarı demek. ` +
+      `Bu sonuç, konunun temel mantığını ve işlem adımlarını iyi kavradığını gösteriyor. ` +
+      `Bu seviyeyi korumak için ara sıra tekrar sorusu çözmen yeterli olur, şu an için ekstra bir çalışmaya ihtiyacın yok.`
+    );
   } else if (weakness_level === "minor") {
-    lines.push(`"${topicName}" konusunda ${total} sorudan ${correctCount} doğru, ${wrongCount} yanlış yaptın (%${percent} başarı). Konuyu genel olarak biliyorsun ama küçük eksiklerin var.`);
+    paragraphs.push(
+      `"${topicName}" konusunda ${total} sorudan ${correctCount} tanesini doğru, ${wrongCount} tanesini yanlış yaptın; bu da %${percent} başarı oranına karşılık geliyor. ` +
+      `Bu sonuç, konunun ana fikrini kavradığını ama bazı noktalarda hâlâ tam oturmamış detaylar olduğunu gösteriyor. ` +
+      `Doğru cevaplarının çoğunlukta olması cesaret verici; birkaç eksiği kapatırsan bu konuyu tamamen kendine mal edebilirsin.`
+    );
   } else {
-    lines.push(`"${topicName}" konusunda ${total} sorudan sadece ${correctCount} tanesini doğru yaptın (%${percent} başarı). Bu konuda ciddi bir eksik görünüyor, temelden tekrar etmen gerekiyor.`);
+    paragraphs.push(
+      `"${topicName}" konusunda ${total} sorudan sadece ${correctCount} tanesini doğru yapabildin, bu da %${percent} gibi düşük bir başarı oranı anlamına geliyor. ` +
+      `Bu durum, konunun temel kurallarında ciddi bir boşluk olduğuna işaret ediyor; yani hatalar tek tük küçük yanlışlardan değil, konunun kendisinin tam öğrenilmemiş olmasından kaynaklanıyor. ` +
+      `Üzülmene gerek yok, her eksik konu doğru bir tekrar planıyla kapatılabilir — önemli olan şimdi nereden başlayacağını bilmen.`
+    );
   }
 
+  // 2) Boş bırakma / zaman yönetimi yorumu (varsa)
   if (emptyRatio >= 0.2) {
-    lines.push(`Sorularin %${Math.round(emptyRatio * 100)}'ini boş bıraktın — zaman yönetimine ya da soruyu atlamak yerine tahmin/analiz yapmaya dikkat et.`);
+    paragraphs.push(
+      `Ayrıca soruların %${Math.round(emptyRatio * 100)}'ini boş bıraktığını fark ettik. ` +
+      `Bu, ya süre yetiştirememe ya da emin olmadığın sorularda tahmin etmek yerine pas geçme alışkanlığından kaynaklanıyor olabilir. ` +
+      `Sınavda boş bırakmak yerine, bildiğin kadarıyla mantık yürütüp bir seçenek işaretlemeyi dene; bu küçük alışkanlık bile net sayını artırabilir.`
+    );
   }
 
+  // 3) Hata örüntüsü yorumu (varsa) - ayrı rozette de gösterildiği için
+  // burada tekrar etmek yerine ne anlama geldiğini açıklıyoruz.
   if (common_error_pattern) {
-    lines.push(`Genel hata örüntün: ${common_error_pattern}.`);
+    paragraphs.push(
+      `Yanlışlarını incelediğimizde ortaya çıkan en belirgin eğilim şu: ${common_error_pattern}. ` +
+      `Bunu bilmek önemli, çünkü doğru çözüm yolunu bilip bilmediğinden çok, hatanın nerede oluştuğunu bilmek çalışma şeklini değiştirmeni sağlar.`
+    );
   }
 
+  // 4) Çalışılması gereken alt konular - madde madde ama önce açıklayıcı bir cümleyle
   if (concepts.length > 0 && weakness_level !== "none") {
-    lines.push(`Şunlara çalışmalısın:\n${concepts.map((c) => `• ${c}`).join("\n")}`);
+    paragraphs.push(
+      `Yanlış yaptığın soruları tek tek incelediğimizde, özellikle şu alt konularda tekrar yapman gerektiğini görüyoruz. ` +
+      `Bu başlıkları sırayla çalışırsan, bir sonraki testte belirgin bir fark göreceksin:\n` +
+      concepts.map((c) => `• ${c}`).join("\n")
+    );
   }
 
+  // 5) Somut yönlendirme + kapanış motivasyon cümlesi
   if (recommended_action === "tutor_referral") {
-    lines.push("Bu konuda tek başına ilerlemek zor görünüyor, bir öğretmenle özel ders yapmanı öneririz — talebin oluşturuldu.");
+    paragraphs.push(
+      `Bu konudaki eksik, tek başına tekrar ederek kısa sürede kapanacak gibi görünmüyor; bu yüzden bir öğretmenle birebir çalışmanı öneriyoruz. ` +
+      `Senin adına özel ders talebini zaten oluşturduk, yakında bir öğretmen seninle iletişime geçecek. ` +
+      `Bu arada konuyu tamamen bırakma, öğretmenle görüşene kadar en azından temel tanımları tekrar gözden geçir.`
+    );
   } else if (recommended_action === "watch_video") {
-    lines.push("Devam etmeden önce bu konunun anlatım videosunu izlemeni öneririz.");
+    paragraphs.push(
+      `Yeni soru çözmeden önce bu konunun anlatım videosunu baştan izlemeni öneririz, çünkü şu anki hataların büyük ölçüde konunun temelinden kaynaklanıyor. ` +
+      `Videoyu izledikten sonra aynı konudan birkaç soru daha çözerek gelişimini kontrol edebilirsin.`
+    );
   } else if (recommended_action === "practice_more") {
-    lines.push("Bu konudan birkaç test daha çözerek pekiştirmeni öneririz.");
+    paragraphs.push(
+      `Konunun mantığını büyük ölçüde biliyorsun, bu yüzden yeni bir anlatıma gerek yok — birkaç test daha çözerek küçük eksiklerini kapatman yeterli olacaktır. ` +
+      `Yanlış yaptığın soru tiplerine benzer sorulardan seçerek çalışırsan daha hızlı ilerlersin.`
+    );
   }
 
   return {
     weakness_level,
-    ai_summary: lines.join("\n\n"),
+    ai_summary: paragraphs.join("\n\n"),
     common_error_pattern,
     recommended_action,
   };

@@ -15,7 +15,7 @@ type Draft = {
 
 export default function SoruEklePage() {
   const [topicId, setTopicId] = useState("");
-  const [manual, setManual] = useState({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "" });
+  const [manual, setManual] = useState({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,6 +35,7 @@ export default function SoruEklePage() {
       topic_id: topicId,
       created_by: userData.user?.id,
       body: manual.body,
+      image_url: manual.imageUrl || null,
       options: { A: manual.a, B: manual.b, C: manual.c, D: manual.d },
       correct_option: manual.correct,
       explanation: manual.explanation,
@@ -46,7 +47,7 @@ export default function SoruEklePage() {
     if (error) setStatus(`Hata: ${error.message}`);
     else {
       setStatus("Soru eklendi.");
-      setManual({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "" });
+      setManual({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
     }
   }
 
@@ -88,6 +89,7 @@ export default function SoruEklePage() {
           <h2 className="mb-3 font-semibold text-slate-900">Elle Soru Ekle</h2>
           <form onSubmit={handleManualSubmit} className="flex flex-col gap-3">
             <Textarea required rows={3} placeholder="Soru metni" value={manual.body} onChange={(e) => setManual({ ...manual, body: e.target.value })} />
+            <Input placeholder="Görsel URL (opsiyonel - şekil, grafik vb.)" value={manual.imageUrl} onChange={(e) => setManual({ ...manual, imageUrl: e.target.value })} />
             <Input required placeholder="A şıkkı" value={manual.a} onChange={(e) => setManual({ ...manual, a: e.target.value })} />
             <Input required placeholder="B şıkkı" value={manual.b} onChange={(e) => setManual({ ...manual, b: e.target.value })} />
             <Input required placeholder="C şıkkı" value={manual.c} onChange={(e) => setManual({ ...manual, c: e.target.value })} />
