@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
+import { AuthPageBackground, AuthPageHeader } from "@/components/auth-background";
 
 // middleware.ts'teki ROLE_HOME ile ayni esleme - middleware server-only
 // import'lar icerdigi icin buradan dogrudan import edilemiyor, kucuk bir
@@ -122,10 +123,14 @@ function GirisForm() {
 
 export default function GirisPage() {
   return (
-    <div className="flex flex-1 items-center justify-center px-6 py-16">
-      <Suspense fallback={null}>
-        <GirisForm />
-      </Suspense>
+    <div className="relative flex flex-1 flex-col">
+      <AuthPageBackground />
+      <AuthPageHeader />
+      <div className="flex flex-1 items-center justify-center px-6 py-10">
+        <Suspense fallback={null}>
+          <GirisForm />
+        </Suspense>
+      </div>
     </div>
   );
 }

@@ -1,48 +1,64 @@
 "use client";
 
-// Ogrenci panelinin arkasinda yasa gore degisen, hafif "canli" (yavas
-// hareket eden, bulanik golge/renk lekesi) bir arka plan. Kutuphane
-// kullanmiyor - sadece CSS animasyonlu, dusuk opasiteli blur'lu daireler.
-// prefers-reduced-motion acikken globals.css'teki kural animasyonu durduruyor.
+import { useEffect, useState } from "react";
+
+// Ogrenci panelinin (soru cozme dahil) arkasinda sinifa gore degisen gercek
+// gorsel arka planlar. Her sinif grubunun kendi gorsel havuzu var; birden
+// fazla gorseli olan gruplarda (1-4 ve 5-8) belli araliklarla rastgele baska
+// bir gorsele geciliyor - "canli" ama metin/soru okunurlugunu bozmayacak
+// kadar soluk. prefers-reduced-motion acirken donme durduruluyor.
 
 export type GradeBackgroundVariant = "ilkokul" | "ortaokul" | "lise" | "default";
 
-const PALETTES: Record<GradeBackgroundVariant, { a: string; b: string; c: string }> = {
-  // 1-4. sinif: canli, oyuncu renkler
-  ilkokul: { a: "bg-amber-300", b: "bg-pink-300", c: "bg-sky-300" },
-  // 5-8. sinif: enerjik ama daha dengeli
-  ortaokul: { a: "bg-emerald-300", b: "bg-indigo-300", c: "bg-violet-300" },
-  // 9-12. sinif: daha sade/ciddi
-  lise: { a: "bg-indigo-400", b: "bg-slate-400", c: "bg-blue-400" },
-  // sinifi belirtilmemis kullanicilar icin notr varsayilan
-  default: { a: "bg-slate-300", b: "bg-indigo-200", c: "bg-slate-200" },
+const IMAGES: Record<GradeBackgroundVariant, string[]> = {
+  // 1-4. sinif: 3 gorsel arasinda rastgele doner
+  ilkokul: ["/grade-bg/ilkokul-1.jpg", "/grade-bg/ilkokul-2.jpg", "/grade-bg/ilkokul-3.jpg"],
+  // 5-8. sinif: 2 gorsel arasinda rastgele doner
+  ortaokul: ["/grade-bg/ortaokul-1.jpg", "/grade-bg/ortaokul-2.jpg"],
+  // 9-12. sinif: tek, sabit gorsel
+  lise: ["/grade-bg/lise-1.jpg"],
+  // sinifi belirtilmemis / diger kullanicilar icin tek, sabit gorsel
+  default: ["/grade-bg/varsayilan.jpg"],
 };
 
-const DURATIONS: Record<GradeBackgroundVariant, [string, string, string]> = {
-  ilkokul: ["10s", "12s", "9s"],
-  ortaokul: ["16s", "18s", "14s"],
-  lise: ["22s", "26s", "20s"],
-  default: ["24s", "28s", "22s"],
-};
+const ROTATE_MS = 45000;
 
 export function GradeBackground({ variant }: { variant: GradeBackgroundVariant }) {
-  const palette = PALETTES[variant];
-  const [dA, dB, dC] = DURATIONS[variant];
+  const images = IMAGES[variant];
+  const [index, setIndex] = useState(0);
+
+  // Ilk yuklemede havuzdan rastgele bir gorselle basla.
+  useEffect(() => {
+    setIndex(Math.floor(Math.random() * images.length));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variant]);
+
+  // Birden fazla gorsel varsa belli araliklarla farkli birine gec.
+  useEffect(() => {
+    if (images.length <= 1) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const id = setInterval(() => {
+      setIndex((prev) => {
+        let next = Math.floor(Math.random() * images.length);
+        while (images.length > 1 && next === prev) next = Math.floor(Math.random() * images.length);
+        return next;
+      });
+    }, ROTATE_MS);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variant]);
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        className={`grade-blob absolute -left-16 -top-16 h-72 w-72 rounded-full opacity-40 blur-3xl ${palette.a}`}
-        style={{ animationDuration: dA }}
-      />
-      <div
-        className={`grade-blob absolute -right-10 top-1/3 h-80 w-80 rounded-full opacity-30 blur-3xl ${palette.b}`}
-        style={{ animationDuration: dB, animationDirection: "reverse" }}
-      />
-      <div
-        className={`grade-blob absolute -bottom-20 left-1/3 h-64 w-64 rounded-full opacity-30 blur-3xl ${palette.c}`}
-        style={{ animationDuration: dC }}
-      />
+      {images.map((src, i) => (
+        <div
+          key={src}
+          className="absolute inset-0 bg-cover bg-center transition-opacity duration-[2000ms] ease-in-out"
+          style={{ backgroundImage: `url(${src})`, opacity: i === index ? 0.28 : 0 }}
+        />
+      ))}
+      <div className="absolute inset-0 bg-white/50" />
     </div>
   );
 }

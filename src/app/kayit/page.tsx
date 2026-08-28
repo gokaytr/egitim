@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
+import { AuthPageBackground, AuthPageHeader } from "@/components/auth-background";
 
 type SignupRole = "student" | "parent" | "teacher_request";
 
@@ -76,7 +77,10 @@ export default function KayitPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="relative flex flex-1 flex-col">
+      <AuthPageBackground />
+      <AuthPageHeader />
+      <div className="flex flex-1 items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">Kayıt ol</h1>
 
@@ -143,6 +147,7 @@ export default function KayitPage() {
         <p className="mt-6 text-center text-sm text-slate-500">
           Zaten hesabın var mı? <Link href="/giris" className="font-medium text-indigo-600">Giriş yap</Link>
         </p>
+      </div>
       </div>
     </div>
   );
