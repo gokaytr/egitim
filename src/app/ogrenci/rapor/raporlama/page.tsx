@@ -152,6 +152,15 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
                   <span className="ml-auto text-xs text-slate-400">{new Date(d.created_at).toLocaleDateString("tr-TR")}</span>
                 </div>
                 <p className="whitespace-pre-line text-sm text-slate-600">{d.ai_summary}</p>
+                <p className="mt-2 text-xs font-medium">
+                  {d.acknowledged_at ? (
+                    <span className="text-green-700">
+                      ✓ Öğrenci okudu — {new Date(d.acknowledged_at).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  ) : (
+                    <span className="text-amber-700">Öğrenci henüz okumadı</span>
+                  )}
+                </p>
               </li>
             );
           })}

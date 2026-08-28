@@ -71,6 +71,7 @@ export type StudentReportCore = {
     weakness_level: string;
     recommended_action: string;
     created_at: string;
+    acknowledged_at: string | null;
     topics: { name: string } | { name: string }[] | null;
   }[];
   views: {
@@ -121,7 +122,7 @@ export async function loadStudentReportCore(studentId: string): Promise<StudentR
       .order("started_at", { ascending: false }),
     supabase
       .from("diagnoses")
-      .select("id, ai_summary, common_error_pattern, weakness_level, recommended_action, created_at, topics(name)")
+      .select("id, ai_summary, common_error_pattern, weakness_level, recommended_action, created_at, acknowledged_at, topics(name)")
       .eq("student_id", studentId)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -321,20 +322,37 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
   };
 }
 
-// Admin/ogretmen genel ogrenci raporlari ekrani icin: butun ogrenci
-// listesinden serbestce secim yapabiliyorlar (veli onizlemesinden farkli
-// olarak parent_student_links'e bagli degil - staff-wide RLS zaten butun
-// tablolarda admin/ogretmen/moderator icin acik).
+// Admin/ogretmen genel ogrenci raporlari ekrani icin. Admin butun ogrenci
+// listesinden serbestce secim yapabiliyor (staff-wide RLS zaten butun
+// tablolarda admin/ogretmen/moderator icin acik). Gercek bir ogretmen ise
+// SADECE adminin kendisine `teacher_students` tablosuyla atadigi
+// ogrencileri gorebiliyor - serbest "tum ogrenciler" listesi yok.
 export async function loadStaffStudentReport(requestedStudentId?: string): Promise<ReportData | ReportNeedsSetup> {
   const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
 
-  const { data: students } = await supabase
+  const { data: callerProfile } = await supabase
     .from("profiles")
-    .select("id, full_name")
-    .eq("role", "student")
-    .order("full_name");
+    .select("role")
+    .eq("id", userData.user?.id)
+    .single();
 
-  const candidates: ReportCandidate[] = students ?? [];
+  let candidates: ReportCandidate[] = [];
+
+  if (callerProfile?.role === "teacher") {
+    const { data: assigned } = await supabase
+      .from("teacher_students")
+      .select("profiles!teacher_students_student_id_fkey(id, full_name)")
+      .eq("teacher_id", userData.user?.id);
+    candidates = (assigned ?? [])
+      .map((row) => (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles))
+      .filter((p): p is ReportCandidate => !!p)
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "tr"));
+  } else {
+    const { data: students } = await supabase.from("profiles").select("id, full_name").eq("role", "student").order("full_name");
+    candidates = students ?? [];
+  }
+
   const pageTitle = "Öğrenci Raporları";
 
   const studentId = (requestedStudentId && candidates.some((c) => c.id === requestedStudentId) ? requestedStudentId : candidates[0]?.id) ?? undefined;

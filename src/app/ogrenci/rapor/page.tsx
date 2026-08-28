@@ -28,10 +28,20 @@ export default async function RaporPage({ searchParams }: { searchParams: Promis
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0];
 
   const recentEvents = sortEventsDesc(data.events).slice(0, 10);
+  const latestDiagnosis = data.diagnoses[0];
 
   return (
     <div className="flex flex-col gap-6">
       <ReportHeader data={data} />
+
+      {data.role === "parent" && latestDiagnosis && !latestDiagnosis.acknowledged_at && (
+        <Card className="border-amber-200 bg-amber-50">
+          <p className="text-sm text-amber-900">
+            <span className="font-semibold">Uyarı:</span> {data.studentProfile?.full_name?.split(" ")[0] ?? "Öğrenci"} son
+            analizi ve tavsiyeleri henüz "Okudum, Anladım" diyerek onaylamadı.
+          </p>
+        </Card>
+      )}
 
       {upcomingSession && (
         <Card className="border-indigo-200 bg-indigo-50">

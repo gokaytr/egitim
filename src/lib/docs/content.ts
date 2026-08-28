@@ -48,6 +48,10 @@ export const DOC_SECTIONS: DocSection[] = [
         body: "Öğrenci Raporları sayfasından, veli önizlemesinden farklı olarak platformdaki TÜM öğrencilerden istediğini seçip; çalışma programını/hedeflerini, hangi soruları çözüp hangilerini çözmesi gerektiğini, geçmiş sınav/test sonuçlarını, konu anlatımı izleme geçmişini ve eksik analizlerini tek ekranda görebilirsin.",
       },
       {
+        title: "Öğretmen — Öğrenci Atamaları",
+        body: "Kullanıcılar sayfasındaki Öğretmen — Öğrenci Atamaları tablosundan her öğrenciye bir öğretmen atayabilirsin. Bu, branş atamasından ayrı bir ilişki: bir öğretmen kendi Öğrenci Raporları ekranında SADECE burada kendisine atanmış öğrencileri görebilir, admin ise her zaman tüm öğrencileri görür.",
+      },
+      {
         title: "Demo hesaplar",
         body: "Test amaçlı, aşağıda listelenen demo veli ve demo öğretmen hesapları platformda hazır bulunuyor. Öğrenci tarafında da 'reinvita' kullanıcı adıyla giren örnek bir öğrenci hesabı mevcut ve demo veliye bağlı.",
       },
@@ -91,7 +95,7 @@ export const DOC_SECTIONS: DocSection[] = [
       },
       {
         title: "Öğrenci Raporları",
-        body: "Öğrenci Raporları sayfasından platformdaki tüm öğrencilerden birini seçip; çalışma programını, geçmiş sınav sonuçlarını, konu anlatımı izleme geçmişini ve eksik analizlerini görebilirsin.",
+        body: "Öğrenci Raporları sayfasından, admin tarafından sana atanmış öğrencilerden birini seçip; çalışma programını, geçmiş sınav sonuçlarını, konu anlatımı izleme geçmişini ve eksik analizlerini görebilirsin. Sana henüz hiç öğrenci atanmadıysa liste boş görünür - bunu admin, Kullanıcılar sayfasındaki atama tablosundan yapar. Her analiz kartında öğrencinin son analizi okuyup okumadığı da (\"Öğrenci okudu\" / \"Öğrenci henüz okumadı\") görünür.",
       },
     ],
   },
@@ -123,6 +127,10 @@ export const DOC_SECTIONS: DocSection[] = [
         title: "Geçmiş sınav sonuçları",
         body: "Raporlama sayfasındaki 'Geçmiş Sınav Sonuçları' kartından öğrencinin bugüne kadar çözdüğü her test/denemeyi, doğru/yanlış/boş sayılarıyla ve başarı yüzdesiyle görebilirsin.",
       },
+      {
+        title: "Analiz okundu bilgisi",
+        body: "Genel Durum sayfasında, öğrencin en son analizi ve tavsiyeleri henüz \"Okudum, Anladım\" diyerek onaylamadıysa turuncu bir uyarı görürsün. Raporlama sayfasındaki Eksikler / Analiz Geçmişi kartında da her analizin altında öğrencinin okuyup okumadığı (ve okuduysa ne zaman) ayrıca belirtilir.",
+      },
     ],
   },
   {
@@ -131,7 +139,11 @@ export const DOC_SECTIONS: DocSection[] = [
     items: [
       {
         title: "Ders ve konu seçimi",
-        body: "Öğrenci girişinde önce (varsa) velinin atadığı hedefler, ardından ders kartları (Türkçe, Matematik, Fen Bilimleri vb.), sonra o dersin konuları listelenir. Bir konuya girince varsa konu anlatımı, ardından o konunun soruları gösterilir. Öğrenci ekranında ayrıntılı raporlama gösterilmez - bu veli ve admin ekranlarına özeldir.",
+        body: "Dersler artık sol menüde ayrı sekmeler halinde listelenir; bir derse tıklayınca o dersin konuları, ardından bir konuya girince varsa konu anlatımı ve o konunun soruları gösterilir. Öğrenci ekranında ayrıntılı raporlama gösterilmez - bu veli ve admin ekranlarına özeldir.",
+      },
+      {
+        title: "Son analiz ve okundu onayı",
+        body: "Genel Bakış sayfasındaki 'Son Analiz' kartında, tavsiyeleri okuyup uyguladığında altındaki 'Okudum, Anladım' butonuna basabilirsin. Onayladığında bu, velinin ekranında da görünür - hem okuduğun hem de ne zaman okuduğun.",
       },
       {
         title: "Quiz ve değerlendirme",

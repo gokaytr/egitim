@@ -14,7 +14,7 @@ export default async function OgretmenOgrenciRaporlariPage({ searchParams }: { s
           <h1 className="text-2xl font-semibold text-slate-900">{data.pageTitle}</h1>
         </div>
         <Card>
-          <p className="text-sm text-slate-500">Henüz kayıtlı öğrenci yok.</p>
+          <p className="text-sm text-slate-500">Henüz sana atanmış bir öğrenci yok. Admin öğrenci ataması yaptığında burada görünecek.</p>
         </Card>
       </div>
     );
