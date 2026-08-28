@@ -2,20 +2,12 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
 
-const ROLE_HOME: Record<string, string> = {
-  admin: "/admin",
-  teacher: "/ogretmen",
-  student: "/ogrenci",
-  parent: "/ogrenci/rapor",
-};
-
 function GirisForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,21 +46,15 @@ function GirisForm() {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, teacher_pending")
-        .eq("id", data.user.id)
-        .single();
-
-      if (profile?.teacher_pending) {
-        router.push("/basvuru-bekleniyor");
-        router.refresh();
-        return;
-      }
-
+      // Rolüne göre hangi panele gideceğini burada sormuyoruz (bu ekstra bir
+      // veritabanı sorgusu daha demekti) - middleware zaten her korumalı
+      // sayfada rolünü kontrol edip yanlış panele düşersen doğrusuna
+      // yönlendiriyor. Biz sadece herhangi bir korumalı sayfaya (ya da
+      // ?redirect= ile gelinen sayfaya) tam sayfa yönlendirme yapıyoruz;
+      // tam sayfa yönlendirme (router.push değil) session cookie'sinin bir
+      // sonraki sunucu render'ında kesin taze okunmasını garanti ediyor.
       const redirect = searchParams.get("redirect");
-      router.push(redirect || ROLE_HOME[profile?.role ?? "student"] || "/");
-      router.refresh();
+      window.location.href = redirect || "/ogrenci";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
       setLoading(false);

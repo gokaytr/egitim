@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const ROLE_HOME: Record<string, string> = {
-  admin: "/admin",
-  teacher: "/ogretmen",
-  student: "/ogrenci",
-  parent: "/ogrenci/rapor",
-};
-
 function failRedirect(origin: string, detail: string) {
   const url = new URL("/giris", origin);
   url.searchParams.set("error", "oauth");
@@ -16,9 +9,10 @@ function failRedirect(origin: string, detail: string) {
 }
 
 // Google (ve ileride eklenebilecek diğer OAuth sağlayıcıları) girişinden dönen
-// kullanıcıyı oturuma çevirir ve rolüne göre kendi paneline yönlendirir.
-// Her hata durumunda /giris sayfasina neden bilgisiyle donuyor (sessizce
-// takilip kalmak yerine kullaniciya gercek sebebi gosteriyoruz).
+// kullanıcıyı oturuma çevirir. Hangi panele gideceğine burada karar vermiyoruz
+// (bu, ek bir profiles sorgusu demekti) - middleware zaten her korumalı
+// sayfada rolü kontrol edip yanlış yere düşersen doğrusuna yönlendiriyor,
+// biz sadece herhangi bir korumalı sayfaya (/ogrenci) yönlendiriyoruz.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
 
@@ -41,20 +35,5 @@ export async function GET(request: NextRequest) {
     return failRedirect(origin, error?.message ?? "Oturum oluşturulamadı.");
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role, teacher_pending")
-    .eq("id", data.user.id)
-    .single();
-
-  if (profileError) {
-    return failRedirect(origin, `Profil okunamadı: ${profileError.message}`);
-  }
-
-  if (profile?.teacher_pending) {
-    return NextResponse.redirect(`${origin}/basvuru-bekleniyor`);
-  }
-
-  const target = ROLE_HOME[profile?.role ?? "student"] ?? "/ogrenci";
-  return NextResponse.redirect(`${origin}${target}`);
+  return NextResponse.redirect(`${origin}/ogrenci`);
 }

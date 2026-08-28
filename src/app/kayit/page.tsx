@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
@@ -16,7 +15,6 @@ const REDIRECT_AFTER_SIGNUP: Record<SignupRole, string> = {
 };
 
 export default function KayitPage() {
-  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,8 +66,9 @@ export default function KayitPage() {
         return;
       }
 
-      router.push(REDIRECT_AFTER_SIGNUP[role]);
-      router.refresh();
+      // Tam sayfa yönlendirme (router.push degil) - session cookie'sinin bir
+      // sonraki sunucu render'inda kesin taze okunmasini garanti ediyor.
+      window.location.href = REDIRECT_AFTER_SIGNUP[role];
     } catch (err) {
       setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
       setLoading(false);
