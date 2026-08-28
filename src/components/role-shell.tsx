@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { GradeBackground, gradeBackgroundVariant } from "@/components/grade-background";
 
 type NavItem = { href: string; label: string };
 
@@ -15,6 +16,7 @@ export function RoleShell({
   navItemsByRole,
   titleByRole,
   topBarLinks,
+  showGradeBackground,
 }: {
   title: string;
   navItems: NavItem[];
@@ -23,12 +25,14 @@ export function RoleShell({
   navItemsByRole?: Partial<Record<string, NavItem[]>>;
   titleByRole?: Partial<Record<string, string>>;
   topBarLinks?: NavItem[];
+  showGradeBackground?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const [isAdminPreviewing, setIsAdminPreviewing] = useState(false);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const [gradeLevel, setGradeLevel] = useState<number | null>(null);
 
   // Admin, ogrenci/ogretmen panellerini onizlerken (kendi paneli disinda
   // gezinirken) ust tarafta admin paneline donme baglantisi gosteriyoruz.
@@ -40,9 +44,10 @@ export function RoleShell({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("role, grade_level").eq("id", user.id).single();
       if (cancelled) return;
       setCurrentRole(profile?.role ?? null);
+      setGradeLevel(profile?.grade_level ?? null);
       if (profile?.role === "admin" && !pathname.startsWith("/admin")) {
         setIsAdminPreviewing(true);
       }
@@ -152,7 +157,12 @@ export function RoleShell({
             </div>
           </div>
         )}
-        <main className="flex-1 bg-slate-50 p-6 md:p-10">{children}</main>
+        <main className="relative flex-1 overflow-hidden bg-slate-50 p-6 md:p-10">
+          {showGradeBackground && currentRole === "student" && (
+            <GradeBackground variant={gradeBackgroundVariant(gradeLevel)} />
+          )}
+          <div className="relative z-10">{children}</div>
+        </main>
       </div>
     </div>
   );

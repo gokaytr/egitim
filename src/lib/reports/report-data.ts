@@ -99,7 +99,10 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
   let pageTitle = "İlerleme Raporu";
   let showAddChild = false;
 
-  if (role === "parent") {
+  if (role === "parent" || role === "admin") {
+    // Admin de veli onizlemesinde artik tum ogrenci listesinden serbestce
+    // secim yapmiyor - gercek bir veli gibi, admin panelinden kendisine
+    // baglanmis ogrenci(ler)in verisini goruyor (parent_student_links).
     const { data: links } = await supabase
       .from("parent_student_links")
       .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name)")
@@ -107,16 +110,8 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
     candidates = (links ?? [])
       .map((l) => (Array.isArray(l.profiles) ? l.profiles[0] : l.profiles))
       .filter((p): p is ReportCandidate => !!p);
-    pageTitle = "Veli Raporu";
-    showAddChild = true;
-  } else if (role === "admin") {
-    const { data: students } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("role", "student")
-      .order("full_name");
-    candidates = students ?? [];
-    pageTitle = "Veli Görünümü (Admin Önizleme)";
+    pageTitle = role === "admin" ? "Veli Görünümü (Admin Önizleme)" : "Veli Raporu";
+    showAddChild = role === "parent";
   }
 
   const studentId =

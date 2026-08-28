@@ -18,3 +18,25 @@ body {
   color: var(--foreground);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
 }
+
+/* Ogrenci panelindeki sinif bazli arka plan lekeleri (grade-background.tsx) */
+@keyframes grade-blob-float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -18px) scale(1.08);
+  }
+}
+
+.grade-blob {
+  animation-name: grade-blob-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grade-blob {
+    animation: none;
+  }
+}

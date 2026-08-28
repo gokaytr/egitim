@@ -15,6 +15,7 @@ export default function OgrenciLayout({ children }: { children: React.ReactNode 
       helpHref="/ogrenci/nasil-calisir"
       titleByRole={{ parent: "Veli Paneli", student: "Öğrenci Paneli" }}
       navItemsByRole={{ parent: NAV_PARENT, student: NAV_STUDENT, admin: NAV_STUDENT }}
+      showGradeBackground
     >
       {children}
     </RoleShell>
