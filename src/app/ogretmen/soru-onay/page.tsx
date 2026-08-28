@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ApproveButton } from "@/components/approve-button";
 import { Card, Badge } from "@/components/ui";
 
-export default async function SoruOnayPage() {
+export default async function OgretmenSoruOnayPage() {
   const supabase = await createClient();
   const { data: pending } = await supabase
     .from("questions")

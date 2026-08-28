@@ -37,7 +37,19 @@ export type ReportData = {
   accuracy: number | null;
   distinctContentViewed: number;
   targetQuestionsRemaining: number;
-  referrals: { id: string; status: string; requested_at: string; topics: { name: string } | { name: string }[] | null }[];
+  referrals: {
+    id: string;
+    status: string;
+    requested_at: string;
+    topics: { name: string } | { name: string }[] | null;
+    tutor_sessions: {
+      id: string;
+      scheduled_at: string | null;
+      duration_minutes: number | null;
+      meeting_link: string | null;
+      status: string;
+    }[] | null;
+  }[];
   planItems: {
     id: string;
     status: string;
@@ -141,7 +153,7 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
       .eq("study_plans.student_id", studentId),
     supabase
       .from("tutor_referrals")
-      .select("id, status, requested_at, topics(name)")
+      .select("id, status, requested_at, topics(name), tutor_sessions(id, scheduled_at, duration_minutes, meeting_link, status)")
       .eq("student_id", studentId)
       .order("requested_at", { ascending: false }),
     supabase

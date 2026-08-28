@@ -25,9 +25,19 @@ export default async function OzelDersPage() {
   const { data: referrals, error } = await supabase
     .from("tutor_referrals")
     .select(
-      "id, status, requested_at, tutor_id, topics(name), profiles!tutor_referrals_student_id_fkey(full_name), tutor_sessions(id, scheduled_at, duration_minutes, teacher_notes, status)"
+      "id, status, requested_at, tutor_id, topics(name), profiles!tutor_referrals_student_id_fkey(full_name), tutor_sessions(id, scheduled_at, duration_minutes, teacher_notes, meeting_link, status)"
     )
     .order("requested_at", { ascending: false });
+
+  const myUpcomingSessions = (referrals ?? [])
+    .filter((r) => r.tutor_id === userData.user?.id)
+    .flatMap((r) => {
+      const student = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+      const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
+      return (r.tutor_sessions ?? []).map((s) => ({ ...s, studentName: student?.full_name, topicName: topic?.name }));
+    })
+    .filter((s) => s.scheduled_at && s.status !== "completed" && new Date(s.scheduled_at) > new Date())
+    .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,6 +47,29 @@ export default async function OzelDersPage() {
           Öğrencilerin özel ders ihtiyacı belirlenen konularını üstlenip ders saatini planlayabilirsin.
         </p>
       </div>
+
+      {myUpcomingSessions.length > 0 && (
+        <Card>
+          <h2 className="mb-3 font-semibold text-slate-900">Programım — Yaklaşan Dersler</h2>
+          <ul className="flex flex-col gap-2">
+            {myUpcomingSessions.map((s) => (
+              <li key={s.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <span>
+                  {s.studentName ?? "Öğrenci"} · {s.topicName ?? "Genel"}
+                </span>
+                <div className="flex items-center gap-3 text-xs text-slate-500">
+                  <span>{new Date(s.scheduled_at!).toLocaleString("tr-TR")} · {s.duration_minutes} dk</span>
+                  {s.meeting_link && (
+                    <a href={s.meeting_link} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 underline">
+                      Canlı ders linki
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {error && <p className="text-sm text-red-600">Hata: {error.message}</p>}
       {!error && !referrals?.length && (

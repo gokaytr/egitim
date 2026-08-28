@@ -10,6 +10,7 @@ type Session = {
   scheduled_at: string | null;
   duration_minutes: number | null;
   teacher_notes: string | null;
+  meeting_link: string | null;
   status: string;
 };
 
@@ -32,6 +33,7 @@ export function TutorReferralActions({
   const [scheduledAt, setScheduledAt] = useState("");
   const [duration, setDuration] = useState(60);
   const [notes, setNotes] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
 
   const isMine = tutorId === currentUserId;
 
@@ -59,6 +61,7 @@ export function TutorReferralActions({
       scheduled_at: new Date(scheduledAt).toISOString(),
       duration_minutes: duration,
       teacher_notes: notes || null,
+      meeting_link: meetingLink || null,
       status: "planned",
     });
     if (sessionError) {
@@ -75,6 +78,7 @@ export function TutorReferralActions({
     else {
       setScheduledAt("");
       setNotes("");
+      setMeetingLink("");
       router.refresh();
     }
   }
@@ -120,6 +124,12 @@ export function TutorReferralActions({
           <label className="text-sm font-medium text-slate-700">Ders saatini planla</label>
           <Input type="datetime-local" required value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           <Input type="number" min={15} step={15} value={duration} onChange={(e) => setDuration(Number(e.target.value))} placeholder="Süre (dakika)" />
+          <Input
+            type="url"
+            placeholder="Google Meet / Zoom linki (opsiyonel)"
+            value={meetingLink}
+            onChange={(e) => setMeetingLink(e.target.value)}
+          />
           <Textarea rows={2} placeholder="Not (opsiyonel)" value={notes} onChange={(e) => setNotes(e.target.value)} />
           <Button type="submit" disabled={loading}>{loading ? "Kaydediliyor..." : "Planla"}</Button>
         </form>
@@ -134,6 +144,16 @@ export function TutorReferralActions({
                   {s.scheduled_at ? new Date(s.scheduled_at).toLocaleString("tr-TR") : "Tarih belirtilmedi"} · {s.duration_minutes} dk
                 </p>
                 {s.teacher_notes && <p className="mt-0.5 text-slate-500">{s.teacher_notes}</p>}
+                {s.meeting_link && (
+                  <a
+                    href={s.meeting_link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-0.5 inline-block text-indigo-600 underline"
+                  >
+                    Canlı ders linki
+                  </a>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={s.status === "completed" ? "green" : "amber"}>{s.status}</Badge>

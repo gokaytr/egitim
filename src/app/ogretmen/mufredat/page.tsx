@@ -1,6 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { SubjectAddForm } from "@/components/subject-add-form";
-import { CourseManager } from "@/components/course-manager";
 import { TopicAddForm } from "@/components/topic-add-form";
 import { CurriculumBrowser, type CurriculumTopicRow } from "@/components/curriculum-browser";
 
@@ -8,7 +6,7 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-export default async function MufredatPage() {
+export default async function OgretmenMufredatPage() {
   const supabase = await createClient();
 
   const [{ data: subjects }, { data: courses }, { data: rawTopics }] = await Promise.all([
@@ -28,16 +26,11 @@ export default async function MufredatPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Müfredat</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Müfredat / Konu Ekle</h1>
         <p className="text-sm text-slate-500">
-          1. sınıftan 12. sınıfa ders/konu ağacı. Yeni konu ekleme öğretmen panelinde de mevcut; ders ve kurs
-          yönetimi yalnızca burada.
+          1. sınıftan 12. sınıfa mevcut konu ağacı. Ders ve kurs (LGS/TYT/AYT vb.) listesi admin panelinden
+          yönetiliyor; buradan yeni konu ekleyebilirsin.
         </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SubjectAddForm />
-        <CourseManager courses={courses ?? []} />
       </div>
 
       <TopicAddForm subjects={subjects ?? []} courses={courses ?? []} />

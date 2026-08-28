@@ -26,9 +26,34 @@ export default async function RaporGenelBakisPage({ searchParams }: { searchPara
     );
   }
 
+  const upcomingSession = data.referrals
+    .flatMap((r) => (r.tutor_sessions ?? []).map((s) => ({ ...s, topicName: (Array.isArray(r.topics) ? r.topics[0] : r.topics)?.name })))
+    .filter((s) => s.scheduled_at && s.status !== "completed" && new Date(s.scheduled_at) > new Date())
+    .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0];
+
   return (
     <div className="flex flex-col gap-6">
       <ReportHeader data={data} />
+
+      {upcomingSession && (
+        <Card className="border-indigo-200 bg-indigo-50">
+          <h2 className="mb-1 font-semibold text-indigo-900">Yaklaşan Özel Ders</h2>
+          <p className="text-sm text-indigo-800">
+            {upcomingSession.topicName ?? "Genel"} · {new Date(upcomingSession.scheduled_at!).toLocaleString("tr-TR")} ·{" "}
+            {upcomingSession.duration_minutes} dk
+          </p>
+          {upcomingSession.meeting_link && (
+            <a
+              href={upcomingSession.meeting_link}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block text-sm font-medium text-indigo-700 underline"
+            >
+              Canlı ders linkine git
+            </a>
+          )}
+        </Card>
+      )}
 
       <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Genel Durum Raporu</h2>
