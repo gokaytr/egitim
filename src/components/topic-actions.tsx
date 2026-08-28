@@ -3,22 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { TopicSelect } from "@/components/topic-select";
 import { Button } from "@/components/ui";
 
-export function TopicPicker() {
+// Tek bir konu icin "biliyorum, test et" / "bilmiyorum, programa ekle"
+// aksiyonlari. topic-picker.tsx'teki mantigin ayni sekilde, tek bir konu
+// icin (dropdown olmadan) calisan hali - ders bazli konu listesinde
+// her konu karti kendi butonlarina sahip olsun diye ayrildi.
+export function TopicActions({ topicId }: { topicId: string }) {
   const router = useRouter();
-  const [topicId, setTopicId] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleDontKnow() {
-    if (!topicId) return setMessage("Önce bir konu seçin.");
     setLoading(true);
+    setMessage(null);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
 
-    // Aktif bir çalışma planı yoksa oluştur
     let { data: plan } = await supabase
       .from("study_plans")
       .select("id")
@@ -41,28 +42,24 @@ export function TopicPicker() {
     }
 
     setLoading(false);
-    setMessage("Bu konu çalışma programına eklendi. Konu anlatımını görmek için öğretmen içeriklerine göz atabilirsin.");
+    setMessage("Çalışma programına eklendi.");
   }
 
   function handleKnowIt() {
-    if (!topicId) return setMessage("Önce bir konu seçin.");
     router.push(`/ogrenci/konu/${topicId}`);
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="max-w-md">
-        <TopicSelect value={topicId} onChange={setTopicId} />
-      </div>
-      <div className="flex gap-3">
-        <Button onClick={handleKnowIt} disabled={loading}>
-          Bu konuyu biliyorum, test et
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={handleKnowIt} disabled={loading} className="text-xs">
+          Biliyorum, test et
         </Button>
-        <Button variant="secondary" onClick={handleDontKnow} disabled={loading}>
-          Bu konuyu bilmiyorum, programa ekle
+        <Button variant="secondary" onClick={handleDontKnow} disabled={loading} className="text-xs">
+          Bilmiyorum, programa ekle
         </Button>
       </div>
-      {message && <p className="text-sm text-slate-600">{message}</p>}
+      {message && <p className="text-xs text-slate-500">{message}</p>}
     </div>
   );
 }
