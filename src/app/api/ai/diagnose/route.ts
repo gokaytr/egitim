@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { diagnoseWeakness } from "@/lib/ai/anthropic";
+import { ruleBasedDiagnosis } from "@/lib/diagnosis/rule-based";
+// NOT: Anthropic API ücretli olduğu için şimdilik ücretsiz, kural tabanlı
+// değerlendirme motoru kullanılıyor. İleride tekrar AI'ya geçmek istenirse
+// "@/lib/ai/anthropic" içindeki diagnoseWeakness fonksiyonu hazır bekliyor.
 
 export async function POST(req: Request) {
   try {
@@ -43,9 +46,7 @@ export async function POST(req: Request) {
       };
     });
 
-    // diagnoseWeakness kendi içinde Anthropic hatalarını yakalar ve her
-    // durumda kullanılabilir bir sonuç döner - burada throw etmez.
-    const diagnosis = await diagnoseWeakness({
+    const diagnosis = ruleBasedDiagnosis({
       topicName: topic?.name ?? "Genel",
       gradeLevel: topic?.grade_level ?? null,
       correctCount: attempt.correct_count,

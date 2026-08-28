@@ -9,7 +9,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
   const { data: topic } = await supabase.from("topics").select("id, name, grade_level").eq("id", topicId).single();
   const { data: questions } = await supabase
     .from("questions")
-    .select("id, body, options, correct_option")
+    .select("id, body, options, correct_option, option_error_tags")
     .eq("topic_id", topicId)
     .eq("is_approved", true)
     .limit(8);

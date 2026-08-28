@@ -9,6 +9,7 @@ type Question = {
   body: string;
   options: Record<string, string>;
   correct_option: string;
+  option_error_tags?: Record<string, string> | null;
 };
 
 export function QuizRunner({ topicId, questions }: { topicId: string; questions: Question[] }) {
@@ -35,7 +36,11 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
       if (!selected) empty++;
       else if (isCorrect) correct++;
       else wrong++;
-      return { question_id: q.id, selected_option: selected, is_correct: isCorrect };
+      // Öğretmenin soruya girdiği şık bazlı hata etiketi varsa (ör. "B" şıkkı
+      // "işlem_hatası"), yanlış seçilen şıktan otomatik etiketleniyor - bu
+      // etiketler kural tabanlı değerlendirmede hata örüntüsü çıkarmak için kullanılır.
+      const error_tag = selected && !isCorrect ? q.option_error_tags?.[selected] ?? null : null;
+      return { question_id: q.id, selected_option: selected, is_correct: isCorrect, error_tag };
     });
 
     try {
@@ -103,7 +108,7 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
             <Badge tone={result.diagnosis.weakness_level === "major" ? "red" : result.diagnosis.weakness_level === "minor" ? "amber" : "green"}>
               Eksik seviyesi: {result.diagnosis.weakness_level}
             </Badge>
-            <p className="mt-2 text-sm text-slate-700">{result.diagnosis.ai_summary}</p>
+            <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{result.diagnosis.ai_summary}</p>
             {result.diagnosis.common_error_pattern && (
               <p className="mt-1 text-xs text-slate-500">Genel hata örüntün: {result.diagnosis.common_error_pattern}</p>
             )}
