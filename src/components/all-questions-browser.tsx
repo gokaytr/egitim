@@ -48,17 +48,27 @@ function TabButton({
 
 // Tum sorularin sinif sinif, ders ders, konu konu goz atilabildigi salt-okunur
 // bir katalog. Soru Onayi (sadece onay bekleyenler) ve Soru Ekle'den farkli
-// olarak, onayli/onaysiz tum sorulari gruplu sekilde gosterir.
+// olarak, en ustteki Onayli/Onaysiz sekmesiyle secilen onay durumundaki tum
+// sorulari gruplu sekilde gosterir.
 export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; questions: Question[] }) {
+  const [approvalFilter, setApprovalFilter] = useState<"approved" | "unapproved">("approved");
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
 
+  const approvedCount = useMemo(() => questions.filter((q) => q.is_approved).length, [questions]);
+  const unapprovedCount = questions.length - approvedCount;
+
+  const filteredQuestions = useMemo(
+    () => questions.filter((q) => (approvalFilter === "approved" ? q.is_approved : !q.is_approved)),
+    [questions, approvalFilter],
+  );
+
   const questionCountByTopic = useMemo(() => {
     const map = new Map<string, number>();
-    questions.forEach((q) => map.set(q.topic_id, (map.get(q.topic_id) ?? 0) + 1));
+    filteredQuestions.forEach((q) => map.set(q.topic_id, (map.get(q.topic_id) ?? 0) + 1));
     return map;
-  }, [questions]);
+  }, [filteredQuestions]);
 
   const gradeCounts = useMemo(() => {
     const map = new Map<number, number>();
@@ -89,8 +99,15 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
 
   const questionsForTopic = useMemo(() => {
     if (!selectedTopicId) return [];
-    return questions.filter((q) => q.topic_id === selectedTopicId);
-  }, [questions, selectedTopicId]);
+    return filteredQuestions.filter((q) => q.topic_id === selectedTopicId);
+  }, [filteredQuestions, selectedTopicId]);
+
+  function pickApprovalFilter(f: "approved" | "unapproved") {
+    setApprovalFilter(f);
+    setSelectedGrade(null);
+    setSelectedSubjectId(null);
+    setSelectedTopicId(null);
+  }
 
   function pickGrade(g: number) {
     setSelectedGrade(g);
@@ -105,6 +122,27 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
+        <button
+          type="button"
+          onClick={() => pickApprovalFilter("approved")}
+          className={`touch-manipulation rounded-lg px-3 py-2 text-sm font-medium transition ${
+            approvalFilter === "approved" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Onaylı ({approvedCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => pickApprovalFilter("unapproved")}
+          className={`touch-manipulation rounded-lg px-3 py-2 text-sm font-medium transition ${
+            approvalFilter === "unapproved" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Onaysız ({unapprovedCount})
+        </button>
+      </div>
+
       <div>
         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf</p>
         <div className="flex flex-wrap gap-1.5">

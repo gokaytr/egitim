@@ -124,11 +124,11 @@ export default async function SorularPage() {
       </div>
 
       <SimpleTabs
-        defaultKey="ekle"
+        defaultKey="liste"
         tabs={[
-          { key: "ekle", label: "Soru Ekle", content: soruEkleTab },
-          { key: "onay", label: "Soru Onayı", content: soruOnayTab, dot: pendingQuestions.length > 0 },
           { key: "liste", label: "Tüm Sorular", content: sorularListesiTab },
+          { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
+          { key: "onay", label: "Soru Onayı", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
         ]}
       />
     </div>

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
+import { AllQuestionsBrowser } from "@/components/all-questions-browser";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
@@ -35,14 +36,29 @@ export default async function OgretmenSorularPage({
     difficulty: number | null;
     topic_id: string;
   }[] = [];
+  let allQuestions: {
+    id: string;
+    body: string;
+    options: Record<string, string>;
+    correct_option: string;
+    is_approved: boolean;
+    source: string;
+    difficulty: number | null;
+    topic_id: string;
+  }[] = [];
 
   if (subjectIds.length > 0) {
-    const [{ data: rawTopics }, { data: pending }] = await Promise.all([
+    const [{ data: rawTopics }, { data: pending }, { data: all }] = await Promise.all([
       supabase.from("topics").select("id, name, grade_level, subject_id, subjects(name)").in("subject_id", subjectIds),
       supabase
         .from("questions")
         .select("id, body, options, correct_option, source, difficulty, topic_id, topics!inner(subject_id)")
         .eq("is_approved", false)
+        .in("topics.subject_id", subjectIds)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("questions")
+        .select("id, body, options, correct_option, is_approved, source, difficulty, topic_id, topics!inner(subject_id)")
         .in("topics.subject_id", subjectIds)
         .order("created_at", { ascending: false }),
     ]);
@@ -60,6 +76,17 @@ export default async function OgretmenSorularPage({
       body: q.body,
       options: (q.options ?? {}) as Record<string, string>,
       correct_option: q.correct_option,
+      source: q.source,
+      difficulty: q.difficulty,
+      topic_id: q.topic_id,
+    }));
+
+    allQuestions = (all ?? []).map((q) => ({
+      id: q.id,
+      body: q.body,
+      options: (q.options ?? {}) as Record<string, string>,
+      correct_option: q.correct_option,
+      is_approved: q.is_approved,
       source: q.source,
       difficulty: q.difficulty,
       topic_id: q.topic_id,
@@ -91,18 +118,34 @@ export default async function OgretmenSorularPage({
     </div>
   );
 
+  const sorularListesiTab = (
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-slate-500">
+        Branşınızdaki tüm sorular — onaylı ve onay bekleyenler dahil — sınıf, ders ve konuya göre gruplu.
+      </p>
+      {subjectIds.length === 0 ? (
+        <p className="text-sm text-amber-700">
+          Size henüz bir branş atanmamış. Soru görebilmeniz için admin panelinden bir branş atanması gerekiyor.
+        </p>
+      ) : (
+        <AllQuestionsBrowser topics={topics} questions={allQuestions} />
+      )}
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
-        <p className="text-sm text-slate-500">Soru ekleme ve soru onaylama tek ekranda.</p>
+        <p className="text-sm text-slate-500">Soru ekleme, onaylama ve tüm soruları görüntüleme tek ekranda.</p>
       </div>
 
       <SimpleTabs
-        defaultKey="ekle"
+        defaultKey="liste"
         tabs={[
-          { key: "ekle", label: "Soru Ekle", content: soruEkleTab },
-          { key: "onay", label: "Soru Onayı", content: soruOnayTab, dot: questions.length > 0 },
+          { key: "liste", label: "Tüm Sorular", content: sorularListesiTab },
+          { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
+          { key: "onay", label: "Soru Onayı", content: soruOnayTab, dot: questions.length > 0, tone: "amber" },
         ]}
       />
     </div>

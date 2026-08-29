@@ -60,7 +60,7 @@ export default async function OgretmenBasvurulariPage() {
   const aktiviteTab = (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-slate-500">Her öğretmenin tek tek ne katkı sağladığının kaydı.</p>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Aktif Öğretmen" value={rows.length} />
         <StatCard label="Eklenen Soru" value={totalQuestions} />
         <StatCard label="Onaylanan Soru" value={totalApprovedQuestions} />
@@ -173,11 +173,11 @@ export default async function OgretmenBasvurulariPage() {
       </div>
 
       <SimpleTabs
-        defaultKey="basvurular"
+        defaultKey="aktivite"
         tabs={[
+          { key: "aktivite", label: "Öğretmen Aktivitesi", content: aktiviteTab },
           { key: "basvurular", label: "Öğretmen Başvuruları", content: basvurularTab },
           { key: "brans", label: "Branş Atamaları", content: bransTab },
-          { key: "aktivite", label: "Öğretmen Aktivitesi", content: aktiviteTab },
           { key: "test-ogretmenler", label: "Test Öğretmenler", content: testOgretmenlerTab },
         ]}
       />
