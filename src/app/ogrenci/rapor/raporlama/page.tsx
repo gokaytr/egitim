@@ -56,7 +56,7 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
           <h2 className="mb-1 font-semibold text-slate-900">Seviye Tespit Sınavı</h2>
           <p className="mb-3 text-sm text-slate-600">
             {data.studentProfile?.full_name?.split(" ")[0] ?? "Öğrenci"} henüz hiç soru çözmedi. İstersen sınıf seviyesine
-            uygun, farklı derslerden birkaç konuyu "seviye tespiti" olarak çalışma programına ekleyip performansını ve
+            uygun, farklı derslerden birkaç konuyu “seviye tespiti” olarak çalışma programına ekleyip performansını ve
             bilgi birikimini ölçebilirsin - sonuçlara göre çalışması ve çözmesi gereken konular otomatik önerilir.
           </p>
           <ParentPlacementTestButton studentId={data.studentId} gradeLevel={data.studentProfile?.grade_level ?? null} />
@@ -66,7 +66,7 @@ export default async function RaporlamaPage({ searchParams }: { searchParams: Pr
       <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Çalışma Programı / Hedefler</h2>
         <p className="mb-2 text-xs text-slate-500">
-          Özel ders talebi ve randevuları artık ayrı "Özel Ders Talebi" sekmesinde.
+          Özel ders talebi ve randevuları artık ayrı “Özel Ders Talebi” sekmesinde.
         </p>
         {!data.planItems.length && <p className="text-sm text-slate-500">Henüz çalışma programına konu eklenmemiş.</p>}
         <ul className="flex flex-col gap-2">

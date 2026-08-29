@@ -72,7 +72,7 @@ export function TeacherStudentManager({
     <Card className="overflow-x-auto">
       <h2 className="mb-1 font-semibold text-slate-900">Öğretmen — Öğrenci Atamaları</h2>
       <p className="mb-3 text-xs text-slate-500">
-        Her öğrenciye "öğrenci durumu" ekranlarında görebileceği bir öğretmen ata. Bu, branş atamasından
+        Her öğrenciye “öğrenci durumu” ekranlarında görebileceği bir öğretmen ata. Bu, branş atamasından
         (Öğretmen Branş Atamaları) ayrı - öğretmen sadece burada kendisine atanan öğrencilerin raporunu görür.
       </p>
       <table className="w-full min-w-[520px] text-left text-sm">

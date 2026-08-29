@@ -68,7 +68,7 @@ export function ParentGoalAssignForm({ studentId }: { studentId: string }) {
       <label className="text-sm font-medium text-slate-700">Öğrenciye soru ata</label>
       <p className="-mt-1 text-xs text-slate-500">
         Bir konu seç, kaç soru ve kaç dakika çalışması gerektiğini belirle. Atanan konu öğrencinin
-        panelinde "Hedeflerim" altında, doğrudan soru çözme sayfasına götüren bir bağlantıyla görünür.
+        panelinde “Hedeflerim” altında, doğrudan soru çözme sayfasına götüren bir bağlantıyla görünür.
       </p>
       <TopicSelect value={topicId} onChange={setTopicId} />
       <div className="grid grid-cols-2 gap-2">

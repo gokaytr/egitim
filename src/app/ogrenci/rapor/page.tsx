@@ -38,7 +38,7 @@ export default async function RaporPage({ searchParams }: { searchParams: Promis
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-900">
             <span className="font-semibold">Uyarı:</span> {data.studentProfile?.full_name?.split(" ")[0] ?? "Öğrenci"} son
-            analizi ve tavsiyeleri henüz "Okudum, Anladım" diyerek onaylamadı.
+            analizi ve tavsiyeleri henüz “Okudum, Anladım” diyerek onaylamadı.
           </p>
         </Card>
       )}
