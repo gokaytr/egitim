@@ -10,16 +10,15 @@ const TOP_BAR_LINKS = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { count: pendingCount } = await supabase
-    .from("questions")
-    .select("id", { count: "exact", head: true })
-    .eq("is_approved", false);
+  const [{ count: pendingCount }, { count: pendingTeacherCount }] = await Promise.all([
+    supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_approved", false),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("teacher_pending", true),
+  ]);
 
   const NAV = [
     { href: "/admin", label: "Genel Bakış" },
     { href: "/admin/kullanicilar", label: "Kullanıcılar" },
-    { href: "/admin/veli-baglantilari", label: "Veli Bağlantıları" },
-    { href: "/admin/ogretmen-basvurulari", label: "Öğretmen Başvuruları" },
+    { href: "/admin/ogretmen-basvurulari", label: "Öğretmen Başvuruları", dot: (pendingTeacherCount ?? 0) > 0 },
     { href: "/admin/mufredat", label: "Müfredat / Konu Ekle" },
     { href: "/admin/sorular", label: "Soru Onayı", tone: "amber" as const, dot: (pendingCount ?? 0) > 0 },
     { href: "/admin/soru-ekle", label: "Soru Ekle", tone: "emerald" as const },

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function DeleteLinkButton({ parentId, studentId }: { parentId: string; studentId: string }) {
+export function DeleteParentLinkButton({ parentId, studentId }: { parentId: string; studentId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 

@@ -7,7 +7,7 @@ import { Button, Card, Select } from "@/components/ui";
 
 type Person = { id: string; full_name: string; email: string };
 
-export function LinkForm({ parents, students }: { parents: Person[]; students: Person[] }) {
+export function ParentLinkForm({ parents, students }: { parents: Person[]; students: Person[] }) {
   const router = useRouter();
   const [parentId, setParentId] = useState(parents[0]?.id ?? "");
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");

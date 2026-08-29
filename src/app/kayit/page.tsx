@@ -84,6 +84,17 @@ export default function KayitPage() {
         return;
       }
 
+      // Ogretmen basvurusunda admine bildirim denemesi - kayit akisini
+      // engellememesi icin sonucunu beklemiyoruz, hata olsa da yutuluyor
+      // (bkz. /api/auth/teacher-application).
+      if (role === "teacher_request") {
+        fetch("/api/auth/teacher-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullName, email }),
+        }).catch(() => {});
+      }
+
       // Tam sayfa yönlendirme (router.push degil) - session cookie'sinin bir
       // sonraki sunucu render'inda kesin taze okunmasini garanti ediyor.
       window.location.href = REDIRECT_AFTER_SIGNUP[role];
