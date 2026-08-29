@@ -23,9 +23,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/mufredat", label: "Müfredat / Konu Ekle" },
     { href: "/admin/sorular", label: "Soru Onayı", tone: "amber" as const, dot: (pendingCount ?? 0) > 0 },
     { href: "/admin/soru-ekle", label: "Soru Ekle", tone: "emerald" as const },
-    { href: "/admin/gorevler", label: "Yapılacaklar" },
     { href: "/admin/ogrenci-raporlari", label: "Öğrenci Raporları" },
     { href: "/admin/ogretmen-aktivite", label: "Öğretmen Aktivitesi" },
+    { href: "/admin/analitik", label: "Analitik" },
     { href: "/admin/genel-ayarlar", label: "Genel Ayarlar" },
   ];
 
