@@ -20,9 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/kullanicilar", label: "Kullanıcılar" },
     { href: "/admin/ogrenci-raporlari", label: "Öğrenci Raporları" },
     { href: "/admin/ogretmen-basvurulari", label: "Öğretmenler", dot: (pendingTeacherCount ?? 0) > 0 },
-    { href: "/admin/soru-ekle", label: "Soru Ekle", tone: "emerald" as const },
-    { href: "/admin/sorular", label: "Soru Onayı", tone: "amber" as const, dot: (pendingCount ?? 0) > 0 },
-    { href: "/admin/sorular-listesi", label: "Sorular" },
+    { href: "/admin/sorular", label: "Sorular", tone: "emerald" as const, dot: (pendingCount ?? 0) > 0 },
     { href: "/admin/istatistikler", label: "İstatistikler" },
     { href: "/admin/genel-ayarlar", label: "Genel Ayarlar" },
   ];
