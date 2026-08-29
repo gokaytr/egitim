@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApproveButton } from "@/components/approve-button";
+import { AiCheckButton } from "@/components/ai-check-button";
 import { Card, Badge } from "@/components/ui";
 
 export default async function SoruOnayPage() {
@@ -36,6 +37,7 @@ export default async function SoruOnayPage() {
                   </li>
                 ))}
               </ul>
+              <AiCheckButton questionId={q.id} />
               <ApproveButton questionId={q.id} />
             </Card>
           );

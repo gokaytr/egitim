@@ -13,7 +13,7 @@ export default async function OgretmenMufredatPage() {
   const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: myAssignments }] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
-    supabase.from("topics").select("id, name, grade_level, exam_types, subjects(name)").order("grade_level"),
+    supabase.from("topics").select("id, name, kazanim, grade_level, exam_types, subjects(name)").order("grade_level"),
     supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", userData.user?.id),
   ]);
 
@@ -25,6 +25,7 @@ export default async function OgretmenMufredatPage() {
   const topics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({
     id: t.id,
     name: t.name,
+    kazanim: t.kazanim,
     grade_level: t.grade_level,
     exam_types: t.exam_types,
     subjectName: firstOf(t.subjects)?.name ?? "Diğer",

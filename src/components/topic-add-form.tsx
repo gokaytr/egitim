@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Card, Button, Input, Select } from "@/components/ui";
+import { Card, Button, Input, Select, Textarea } from "@/components/ui";
 
 type Subject = { id: string; name: string };
 type Course = { id: string; name: string };
@@ -13,6 +13,7 @@ export function TopicAddForm({ subjects, courses }: { subjects: Subject[]; cours
   const [gradeLevel, setGradeLevel] = useState(5);
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
   const [name, setName] = useState("");
+  const [kazanim, setKazanim] = useState("");
   const [difficulty, setDifficulty] = useState(3);
   const [estimatedMinutes, setEstimatedMinutes] = useState(20);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
@@ -35,6 +36,7 @@ export function TopicAddForm({ subjects, courses }: { subjects: Subject[]; cours
     const { error } = await supabase.from("topics").insert({
       subject_id: subjectId,
       name,
+      kazanim: kazanim.trim() || null,
       grade_level: gradeLevel,
       difficulty_level: difficulty,
       estimated_minutes: estimatedMinutes,
@@ -47,6 +49,7 @@ export function TopicAddForm({ subjects, courses }: { subjects: Subject[]; cours
     }
     setStatus("Konu eklendi.");
     setName("");
+    setKazanim("");
     setSelectedCourses([]);
     router.refresh();
   }
@@ -75,6 +78,17 @@ export function TopicAddForm({ subjects, courses }: { subjects: Subject[]; cours
         </div>
 
         <Input required placeholder="Konu adı (örn. Üçgende Açılar)" value={name} onChange={(e) => setName(e.target.value)} />
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Kazanım (opsiyonel)</label>
+          <Textarea
+            rows={2}
+            placeholder="Örn. Üçgenin iç açıları toplamının 180° olduğunu gösterir ve uygular."
+            value={kazanim}
+            onChange={(e) => setKazanim(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-400">MEB müfredatındaki kazanım/öğrenme hedefi metnini buraya ekleyebilirsin. İleride sınıf sınıf müfredat eklerken işine yarar.</p>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>

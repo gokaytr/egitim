@@ -141,3 +141,81 @@ Aşağıdaki JSON formatında ve SADECE JSON dizisi döndür:
     return [];
   }
 }
+
+
+const FALLBACK_QUALITY_CHECK = {
+  verdict: "bilinmiyor" as const,
+  summary: "Yapay zeka kontrolü şu anda yapılamadı (bağlantı sorunu ya da beklenmeyen bir hata). Soruyu elle incelemeye devam edebilirsin.",
+  issues: [] as string[],
+};
+
+/**
+ * Onay bekleyen bir soruyu yapay zekaya gönderip ikinci bir goz olarak
+ * kontrol ettirir: dogru cevabin gercekten dogru olup olmadigi, siklarda
+ * hata olup olmadigi, birden fazla dogru cevap olasiligi ve sorunun
+ * anlasilirligi. Bu sadece bir ÖNERİDİR - onay/red karari yine admin ya da
+ * ogretmene ait, sonuc otomatik olarak hicbir seyi degistirmez.
+ */
+export async function checkQuestionQuality(params: {
+  body: string;
+  options: Record<string, string>;
+  correctOption: string;
+  topicName: string | null;
+  gradeLevel: number | null;
+  difficulty: number | null;
+}) {
+  const { body, options, correctOption, topicName, gradeLevel, difficulty } = params;
+
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 1024,
+      system:
+        "Sen Türkiye müfredatına (MEB) hakim, çoktan seçmeli sınav sorularını denetleyen titiz bir editörsün. " +
+        "Sana verilen soruyu SADECE dogruluk ve kalite acisindan denetleyeceksin, yeniden yazmayacaksın. " +
+        "Kısa, somut ve SADECE JSON döndüreceksin.",
+      messages: [
+        {
+          role: "user",
+          content: `Aşağıdaki soruyu kontrol et:
+
+Konu: ${topicName ?? "belirtilmemiş"} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"}), Zorluk: ${difficulty ?? "belirtilmemiş"}/5
+
+Soru: ${body}
+${Object.entries(options)
+  .map(([key, val]) => `${key}) ${val}`)
+  .join("\n")}
+Belirtilen doğru cevap: ${correctOption}
+
+Şunları kontrol et:
+1. Belirtilen doğru cevap gerçekten doğru mu?
+2. Şıklarda yazım/mantık hatası var mı?
+3. Birden fazla şık doğru kabul edilebilir mi (belirsizlik)?
+4. Soru metni açık ve anlaşılır mı?
+5. Konu ve sınıf seviyesine uygun mu?
+
+Aşağıdaki JSON formatında ve SADECE JSON döndür:
+{
+  "verdict": "sorun_yok" | "sorunlu",
+  "summary": "1-2 cümlelik genel değerlendirme",
+  "issues": ["varsa somut sorunlar, madde madde - yoksa boş dizi"]
+}`,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("checkQuestionQuality: anthropic isteği başarısız", err);
+    return FALLBACK_QUALITY_CHECK;
+  }
+
+  const textBlock = message.content.find((b) => b.type === "text");
+  const raw = textBlock && "text" in textBlock ? textBlock.text : "{}";
+
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+  } catch {
+    return FALLBACK_QUALITY_CHECK;
+  }
+}

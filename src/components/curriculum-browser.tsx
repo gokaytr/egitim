@@ -3,6 +3,7 @@ import { Card } from "@/components/ui";
 export type CurriculumTopicRow = {
   id: string;
   name: string;
+  kazanim?: string | null;
   grade_level: number | null;
   exam_types: string[] | null;
   subjectName: string;
@@ -39,11 +40,14 @@ export function CurriculumBrowser({ topics }: { topics: CurriculumTopicRow[] }) 
                   <p className="mb-1 text-sm font-medium text-slate-700">{subjectName}</p>
                   <ul className="flex flex-col gap-1">
                     {ts.map((t) => (
-                      <li key={t.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                        <span>{t.name}</span>
-                        {t.exam_types && t.exam_types.length > 0 && (
-                          <span className="text-xs text-slate-500">{t.exam_types.join(", ")}</span>
-                        )}
+                      <li key={t.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span>{t.name}</span>
+                          {t.exam_types && t.exam_types.length > 0 && (
+                            <span className="text-xs text-slate-500">{t.exam_types.join(", ")}</span>
+                          )}
+                        </div>
+                        {t.kazanim && <p className="mt-0.5 text-xs text-slate-400">{t.kazanim}</p>}
                       </li>
                     ))}
                   </ul>

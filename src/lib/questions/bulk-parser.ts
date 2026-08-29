@@ -107,3 +107,47 @@ export function parseQuestionsText(raw: string): ParseResult {
 
   return { questions, errors };
 }
+
+// "Ders ders" / konu konu toplu ekleme: metin icinde "Konu: <konu adi>"
+// basliklariyla birden fazla konunun sorulari tek seferde yapistirilabilir.
+// Baslik yoksa (eski davranis) butun metin tek bir bolum sayilir ve
+// cagiran taraf (ör. o an ekranda secili konu) varsayilan olarak kullanilir.
+//
+//   Konu: Üçgende Açılar
+//   Soru: ...
+//   ...
+//
+//   Konu: Dörtgenler
+//   Soru: ...
+//   ...
+
+export type TopicSection = {
+  /** "Konu:" basligindan gelen ham metin, baslik yoksa null. */
+  topicName: string | null;
+  result: ParseResult;
+};
+
+const TOPIC_HEADER = /^\s*konu\s*:\s*(.+)$/i;
+
+export function parseQuestionsByTopic(raw: string): TopicSection[] {
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+
+  const sections: { topicName: string | null; lines: string[] }[] = [];
+  let current: { topicName: string | null; lines: string[] } | null = null;
+
+  for (const line of lines) {
+    const topicMatch = TOPIC_HEADER.exec(line);
+    if (topicMatch) {
+      if (current) sections.push(current);
+      current = { topicName: topicMatch[1].trim(), lines: [] };
+    } else {
+      if (!current) current = { topicName: null, lines: [] };
+      current.lines.push(line);
+    }
+  }
+  if (current) sections.push(current);
+
+  return sections
+    .filter((s) => s.lines.some((l) => l.trim()))
+    .map((s) => ({ topicName: s.topicName, result: parseQuestionsText(s.lines.join("\n")) }));
+}
