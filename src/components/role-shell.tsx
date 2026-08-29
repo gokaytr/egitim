@@ -55,7 +55,6 @@ export function RoleShell({
   title,
   navItems,
   children,
-  helpHref,
   navItemsByRole,
   titleByRole,
   topBarLinks,
@@ -64,7 +63,6 @@ export function RoleShell({
   title: string;
   navItems: NavItem[];
   children: ReactNode;
-  helpHref?: string;
   navItemsByRole?: Partial<Record<string, NavItem[]>>;
   titleByRole?: Partial<Record<string, string>>;
   topBarLinks?: NavItem[];
@@ -200,7 +198,7 @@ export function RoleShell({
         </button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {(isAdminPreviewing || helpHref || topBarLinks?.length) && (
+        {(isAdminPreviewing || topBarLinks?.length) && (
           <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-6">
             <div>
               {isAdminPreviewing && (
@@ -226,23 +224,6 @@ export function RoleShell({
                   {link.label}
                 </Link>
               ))}
-              {helpHref && (
-              <Link
-                href={helpHref}
-                title="Sistem Bilgisi"
-                aria-label="Sistem Bilgisi"
-                className="flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-100"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10A8 8 0 112 10a8 8 0 0116 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9zm1-3a1 1 0 100 2 1 1 0 000-2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Sistem Bilgisi
-              </Link>
-              )}
             </div>
           </div>
         )}

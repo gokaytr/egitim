@@ -6,6 +6,7 @@ const NAV_PARENT = [
   { href: "/ogrenci/rapor", label: "Genel Durum" },
   { href: "/ogrenci/rapor/raporlama", label: "Raporlama" },
   { href: "/ogrenci/rapor/ozel-ders-talebi", label: "Özel Ders Talebi" },
+  { href: "/ogrenci/genel-ayarlar", label: "Genel Ayarlar" },
 ];
 
 export default async function OgrenciLayout({ children }: { children: React.ReactNode }) {
@@ -91,13 +92,13 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
         badge: total > 0 ? `${doneBySubject.get(s.id) ?? 0}/${total}` : undefined,
       };
     }),
+    { href: "/ogrenci/genel-ayarlar", label: "Genel Ayarlar" },
   ];
 
   return (
     <RoleShell
       title="Öğrenci Paneli"
       navItems={navStudent}
-      helpHref="/ogrenci/nasil-calisir"
       titleByRole={{ parent: "Veli Paneli", student: "Öğrenci Paneli" }}
       navItemsByRole={{ parent: NAV_PARENT, student: navStudent, admin: navStudent }}
       showGradeBackground

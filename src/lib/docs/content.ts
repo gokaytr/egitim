@@ -1,5 +1,5 @@
 // Bu dosya Odak platformunun "sistem nasıl işliyor" dokümantasyonunun tek
-// kaynağıdır. /admin/sistem-bilgisi ve /ogretmen/nasil-calisir sayfaları
+// kaynağıdır. /admin/genel-ayarlar, /ogrenci/genel-ayarlar ve /ogretmen/genel-ayarlar sayfaları
 // buradan besleniyor. Yeni bir özellik eklendiğinde ilgili bölüme birkaç
 // cümle eklemek yeterli - ayrı bir dokümantasyon güncellemesi gerekmiyor.
 

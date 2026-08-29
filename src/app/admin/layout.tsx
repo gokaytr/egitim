@@ -2,10 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
 
 const TOP_BAR_LINKS = [
-  { href: "/admin/gorevler", label: "Yapılacaklar", tone: "accent" as const },
   { href: "/ogrenci", label: "Öğrenci Ekranı" },
   { href: "/ogretmen", label: "Öğretmen Ekranı" },
   { href: "/ogrenci/rapor", label: "Veli Görünümü" },
+  { href: "/admin/gorevler", label: "Yapılacaklar", tone: "accent" as const },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <RoleShell title="Yönetici Paneli" navItems={NAV} helpHref="/admin/sistem-bilgisi" topBarLinks={TOP_BAR_LINKS}>
+    <RoleShell title="Yönetici Paneli" navItems={NAV} topBarLinks={TOP_BAR_LINKS}>
       {children}
     </RoleShell>
   );

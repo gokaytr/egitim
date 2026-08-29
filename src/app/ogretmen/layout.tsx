@@ -28,10 +28,11 @@ export default async function OgretmenLayout({ children }: { children: React.Rea
     { href: "/ogretmen/soru-onay", label: "Soru Onayı", tone: "amber" as const, dot: pendingCount > 0 },
     { href: "/ogretmen/ozel-ders", label: "Özel Ders" },
     { href: "/ogretmen/ogrenci-raporlari", label: "Öğrenci Raporları" },
+    { href: "/ogretmen/genel-ayarlar", label: "Genel Ayarlar" },
   ];
 
   return (
-    <RoleShell title="Öğretmen Paneli" navItems={NAV} helpHref="/ogretmen/nasil-calisir">
+    <RoleShell title="Öğretmen Paneli" navItems={NAV}>
       {children}
     </RoleShell>
   );
