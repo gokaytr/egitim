@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
 import { CoachChat } from "@/components/coach-chat";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
 const NAV_PARENT = [
   { href: "/ogrenci/rapor", label: "Genel Durum" },
@@ -13,14 +14,26 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
   const supabase = await createClient();
   const { data: subjects } = await supabase.from("subjects").select("id, name").order("name");
 
-  // Koc Pusula sohbet balonu SADECE gercek ogrenci girisinde gorunur - veli
-  // onizlemesinde veya admin onizlemesinde gosterilmez.
+  // Koc Pusula sohbet balonu SADECE gercek ogrenci girisinde veya admin
+  // bir test ogrenciyi onizlerken gorunur - veli onizlemesinde gosterilmez.
   const { data: userData } = await supabase.auth.getUser();
   const { data: callerProfile } = await supabase
     .from("profiles")
     .select("role, full_name, grade_level")
     .eq("id", userData.user?.id)
     .single();
+
+  // Admin bir test ogrenciyi onizliyorsa (layout'ta query param okunamadigi
+  // icin secim cookie'den geliyor - bkz. resolveEffectiveStudent), sol
+  // menudeki ilerleme rozetleri ve Koc Pusula da o test ogrencinin verisiyle
+  // calissin diye "etkin ogrenci"yi cozumluyoruz.
+  const { studentId: effectiveStudentId, isAdminPreview } = await resolveEffectiveStudent();
+  const isStudentView = callerProfile?.role === "student" || (callerProfile?.role === "admin" && isAdminPreview);
+
+  const effectiveProfile =
+    callerProfile?.role === "admin" && isAdminPreview
+      ? (await supabase.from("profiles").select("full_name, grade_level").eq("id", effectiveStudentId).single()).data
+      : callerProfile;
 
   // Sol menudeki her brans icin "cozulen/toplam" ilerleme bilgisi -
   // ogrencinin kendi sinifina ait konu sayisi ve bunlardan tamamlanmis
@@ -30,13 +43,13 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
   // "cozuldu" sayilmiyor.
   const totalsBySubject = new Map<string, number>();
   const doneBySubject = new Map<string, number>();
-  if (callerProfile?.role === "student" && userData.user && callerProfile.grade_level != null) {
+  if (isStudentView && effectiveStudentId && effectiveProfile?.grade_level != null) {
     const [{ data: gradeTopics }, { data: doneAttempts }] = await Promise.all([
-      supabase.from("topics").select("id, subject_id").eq("grade_level", callerProfile.grade_level),
+      supabase.from("topics").select("id, subject_id").eq("grade_level", effectiveProfile.grade_level),
       supabase
         .from("student_attempts")
         .select("topic_id")
-        .eq("student_id", userData.user.id)
+        .eq("student_id", effectiveStudentId)
         .not("topic_id", "is", null)
         .not("finished_at", "is", null),
     ]);
@@ -50,18 +63,18 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
   }
 
   let coachContext: { isim: string; konu: string; basari: string } | null = null;
-  if (callerProfile?.role === "student" && userData.user) {
+  if (isStudentView && effectiveStudentId) {
     const [{ data: attempts }, { data: pendingItems }] = await Promise.all([
       supabase
         .from("student_attempts")
         .select("correct_count, wrong_count")
-        .eq("student_id", userData.user.id)
+        .eq("student_id", effectiveStudentId)
         .order("started_at", { ascending: false })
         .limit(10),
       supabase
         .from("study_plan_items")
         .select("status, topics(name), study_plans!inner(student_id, status)")
-        .eq("study_plans.student_id", userData.user.id)
+        .eq("study_plans.student_id", effectiveStudentId)
         .neq("status", "done")
         .limit(1),
     ]);
@@ -74,7 +87,7 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
     const pendingTopic = pendingItem ? (Array.isArray(pendingItem.topics) ? pendingItem.topics[0] : pendingItem.topics) : null;
 
     coachContext = {
-      isim: callerProfile.full_name?.split(" ")[0] ?? "Kahraman",
+      isim: effectiveProfile?.full_name?.split(" ")[0] ?? "Kahraman",
       konu: pendingTopic?.name ?? "-",
       basari: accuracy !== null ? String(accuracy) : "-",
     };

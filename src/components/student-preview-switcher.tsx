@@ -12,10 +12,22 @@ export function StudentPreviewSwitcher({ candidates, currentId }: { candidates: 
 
   if (candidates.length === 0) return null;
 
-  function handleChange(id: string) {
+  async function handleChange(id: string) {
+    // Secimi cookie'ye de yaz ki admin baska bir derse/sayfaya gectiginde
+    // (linkte ?studentId= olmasa bile) ayni test ogrenci gorunmeye devam etsin.
+    try {
+      await fetch("/api/admin/preview-student", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: id }),
+      });
+    } catch {
+      // cookie yazilamasa bile query param ile bu sayfada calismaya devam eder
+    }
     const params = new URLSearchParams(searchParams.toString());
     params.set("studentId", id);
     router.push(`${pathname}?${params.toString()}`);
+    router.refresh();
   }
 
   return (

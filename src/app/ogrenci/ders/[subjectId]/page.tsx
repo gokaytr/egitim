@@ -2,16 +2,24 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
 import { TopicActions } from "@/components/topic-actions";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
-export default async function DersPage({ params }: { params: Promise<{ subjectId: string }> }) {
+export default async function DersPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ subjectId: string }>;
+  searchParams: Promise<{ studentId?: string }>;
+}) {
   const { subjectId } = await params;
+  const { studentId: requestedStudentId } = await searchParams;
   const supabase = await createClient();
 
-  const { data: userData } = await supabase.auth.getUser();
+  const { studentId } = await resolveEffectiveStudent(requestedStudentId);
   const { data: profile } = await supabase
     .from("profiles")
     .select("grade_level")
-    .eq("id", userData.user?.id)
+    .eq("id", studentId)
     .single();
 
   const [{ data: subject }, { data: topics }] = await Promise.all([
