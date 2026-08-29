@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Badge } from "@/components/ui";
-import { DrawingCanvas } from "@/components/drawing-canvas";
+import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { levelFromScore, LEVEL_TITLES } from "@/lib/deneme/level";
 
 type Question = {
@@ -27,10 +27,12 @@ export function ExamRunner({
   examId,
   examType,
   questions,
+  quizSettings = DEFAULT_QUIZ_DISPLAY_SETTINGS,
 }: {
   examId: string;
   examType: string;
   questions: Question[];
+  quizSettings?: QuizDisplaySettings;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -123,32 +125,18 @@ export function ExamRunner({
 
   return (
     <div className="flex flex-col gap-4">
-      {questions.map((q, i) => (
-        <Card key={q.id}>
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-indigo-500">{topicNameOf(q)}</p>
-          <p className="font-medium text-slate-900">{i + 1}. {q.body}</p>
-          {q.image_url && <DrawingCanvas backgroundImageUrl={q.image_url} />}
-          <div className="mt-3 flex flex-col gap-2">
-            {Object.entries(q.options).map(([key, val]) => (
-              <label
-                key={key}
-                className={`flex touch-manipulation cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 text-sm active:bg-slate-50 ${
-                  answers[q.id] === key ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={q.id}
-                  className="accent-indigo-600"
-                  checked={answers[q.id] === key}
-                  onChange={() => setAnswers({ ...answers, [q.id]: key })}
-                />
-                <span>{key}) {val}</span>
-              </label>
-            ))}
-          </div>
-        </Card>
-      ))}
+      <QuestionAnswerList
+        questions={questions.map((q) => ({
+          id: q.id,
+          body: q.body,
+          options: q.options,
+          image_url: q.image_url,
+          topicLabel: topicNameOf(q),
+        }))}
+        answers={answers}
+        onAnswer={(questionId, option) => setAnswers({ ...answers, [questionId]: option })}
+        settings={quizSettings}
+      />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <Button onClick={handleSubmit} disabled={submitting} className="w-fit">
         {submitting ? "Değerlendiriliyor..." : "Denemeyi Bitir"}

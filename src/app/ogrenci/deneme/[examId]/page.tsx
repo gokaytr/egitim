@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
 import { ExamRunner } from "./exam-runner";
+import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
 
 export default async function DenemePage({ params }: { params: Promise<{ examId: string }> }) {
   const { examId } = await params;
   const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const quizSettings = await getStudentQuizSettings(userData.user?.id);
 
   const [{ data: exam }, { data: examQuestions }] = await Promise.all([
     supabase.from("exams").select("id, title, exam_type, duration_minutes").eq("id", examId).single(),
@@ -37,7 +40,7 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
           {questions.length} soru · yaklaşık {exam.duration_minutes} dakika
         </p>
       </div>
-      <ExamRunner examId={exam.id} examType={exam.exam_type} questions={questions} />
+      <ExamRunner examId={exam.id} examType={exam.exam_type} questions={questions} quizSettings={quizSettings} />
     </div>
   );
 }

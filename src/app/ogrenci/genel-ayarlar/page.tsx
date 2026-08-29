@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { DOC_SECTIONS } from "@/lib/docs/content";
+import { QuizSettingsForm } from "@/components/quiz-settings-form";
+import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
 
 export default async function OgrenciGenelAyarlarPage() {
   const supabase = await createClient();
@@ -15,6 +17,12 @@ export default async function OgrenciGenelAyarlarPage() {
   const sections = DOC_SECTIONS.filter((s) =>
     role === "parent" ? s.role === "parent" : role === "admin" ? s.role === "student" || s.role === "parent" : s.role === "student"
   );
+
+  // Sinav Ayarlari sekmesi sadece gercek ogrenci hesabinda anlamli - veli
+  // gorunumunde ve admin onizlemesinde (kendi hesabina ait olmayan bir satir
+  // duzenlenemeyecegi icin) gosterilmiyor.
+  const isRealStudent = role === "student";
+  const quizSettings = isRealStudent ? await getStudentQuizSettings(userData.user?.id) : null;
 
   const sistemBilgisiTab = (
     <div className="flex flex-col gap-6">
@@ -34,13 +42,21 @@ export default async function OgrenciGenelAyarlarPage() {
     </div>
   );
 
+  const sinavAyarlariTab = quizSettings && <QuizSettingsForm initial={quizSettings} />;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Genel Ayarlar</h1>
         <p className="text-sm text-slate-500">Platformu nasıl kullanacağına dair güncel özet.</p>
       </div>
-      <SimpleTabs defaultKey="sistem-bilgisi" tabs={[{ key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab }]} />
+      <SimpleTabs
+        defaultKey="sistem-bilgisi"
+        tabs={[
+          { key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab },
+          ...(sinavAyarlariTab ? [{ key: "sinav-ayarlari", label: "Sınav Ayarları", content: sinavAyarlariTab }] : []),
+        ]}
+      />
     </div>
   );
 }

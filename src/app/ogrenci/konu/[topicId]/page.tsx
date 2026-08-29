@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { QuizRunner } from "./quiz-runner";
 import { Card } from "@/components/ui";
 import { LessonContentView } from "@/components/lesson-content-view";
+import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
 
 export default async function KonuTestPage({ params }: { params: Promise<{ topicId: string }> }) {
   const { topicId } = await params;
   const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const quizSettings = await getStudentQuizSettings(userData.user?.id);
 
   const [{ data: topic }, { data: lessonContents }, { data: questions }] = await Promise.all([
     supabase.from("topics").select("id, name, grade_level").eq("id", topicId).single(),
@@ -49,7 +52,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
           </p>
         </Card>
       ) : (
-        <QuizRunner topicId={topicId} questions={questions} />
+        <QuizRunner topicId={topicId} questions={questions} quizSettings={quizSettings} />
       )}
     </div>
   );

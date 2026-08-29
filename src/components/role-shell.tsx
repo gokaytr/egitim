@@ -84,6 +84,12 @@ export function RoleShell({
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [gradeLevel, setGradeLevel] = useState<number | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Soru cozme ekranlarina (deneme/konu testi) girildiginde odaklanmayi
+  // kolaylastirmak icin sol menu varsayilan olarak daraltiliyor - ama
+  // ogrenci isterse daraltma butonuyla istedigi an genisletip kapatabiliyor.
+  const [sidebarOverride, setSidebarOverride] = useState<boolean | null>(null);
+  const isQuestionSolvingRoute = /^\/ogrenci\/(deneme|konu)\//.test(pathname);
+  const sidebarCollapsed = sidebarOverride ?? isQuestionSolvingRoute;
 
   // Admin, ogrenci/ogretmen panellerini onizlerken (kendi paneli disinda
   // gezinirken) ust tarafta admin paneline donme baglantisi gosteriyoruz.
@@ -113,6 +119,13 @@ export function RoleShell({
   // Sayfa degistiginde mobil menu aciksa kapat.
   useEffect(() => {
     setMobileNavOpen(false);
+  }, [pathname]);
+
+  // Yeni bir sayfaya gecince sol menunun daraltilmis/genisletilmis
+  // durumundaki manuel tercih sifirlanir - boylece her soru cozme
+  // ekraninda otomatik daraltma yeniden devreye girer.
+  useEffect(() => {
+    setSidebarOverride(null);
   }, [pathname]);
 
   async function handleLogout() {
@@ -208,32 +221,64 @@ export function RoleShell({
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-5 lg:flex">
-        <Link href={homeHref} className="mb-8 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
-          <span className="text-lg font-semibold">Odak</span>
-        </Link>
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
-        <NavLinks items={displayNav} pathname={pathname} />
-        <div className="mt-auto flex flex-col gap-3 pt-4">
-          {isAdminPreviewing && (
-            <>
-              {displayPreviewSwitcher}
-              <Link
-                href="/admin"
-                className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-              >
-                Admin paneline geçiş yap
+      <aside
+        className={`sticky top-0 hidden h-dvh shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white lg:flex ${
+          sidebarCollapsed ? "w-16 items-center p-3" : "w-64 p-5"
+        }`}
+      >
+        {sidebarCollapsed ? (
+          <>
+            <Link href={homeHref} className="mb-4 flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+              O
+            </Link>
+            <button
+              onClick={() => setSidebarOverride(false)}
+              aria-label="Menüyü genişlet"
+              title="Menüyü genişlet"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+            >
+              ›
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mb-8 flex items-center justify-between gap-2">
+              <Link href={homeHref} className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
+                <span className="text-lg font-semibold">Odak</span>
               </Link>
-            </>
-          )}
-          <button
-            onClick={handleLogout}
-            className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
-          >
-            Çıkış yap
-          </button>
-        </div>
+              <button
+                onClick={() => setSidebarOverride(true)}
+                aria-label="Menüyü daralt"
+                title="Menüyü daralt"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+              >
+                ‹
+              </button>
+            </div>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
+            <NavLinks items={displayNav} pathname={pathname} />
+            <div className="mt-auto flex flex-col gap-3 pt-4">
+              {isAdminPreviewing && (
+                <>
+                  {displayPreviewSwitcher}
+                  <Link
+                    href="/admin"
+                    className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+                  >
+                    Admin paneline geçiş yap
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={handleLogout}
+                className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
+              >
+                Çıkış yap
+              </button>
+            </div>
+          </>
+        )}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         {!!topBarLinks?.length && (
