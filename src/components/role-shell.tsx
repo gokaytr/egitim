@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { GradeBackground } from "@/components/grade-background";
 import { gradeBackgroundVariant } from "@/lib/grade-level";
 
-type NavItem = { href: string; label: string; tone?: "default" | "accent" | "emerald" | "amber"; dot?: boolean };
+type NavItem = { href: string; label: string; tone?: "default" | "accent" | "emerald" | "amber"; dot?: boolean; badge?: string };
 
 function NavLinks({
   items,
@@ -37,10 +37,13 @@ function NavLinks({
               isActive ? "bg-indigo-50 text-indigo-700" : inactiveTone
             }`}
           >
-            <span>{item.label}</span>
-            {item.dot && (
-              <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" aria-label="Onay bekleyen soru var" />
-            )}
+            <span className="flex items-center gap-1.5">
+              {item.label}
+              {item.dot && (
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" aria-label="Onay bekleyen soru var" />
+              )}
+            </span>
+            {item.badge && <span className="text-xs font-normal text-slate-400">{item.badge}</span>}
           </Link>
         );
       })}

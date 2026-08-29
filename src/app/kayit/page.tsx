@@ -23,11 +23,13 @@ export default function KayitPage() {
   const [gradeLevel, setGradeLevel] = useState("9");
   const [examTarget, setExamTarget] = useState("TYT");
   const [error, setError] = useState<string | null>(null);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setAlreadyRegistered(false);
     setLoading(true);
 
     try {
@@ -60,6 +62,21 @@ export default function KayitPage() {
         }),
         timeout,
       ]);
+
+      // Supabase, e-posta zaten kayitliyse -guvenlik geregi- bazen acik bir
+      // hata donmez, bunun yerine identities dizisi bos bir "sahte" kullanici
+      // doner; bazen de dogrudan "already registered" hatasi doner. Ikisini
+      // de yakalayip kullaniciya net bir Turkce mesaj + giris yap secenegi
+      // gosteriyoruz.
+      const duplicateFromError = signUpError && /already registered|already exists|user_already_exists/i.test(signUpError.message ?? "");
+      const duplicateFromFakeUser = !signUpError && !!data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0;
+
+      if (duplicateFromError || duplicateFromFakeUser) {
+        setAlreadyRegistered(true);
+        setError("Bu e-posta adresiyle zaten bir üyeliğin var.");
+        setLoading(false);
+        return;
+      }
 
       if (signUpError || !data.user) {
         setError(signUpError?.message ?? "Kayıt başarısız oldu.");
@@ -131,7 +148,12 @@ export default function KayitPage() {
             <label className="mb-1 block text-sm font-medium text-slate-700">Şifre</label>
             <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && !alreadyRegistered && <p className="text-sm text-red-600">{error}</p>}
+          {alreadyRegistered && (
+            <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+              {error} <Link href="/giris" className="font-medium underline">Giriş yapmayı dener misin?</Link>
+            </p>
+          )}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Kayıt yapılıyor..." : "Kayıt ol"}
           </Button>

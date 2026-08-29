@@ -7,13 +7,20 @@ export default async function DersPage({ params }: { params: Promise<{ subjectId
   const { subjectId } = await params;
   const supabase = await createClient();
 
+  const { data: userData } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("grade_level")
+    .eq("id", userData.user?.id)
+    .single();
+
   const [{ data: subject }, { data: topics }] = await Promise.all([
     supabase.from("subjects").select("id, name, category").eq("id", subjectId).single(),
     supabase
       .from("topics")
       .select("id, name, grade_level, exam_types, difficulty_level, estimated_minutes")
       .eq("subject_id", subjectId)
-      .order("grade_level")
+      .eq("grade_level", profile?.grade_level ?? -1)
       .order("order_index"),
   ]);
 
@@ -27,7 +34,9 @@ export default async function DersPage({ params }: { params: Promise<{ subjectId
 
       {!topics?.length && (
         <Card>
-          <p className="text-sm text-slate-500">Bu derste henüz konu eklenmemiş. Öğretmen içerik ekledikçe burada görünecek.</p>
+          <p className="text-sm text-slate-500">
+            {profile?.grade_level}. sınıf için bu derste henüz konu eklenmemiş. Öğretmen içerik ekledikçe burada görünecek.
+          </p>
         </Card>
       )}
 
