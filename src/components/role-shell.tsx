@@ -24,9 +24,9 @@ function NavLinks({
         const isActive = pathname === item.href;
         const inactiveTone =
           item.tone === "emerald"
-            ? "text-emerald-700 hover:bg-emerald-50"
+            ? "bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100"
             : item.tone === "amber"
-              ? "text-amber-700 hover:bg-amber-50"
+              ? "bg-amber-50 text-amber-700 font-semibold hover:bg-amber-100"
               : "text-slate-600 hover:bg-slate-100";
         return (
           <Link

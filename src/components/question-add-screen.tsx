@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicPickerTabs } from "@/components/topic-picker-tabs";
 import { useMyAssignedSubjectIds } from "@/hooks/use-my-assigned-subject-ids";
@@ -49,11 +49,15 @@ function useContentRightsAck() {
   return { ackAt, saving, acknowledge };
 }
 
-export function QuestionAddScreen({ showAiTab = false }: { showAiTab?: boolean }) {
+// curriculumTab admin panelinde iletiliyor: konu/mufredat eklemek soru
+// eklemenin dogal bir on adimi oldugu icin, artik ayri bir sayfa yerine bu
+// ekranin en soldaki sekmesi - mantiksal sira: once konu/mufredat, sonra
+// soru ekle, (admin'de) sonra yapay zeka ile uret.
+export function QuestionAddScreen({ showAiTab = false, curriculumTab }: { showAiTab?: boolean; curriculumTab?: ReactNode }) {
   const subjectIds = useMyAssignedSubjectIds();
   const [topicId, setTopicId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
-  const [tab, setTab] = useState<"add" | "ai">("add");
+  const [tab, setTab] = useState<"mufredat" | "add" | "ai">("add");
   const { ackAt, saving, acknowledge } = useContentRightsAck();
 
   if (ackAt === undefined) {
@@ -73,15 +77,23 @@ export function QuestionAddScreen({ showAiTab = false }: { showAiTab?: boolean }
     );
   }
 
+  const hasTabs = !!curriculumTab || showAiTab;
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
-        <TopicPickerTabs value={topicId} onChange={setTopicId} subjectIds={subjectIds} />
-      </div>
-
-      {showAiTab && (
-        <div className="flex max-w-md gap-1 rounded-xl bg-slate-100 p-1">
+      {hasTabs && (
+        <div className="flex max-w-2xl flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
+          {curriculumTab && (
+            <button
+              type="button"
+              onClick={() => setTab("mufredat")}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                tab === "mufredat" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Müfredat / Konu Ekle
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setTab("add")}
@@ -91,39 +103,50 @@ export function QuestionAddScreen({ showAiTab = false }: { showAiTab?: boolean }
           >
             Soru Ekle
           </button>
-          <button
-            type="button"
-            onClick={() => setTab("ai")}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              tab === "ai" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Yapay Zeka ile Soru Üret
-            <Badge tone="amber">Test</Badge>
-          </button>
+          {showAiTab && (
+            <button
+              type="button"
+              onClick={() => setTab("ai")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                tab === "ai" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Yapay Zeka ile Soru Üret
+              <Badge tone="amber">Test</Badge>
+            </button>
+          )}
         </div>
       )}
 
-      {(!showAiTab || tab === "add") && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <ManualQuestionForm topicId={topicId} />
-          <BulkQuestionImport topicId={topicId} subjectIds={subjectIds} />
-        </div>
-      )}
+      {tab === "mufredat" && curriculumTab}
 
-      {showAiTab && tab === "ai" && (
-        <div className="max-w-xl">
-          <div className="mb-3 flex items-center gap-2">
-            <Badge tone="amber">Test aşamasında</Badge>
-            <p className="text-sm text-slate-500">
-              Bu özellik henüz test aşamasında, ara sıra hata verebilir.
-            </p>
+      {tab !== "mufredat" && (
+        <>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
+            <TopicPickerTabs value={topicId} onChange={setTopicId} subjectIds={subjectIds} />
           </div>
-          <AiQuestionGenerate topicId={topicId} onStatus={setStatus} />
-        </div>
-      )}
 
-      {status && <p className="text-sm text-slate-600">{status}</p>}
+          {tab === "add" && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <ManualQuestionForm topicId={topicId} />
+              <BulkQuestionImport topicId={topicId} subjectIds={subjectIds} />
+            </div>
+          )}
+
+          {tab === "ai" && showAiTab && (
+            <div className="max-w-xl">
+              <div className="mb-3 flex items-center gap-2">
+                <Badge tone="amber">Test aşamasında</Badge>
+                <p className="text-sm text-slate-500">Bu özellik henüz test aşamasında, ara sıra hata verebilir.</p>
+              </div>
+              <AiQuestionGenerate topicId={topicId} onStatus={setStatus} />
+            </div>
+          )}
+
+          {status && <p className="text-sm text-slate-600">{status}</p>}
+        </>
+      )}
     </div>
   );
 }

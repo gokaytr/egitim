@@ -18,12 +18,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const NAV = [
     { href: "/admin", label: "Genel Bakış" },
     { href: "/admin/kullanicilar", label: "Kullanıcılar" },
-    { href: "/admin/ogretmen-basvurulari", label: "Öğretmenler", dot: (pendingTeacherCount ?? 0) > 0 },
-    { href: "/admin/mufredat", label: "Müfredat / Konu Ekle" },
-    { href: "/admin/sorular", label: "Soru Onayı", tone: "amber" as const, dot: (pendingCount ?? 0) > 0 },
-    { href: "/admin/soru-ekle", label: "Soru Ekle", tone: "emerald" as const },
-    { href: "/admin/sorular-listesi", label: "Sorular" },
     { href: "/admin/ogrenci-raporlari", label: "Öğrenci Raporları" },
+    { href: "/admin/ogretmen-basvurulari", label: "Öğretmenler", dot: (pendingTeacherCount ?? 0) > 0 },
+    { href: "/admin/soru-ekle", label: "Soru Ekle", tone: "emerald" as const },
+    { href: "/admin/sorular", label: "Soru Onayı", tone: "amber" as const, dot: (pendingCount ?? 0) > 0 },
+    { href: "/admin/sorular-listesi", label: "Sorular" },
     { href: "/admin/istatistikler", label: "İstatistikler" },
     { href: "/admin/genel-ayarlar", label: "Genel Ayarlar" },
   ];
