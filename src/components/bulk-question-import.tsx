@@ -31,12 +31,10 @@ type ResolvedQuestion = ParsedQuestion & {
 
 export function BulkQuestionImport({
   topicId,
-  rightsConfirmed,
   subjectIds,
 }: {
   /** Ekranda o an secili konu - metinde "Konu:" basligi olmayan sorular icin varsayilan olarak kullanilir. */
   topicId: string;
-  rightsConfirmed: boolean;
   /** Verilirse, "Konu:" baslıklarını eslestirirken sadece bu derslere ait konulara bakilir. */
   subjectIds?: string[];
 }) {
@@ -121,10 +119,6 @@ export function BulkQuestionImport({
   }
 
   async function handleSaveAll() {
-    if (!rightsConfirmed) {
-      setStatus("Devam etmeden önce yukarıdaki içerik kullanım hakkı onayını işaretle.");
-      return;
-    }
     const savable = resolved.filter((q) => q.topicId);
     if (!savable.length) {
       setStatus("Kaydedilecek soru yok — önce konuları doğru şekilde eşleştir.");
@@ -212,7 +206,7 @@ export function BulkQuestionImport({
           Soruları Ayrıştır
         </Button>
         {resolved.length > 0 && (
-          <Button onClick={handleSaveAll} disabled={saving || !rightsConfirmed}>
+          <Button onClick={handleSaveAll} disabled={saving}>
             {saving ? "Ekleniyor..." : `${resolved.filter((q) => q.topicId).length} Soruyu Ekle`}
           </Button>
         )}
