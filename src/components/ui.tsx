@@ -39,7 +39,7 @@ export function Button({
   };
   return (
     <button
-      className={`rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`touch-manipulation rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${styles[variant]} ${className}`}
       {...props}
     >
       {children}

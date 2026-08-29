@@ -133,7 +133,7 @@ export function QuizRunner({ topicId, questions }: { topicId: string; questions:
           {q.image_url && <DrawingCanvas backgroundImageUrl={q.image_url} />}
           <div className="mt-3 flex flex-col gap-2">
             {Object.entries(q.options).map(([key, val]) => (
-              <label key={key} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${answers[q.id] === key ? "border-indigo-500 bg-indigo-50" : "border-slate-200"}`}>
+              <label key={key} className={`flex touch-manipulation cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 text-sm active:bg-slate-50 ${answers[q.id] === key ? "border-indigo-500 bg-indigo-50" : "border-slate-200"}`}>
                 <input
                   type="radio"
                   name={q.id}
