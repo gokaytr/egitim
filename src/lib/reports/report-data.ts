@@ -325,6 +325,48 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
   };
 }
 
+export type StaffStudentListItem = { id: string; full_name: string; grade_level: number | null; exam_target: string | null; is_demo: boolean };
+
+// Admin "Ogrenci Raporlari" ekraninin liste gorunumu icin - binlerce
+// ogrenci olsa bile her biri icin tam rapor sorgusu calistirmadan, sadece
+// listede gosterilecek birkac alani cekiyor. Detay (tam rapor) ayri bir
+// tiklamayla loadStaffStudentReport uzerinden yukleniyor.
+export async function loadStaffStudentList(): Promise<{ role: string | undefined; students: StaffStudentListItem[] }> {
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userData.user?.id)
+    .single();
+
+  let students: StaffStudentListItem[] = [];
+
+  if (callerProfile?.role === "teacher") {
+    const { data: assigned } = await supabase
+      .from("teacher_students")
+      .select("profiles!teacher_students_student_id_fkey(id, full_name, grade_level, exam_target, is_demo)")
+      .eq("teacher_id", userData.user?.id);
+    students = (assigned ?? [])
+      .map((row) => (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles))
+      .filter((p): p is StaffStudentListItem => !!p)
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "tr"));
+  } else {
+    const { data: rows } = await supabase
+      .from("profiles")
+      .select("id, full_name, grade_level, exam_target, is_demo")
+      .eq("role", "student")
+      .order("full_name");
+    students = rows ?? [];
+  }
+
+  const showDemoData = await getShowDemoData();
+  students = showDemoData ? students : students.filter((s) => !s.is_demo);
+
+  return { role: callerProfile?.role, students };
+}
+
 // Admin/ogretmen genel ogrenci raporlari ekrani icin. Admin butun ogrenci
 // listesinden serbestce secim yapabiliyor (staff-wide RLS zaten butun
 // tablolarda admin/ogretmen/moderator icin acik). Gercek bir ogretmen ise
