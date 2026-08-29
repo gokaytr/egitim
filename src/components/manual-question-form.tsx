@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Input, Textarea, Select } from "@/components/ui";
 
-export function ManualQuestionForm({ topicId }: { topicId: string }) {
+export function ManualQuestionForm({ topicId, rightsConfirmed }: { topicId: string; rightsConfirmed: boolean }) {
   const [manual, setManual] = useState({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,7 @@ export function ManualQuestionForm({ topicId }: { topicId: string }) {
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!topicId) return setStatus("Lütfen bir konu seçin.");
+    if (!rightsConfirmed) return setStatus("Devam etmeden önce yukarıdaki içerik kullanım hakkı onayını işaretle.");
     setLoading(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
@@ -53,7 +54,7 @@ export function ManualQuestionForm({ topicId }: { topicId: string }) {
           </Select>
         </div>
         <Textarea rows={2} placeholder="Çözüm açıklaması (opsiyonel)" value={manual.explanation} onChange={(e) => setManual({ ...manual, explanation: e.target.value })} />
-        <Button type="submit" disabled={loading}>{loading ? "Ekleniyor..." : "Soruyu Ekle"}</Button>
+        <Button type="submit" disabled={loading || !rightsConfirmed}>{loading ? "Ekleniyor..." : "Soruyu Ekle"}</Button>
       </form>
       {status && <p className="mt-2 text-sm text-slate-600">{status}</p>}
     </Card>

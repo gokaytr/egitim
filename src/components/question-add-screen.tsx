@@ -13,9 +13,31 @@ export function QuestionAddScreen() {
   const [topicId, setTopicId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [tab, setTab] = useState<"add" | "ai">("add");
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Telif hakki onayi: elle ya da toplu eklenen sorularin veritabanina
+          kaydedilebilmesi icin once burasi isaretlenmeli. ÖSYM gibi
+          kurumlarin sinav sorulari yazili izin olmadan kullanilamaz -
+          "sadece kendi veritabanimiza ekliyoruz" savunmasi yeterli degil,
+          kopyalama ve turev uretme islemi zaten telif ihlali sayilabilir. */}
+      <Card className="border-amber-200 bg-amber-50/60">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={rightsConfirmed}
+            onChange={(e) => setRightsConfirmed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-sm text-slate-700">
+            <strong>İçerik kullanım hakkı onayı:</strong> Eklediğim sorular kendi hazırladığım, açık lisanslı ya da
+            kullanım hakkına sahip olduğum içeriklerdir. ÖSYM gibi kurumların telif korumalı sınav sorularını
+            yazılı izin almadan eklemeyeceğimi kabul ediyorum. Bu kutuyu işaretlemeden soru kaydedilemez.
+          </span>
+        </label>
+      </Card>
+
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
         <div className="max-w-md">
@@ -47,9 +69,9 @@ export function QuestionAddScreen() {
 
       {tab === "add" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <ManualQuestionForm topicId={topicId} />
+          <ManualQuestionForm topicId={topicId} rightsConfirmed={rightsConfirmed} />
           {topicId ? (
-            <BulkQuestionImport topicId={topicId} />
+            <BulkQuestionImport topicId={topicId} rightsConfirmed={rightsConfirmed} />
           ) : (
             <Card>
               <h2 className="mb-1 font-semibold text-slate-900">Kopyala-Yapıştır / Dosyadan Toplu Soru Ekle</h2>

@@ -20,7 +20,7 @@ C) 90
 D) 100
 Cevap: B`;
 
-export function BulkQuestionImport({ topicId }: { topicId: string }) {
+export function BulkQuestionImport({ topicId, rightsConfirmed }: { topicId: string; rightsConfirmed: boolean }) {
   const [text, setText] = useState("");
   const [parsed, setParsed] = useState<ParsedQuestion[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
@@ -59,6 +59,10 @@ export function BulkQuestionImport({ topicId }: { topicId: string }) {
       setStatus("Önce bir konu seç.");
       return;
     }
+    if (!rightsConfirmed) {
+      setStatus("Devam etmeden önce yukarıdaki içerik kullanım hakkı onayını işaretle.");
+      return;
+    }
     if (!parsed.length) return;
     setSaving(true);
     setStatus(null);
@@ -94,6 +98,11 @@ export function BulkQuestionImport({ topicId }: { topicId: string }) {
         Word (.docx), PDF (.pdf) veya .txt dosyası yükle, ya da sınavdan/Word&apos;den kopyaladığın soruları
         aşağıya yapıştır. Şimdilik yalnızca metin destekleniyor (taranmış/fotoğraflı sorular için görsel okuma henüz yok).
       </p>
+      <p className="mb-3 text-xs text-amber-700">
+        Not: Sadece kullanma hakkına sahip olduğun içerikleri yükle. ÖSYM gibi kurumların telif korumalı sınav
+        sorularını (kağıt üzerinde &quot;yazılı izin alınmadan kullanılamaz&quot; ibaresi taşıyanlar dahil) izinsiz
+        eklemek yasal risk taşır.
+      </p>
 
       <div className="mb-3">
         <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
@@ -124,7 +133,7 @@ export function BulkQuestionImport({ topicId }: { topicId: string }) {
           Soruları Ayrıştır
         </Button>
         {parsed.length > 0 && (
-          <Button onClick={handleSaveAll} disabled={saving}>
+          <Button onClick={handleSaveAll} disabled={saving || !rightsConfirmed}>
             {saving ? "Ekleniyor..." : `${parsed.length} Soruyu Ekle`}
           </Button>
         )}
