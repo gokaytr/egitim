@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
+import { TeacherSwitcher } from "@/components/teacher-switcher";
+import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 export default async function OgretmenLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
+  const { teacherId: effectiveTeacherId, isAdminPreview, candidates } = await resolveEffectiveTeacher();
   const { data: subjectRows } = await supabase
     .from("teacher_subjects")
     .select("subject_id")
-    .eq("teacher_id", userData.user?.id ?? "");
+    .eq("teacher_id", effectiveTeacherId ?? "");
   const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
 
   let pendingCount = 0;
@@ -31,7 +33,13 @@ export default async function OgretmenLayout({ children }: { children: React.Rea
   ];
 
   return (
-    <RoleShell title="Öğretmen Paneli" navItems={NAV}>
+    <RoleShell
+      title="Öğretmen Paneli"
+      navItems={NAV}
+      previewSwitcher={
+        isAdminPreview ? <TeacherSwitcher candidates={candidates} currentId={effectiveTeacherId} /> : undefined
+      }
+    >
       {children}
     </RoleShell>
   );

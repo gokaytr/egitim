@@ -1,7 +1,11 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
 import { CoachChat } from "@/components/coach-chat";
+import { StudentPreviewSwitcher } from "@/components/student-preview-switcher";
+import { ChildPreviewSwitcher } from "@/components/child-preview-switcher";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
+import { getShowDemoData } from "@/lib/site-settings";
 
 const NAV_PARENT = [
   { href: "/ogrenci/rapor", label: "Genel Durum" },
@@ -108,12 +112,39 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
     { href: "/ogrenci/genel-ayarlar", label: "Genel Ayarlar" },
   ];
 
+  // Admin sol menude test ogrenci/test veli secicisini gorsun diye - hangi
+  // secicinin gorunecegi RoleShell icinde effectiveRole'e gore belirleniyor.
+  let previewSwitcherByRole: { student?: React.ReactNode; parent?: React.ReactNode } | undefined;
+  if (callerProfile?.role === "admin") {
+    const { studentId: previewStudentId, candidates: studentCandidates } = await resolveEffectiveStudent();
+
+    const { data: childLinks } = await supabase
+      .from("parent_student_links")
+      .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name, is_demo)")
+      .eq("parent_id", userData.user?.id);
+    let childCandidates = (childLinks ?? [])
+      .map((l) => (Array.isArray(l.profiles) ? l.profiles[0] : l.profiles))
+      .filter((p): p is { id: string; full_name: string; is_demo: boolean } => !!p);
+    const showDemoData = await getShowDemoData();
+    childCandidates = showDemoData ? childCandidates : childCandidates.filter((c) => !c.is_demo);
+    const cookieStore = await cookies();
+    const cookieChildId = cookieStore.get("admin_preview_child_id")?.value;
+    const currentChildId =
+      cookieChildId && childCandidates.some((c) => c.id === cookieChildId) ? cookieChildId : childCandidates[0]?.id;
+
+    previewSwitcherByRole = {
+      student: <StudentPreviewSwitcher candidates={studentCandidates} currentId={previewStudentId} />,
+      parent: <ChildPreviewSwitcher candidates={childCandidates} currentId={currentChildId} />,
+    };
+  }
+
   return (
     <RoleShell
       title="Öğrenci Paneli"
       navItems={navStudent}
       titleByRole={{ parent: "Veli Paneli", student: "Öğrenci Paneli" }}
       navItemsByRole={{ parent: NAV_PARENT, student: navStudent, admin: navStudent }}
+      previewSwitcherByRole={previewSwitcherByRole}
       showGradeBackground
     >
       {children}

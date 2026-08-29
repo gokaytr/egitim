@@ -1,20 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { TopicAddForm } from "@/components/topic-add-form";
 import { CurriculumBrowser, type CurriculumTopicRow } from "@/components/curriculum-browser";
+import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-export default async function OgretmenMufredatPage() {
+export default async function OgretmenMufredatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ teacherId?: string }>;
+}) {
+  const { teacherId: requestedTeacherId } = await searchParams;
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
+  const { teacherId: effectiveTeacherId } = await resolveEffectiveTeacher(requestedTeacherId);
 
   const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: myAssignments }] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
     supabase.from("topics").select("id, name, kazanim, grade_level, exam_types, subjects(name)").order("grade_level"),
-    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", userData.user?.id),
+    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", effectiveTeacherId ?? ""),
   ]);
 
   // Ogretmene brans atanmissa, konu ekleme formundaki ders secimi kendi

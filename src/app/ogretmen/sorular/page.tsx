@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
+import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -10,13 +11,18 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 // Soru Ekle ve Soru Onayi, ogretmen menusunde de tek bir "Sorular" sayfasi
 // altinda iki sekme olarak birlestirildi (admin panelindeki ayni birlestirme
 // ile tutarli).
-export default async function OgretmenSorularPage() {
+export default async function OgretmenSorularPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ teacherId?: string }>;
+}) {
+  const { teacherId: requestedTeacherId } = await searchParams;
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
+  const { teacherId: effectiveTeacherId } = await resolveEffectiveTeacher(requestedTeacherId);
   const { data: subjectRows } = await supabase
     .from("teacher_subjects")
     .select("subject_id, subjects(name)")
-    .eq("teacher_id", userData.user?.id ?? "");
+    .eq("teacher_id", effectiveTeacherId ?? "");
   const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
 
   let topics: { id: string; name: string; grade_level: number | null; subject_id: string; subject_name: string }[] = [];

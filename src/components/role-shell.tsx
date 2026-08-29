@@ -59,6 +59,8 @@ export function RoleShell({
   titleByRole,
   topBarLinks,
   showGradeBackground,
+  previewSwitcher,
+  previewSwitcherByRole,
 }: {
   title: string;
   navItems: NavItem[];
@@ -67,6 +69,13 @@ export function RoleShell({
   titleByRole?: Partial<Record<string, string>>;
   topBarLinks?: NavItem[];
   showGradeBackground?: boolean;
+  // Admin bir paneli (ogrenci/ogretmen/veli) onizlerken sol menude "Cikis
+  // yap" butonunun ustunde gosterilecek test kullanici secici. Tek rollu
+  // sayfalar (orn. ogretmen) icin previewSwitcher, birden fazla rolu ayni
+  // layout icinde onizleyen sayfalar (orn. ogrenci - hem ogrenci hem veli
+  // gorunumu) icin previewSwitcherByRole kullanilir.
+  previewSwitcher?: ReactNode;
+  previewSwitcherByRole?: Partial<Record<string, ReactNode>>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -134,6 +143,8 @@ export function RoleShell({
   // nav listesindeki ilk oge zaten o rolun genel bakis sayfasi (ör. /admin,
   // /ogrenci, /ogretmen, veli icin /ogrenci/rapor).
   const homeHref = displayNav[0]?.href ?? "/";
+  const activePreviewSwitcher = effectiveRole ? previewSwitcherByRole?.[effectiveRole] : undefined;
+  const displayPreviewSwitcher = activePreviewSwitcher ?? previewSwitcher;
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
@@ -173,12 +184,26 @@ export function RoleShell({
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-white p-5 shadow-xl">
             <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
             <NavLinks items={displayNav} pathname={pathname} onNavigate={() => setMobileNavOpen(false)} />
-            <button
-              onClick={handleLogout}
-              className="mt-auto rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
-            >
-              Çıkış yap
-            </button>
+            <div className="mt-auto flex flex-col gap-3 pt-4">
+              {isAdminPreviewing && (
+                <>
+                  {displayPreviewSwitcher}
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+                  >
+                    Admin paneline geçiş yap
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={handleLogout}
+                className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
+              >
+                Çıkış yap
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -190,26 +215,29 @@ export function RoleShell({
         </Link>
         <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
         <NavLinks items={displayNav} pathname={pathname} />
-        <button
-          onClick={handleLogout}
-          className="mt-auto rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
-        >
-          Çıkış yap
-        </button>
+        <div className="mt-auto flex flex-col gap-3 pt-4">
+          {isAdminPreviewing && (
+            <>
+              {displayPreviewSwitcher}
+              <Link
+                href="/admin"
+                className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+              >
+                Admin paneline geçiş yap
+              </Link>
+            </>
+          )}
+          <button
+            onClick={handleLogout}
+            className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
+          >
+            Çıkış yap
+          </button>
+        </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {(isAdminPreviewing || topBarLinks?.length) && (
-          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-6">
-            <div>
-              {isAdminPreviewing && (
-                <div className="flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-800">
-                  <span>Bu paneli admin olarak önizliyorsun.</span>
-                  <Link href="/admin" className="font-medium underline">
-                    Admin paneline dön
-                  </Link>
-                </div>
-              )}
-            </div>
+        {!!topBarLinks?.length && (
+          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end lg:px-6">
             <div className="flex flex-wrap items-center gap-2">
               {topBarLinks?.map((link) => (
                 <Link

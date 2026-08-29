@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, StatCard, Badge, Button } from "@/components/ui";
 import { DiagnosisAcknowledgeButton } from "@/components/diagnosis-acknowledge-button";
 import { DenemeActionButton } from "@/components/deneme-action-button";
-import { StudentPreviewSwitcher } from "@/components/student-preview-switcher";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 import { gradeBackgroundVariant } from "@/lib/grade-level";
 import { LEVEL_TITLES, type LevelLabel } from "@/lib/deneme/level";
@@ -22,7 +21,7 @@ export default async function OgrenciDashboard({
 }) {
   const { studentId: requestedStudentId } = await searchParams;
   const supabase = await createClient();
-  const { studentId, isAdminPreview, candidates } = await resolveEffectiveStudent(requestedStudentId);
+  const { studentId, isAdminPreview } = await resolveEffectiveStudent(requestedStudentId);
 
   if (isAdminPreview && !studentId) {
     return (
@@ -63,15 +62,6 @@ export default async function OgrenciDashboard({
 
   return (
     <div className="flex flex-col gap-6">
-      {isAdminPreview && (
-        <Card className="border border-dashed border-indigo-300 bg-indigo-50/50">
-          <p className="mb-2 text-sm font-medium text-indigo-700">
-            Admin önizlemesi — aşağıdaki ekran, seçtiğin test öğrencinin gerçek görünümüdür.
-          </p>
-          <StudentPreviewSwitcher candidates={candidates} currentId={studentId} />
-        </Card>
-      )}
-
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Merhaba {profile?.full_name?.split(" ")[0]} 👋</h1>
         <p className="text-sm text-slate-500">

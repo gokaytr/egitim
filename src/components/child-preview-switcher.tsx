@@ -5,7 +5,12 @@ import { Select } from "@/components/ui";
 
 type Candidate = { id: string; full_name: string };
 
-export function TeacherSwitcher({ candidates, currentId }: { candidates: Candidate[]; currentId?: string }) {
+// StudentPreviewSwitcher'in veli (admin -> test veli) karsiligi: admin bir
+// test velinin gorunumunu onizlerken hangi (kendisine baglanmis) test
+// ogrencinin raporunu gordugunu buradan degistirir. Secim cookie'ye de
+// yazilir ki baska bir veli sayfasina (Raporlama, Ozel Ders Talebi) gecince
+// de ayni cocuk gorunmeye devam etsin.
+export function ChildPreviewSwitcher({ candidates, currentId }: { candidates: Candidate[]; currentId?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -13,29 +18,29 @@ export function TeacherSwitcher({ candidates, currentId }: { candidates: Candida
   if (candidates.length === 0) return null;
 
   async function handleChange(id: string) {
-    // Secimi cookie'ye de yaz ki admin baska bir sayfaya gectiginde (linkte
-    // ?teacherId= olmasa bile) ayni test ogretmen gorunmeye devam etsin.
     try {
-      await fetch("/api/admin/preview-teacher", {
+      await fetch("/api/admin/preview-child", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherId: id }),
+        body: JSON.stringify({ studentId: id }),
       });
     } catch {
       // cookie yazilamasa bile query param ile bu sayfada calismaya devam eder
     }
     const params = new URLSearchParams(searchParams.toString());
-    params.set("teacherId", id);
+    params.set("studentId", id);
     router.push(`${pathname}?${params.toString()}`);
     router.refresh();
   }
 
   return (
     <div className="max-w-xs">
-      <label className="mb-1 block text-sm font-medium text-slate-700">Test öğretmen seç</label>
+      <label className="mb-1 block text-sm font-medium text-slate-700">Test veli — çocuk seç</label>
       <Select value={currentId ?? ""} onChange={(e) => handleChange(e.target.value)}>
         {candidates.map((c) => (
-          <option key={c.id} value={c.id}>{c.full_name}</option>
+          <option key={c.id} value={c.id}>
+            {c.full_name}
+          </option>
         ))}
       </Select>
     </div>

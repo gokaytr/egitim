@@ -27,7 +27,7 @@ export function ReportHeader({ data }: { data: ReportData }) {
       {data.studentId && data.role === "parent" && (
         <StudentSwitcher candidates={data.candidates} currentId={data.studentId} label="Çocuk seç" />
       )}
-      {data.studentId && data.role !== "parent" && (
+      {data.studentId && data.role === "staff" && (
         <StudentReportSearchList candidates={data.candidates} currentId={data.studentId} />
       )}
 
