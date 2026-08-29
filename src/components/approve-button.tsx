@@ -13,7 +13,15 @@ export function ApproveButton({ questionId }: { questionId: string }) {
     setLoading(true);
     const supabase = createClient();
     if (approve) {
-      await supabase.from("questions").update({ is_approved: true }).eq("id", questionId);
+      // Onaylayan kullanicinin kimligini kaydediyoruz - ogretmen aktivite
+      // raporunda "onayladigi soru" sayisi buradan hesaplaniyor.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      await supabase
+        .from("questions")
+        .update({ is_approved: true, approved_by: user?.id ?? null, approved_at: new Date().toISOString() })
+        .eq("id", questionId);
     } else {
       await supabase.from("questions").delete().eq("id", questionId);
     }

@@ -16,8 +16,10 @@ export default async function OgretmenBasvurulariPage() {
 
   const rows = await loadTeacherActivityReport();
   const totalQuestions = rows.reduce((s, r) => s + r.questionsAdded, 0);
+  const totalApprovedQuestions = rows.reduce((s, r) => s + r.questionsApproved, 0);
   const totalLessonContents = rows.reduce((s, r) => s + r.lessonContentsAdded, 0);
   const totalCompletedReferrals = rows.reduce((s, r) => s + r.referralsCompleted, 0);
+  const totalTutorSessionHours = Math.round(rows.reduce((s, r) => s + r.tutorSessionHours, 0) * 10) / 10;
 
   const [{ data: teacherProfiles }, { data: subjects }, { data: assignments }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, is_demo").eq("role", "teacher").order("full_name"),
@@ -61,8 +63,10 @@ export default async function OgretmenBasvurulariPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Aktif Öğretmen" value={rows.length} />
         <StatCard label="Eklenen Soru" value={totalQuestions} />
+        <StatCard label="Onaylanan Soru" value={totalApprovedQuestions} />
         <StatCard label="Eklenen Konu Anlatımı" value={totalLessonContents} />
         <StatCard label="Tamamlanan Özel Ders" value={totalCompletedReferrals} />
+        <StatCard label="Toplam Özel Ders Saati" value={totalTutorSessionHours} />
       </div>
 
       <Card className="overflow-x-auto p-0">
@@ -73,8 +77,11 @@ export default async function OgretmenBasvurulariPage() {
               <th className="px-5 py-3 font-medium">Branşlar</th>
               <th className="px-5 py-3 font-medium">Atanan Öğrenci</th>
               <th className="px-5 py-3 font-medium">Eklenen Soru</th>
+              <th className="px-5 py-3 font-medium">Onayladığı Soru</th>
               <th className="px-5 py-3 font-medium">Konu Anlatımı</th>
-              <th className="px-5 py-3 font-medium">Özel Ders</th>
+              <th className="px-5 py-3 font-medium">Özel Ders Durumu</th>
+              <th className="px-5 py-3 font-medium">Özel Ders Adedi</th>
+              <th className="px-5 py-3 font-medium">Toplam Saat</th>
               <th className="px-5 py-3 font-medium">Son Aktivite</th>
             </tr>
           </thead>
@@ -90,6 +97,7 @@ export default async function OgretmenBasvurulariPage() {
                 </td>
                 <td className="px-5 py-3 text-slate-600">{r.assignedStudentCount}</td>
                 <td className="px-5 py-3 text-slate-600">{r.questionsAdded}</td>
+                <td className="px-5 py-3 text-slate-600">{r.questionsApproved}</td>
                 <td className="px-5 py-3 text-slate-600">{r.lessonContentsAdded}</td>
                 <td className="px-5 py-3">
                   <div className="flex flex-wrap gap-1.5">
@@ -101,6 +109,8 @@ export default async function OgretmenBasvurulariPage() {
                     )}
                   </div>
                 </td>
+                <td className="px-5 py-3 text-slate-600">{r.tutorSessionCount}</td>
+                <td className="px-5 py-3 text-slate-600">{r.tutorSessionHours}</td>
                 <td className="px-5 py-3 text-slate-400">
                   {r.lastActivityAt ? new Date(r.lastActivityAt).toLocaleDateString("tr-TR") : "-"}
                 </td>

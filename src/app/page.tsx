@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { EducationBackground } from "@/components/education-background";
+import { SiteHeader } from "@/components/site-header";
 
 const FEATURES = [
   {
@@ -50,20 +51,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100/25 via-transparent to-sky-100/25" />
       </div>
 
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/70 bg-white/70 px-6 py-5 backdrop-blur md:px-16">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
-          <span className="text-lg font-semibold">Odak</span>
-        </div>
-        <div className="flex gap-2 sm:gap-3">
-          <Link href="/giris" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 sm:px-4">
-            Giriş yap
-          </Link>
-          <Link href="/kayit" className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 sm:px-4">
-            Ücretsiz başla
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="relative overflow-hidden">
         <EducationBackground />
