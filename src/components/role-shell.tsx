@@ -132,20 +132,24 @@ export function RoleShell({
   const displayTitle = roleTitle ?? title;
   const roleNav = effectiveRole ? navItemsByRole?.[effectiveRole] : undefined;
   const displayNav = roleNav ?? navItems;
+  // Sol ust logo/ikona tiklaninca donulecek "ana sayfa" - her rolun kendi
+  // nav listesindeki ilk oge zaten o rolun genel bakis sayfasi (ör. /admin,
+  // /ogrenci, /ogretmen, veli icin /ogrenci/rapor).
+  const homeHref = displayNav[0]?.href ?? "/";
 
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
+    <div className="flex min-h-dvh flex-col lg:flex-row">
       {/* Mobilde ust bar: logo + hamburger. Sol menu md ve ustunde sabit
           gorunur, mobilde ise gizli - bunun yerine bu bar ve acilir menu
           kullanicinin tek erisim yolu. */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+        <Link href={homeHref} className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
           <div>
             <span className="block text-base font-semibold leading-tight">Odak</span>
             <span className="block text-[11px] leading-tight text-slate-400">{displayTitle}</span>
           </div>
-        </div>
+        </Link>
         <button
           onClick={() => setMobileNavOpen((v) => !v)}
           aria-label={mobileNavOpen ? "Menüyü kapat" : "Menüyü aç"}
@@ -166,7 +170,7 @@ export function RoleShell({
 
       {/* Mobil acilir menu (overlay + panel) */}
       {mobileNavOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setMobileNavOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-white p-5 shadow-xl">
             <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
@@ -181,11 +185,11 @@ export function RoleShell({
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-5 md:flex">
-        <div className="mb-8 flex items-center gap-2">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-5 lg:flex">
+        <Link href={homeHref} className="mb-8 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
           <span className="text-lg font-semibold">Odak</span>
-        </div>
+        </Link>
         <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
         <NavLinks items={displayNav} pathname={pathname} />
         <button
@@ -197,7 +201,7 @@ export function RoleShell({
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         {(isAdminPreviewing || helpHref || topBarLinks?.length) && (
-          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
+          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-6">
             <div>
               {isAdminPreviewing && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-800">
@@ -242,7 +246,7 @@ export function RoleShell({
             </div>
           </div>
         )}
-        <main className="relative flex-1 overflow-hidden bg-slate-50 p-4 sm:p-6 md:p-10">
+        <main className="relative flex-1 overflow-hidden bg-slate-50 p-4 sm:p-6 lg:p-10">
           {showGradeBackground && currentRole === "student" && (
             <GradeBackground variant={gradeBackgroundVariant(gradeLevel)} />
           )}
