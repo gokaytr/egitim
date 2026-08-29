@@ -1,7 +1,7 @@
-import { Card, StatCard } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { ReportHeader } from "@/components/report-header";
+import { StudentReportView } from "@/components/student-report-view";
 import { loadReportData, firstOf } from "@/lib/reports/report-data";
-import { sortEventsDesc } from "@/lib/reports/activity-feed";
 
 export default async function RaporPage({ searchParams }: { searchParams: Promise<{ studentId?: string }> }) {
   const { studentId } = await searchParams;
@@ -27,7 +27,6 @@ export default async function RaporPage({ searchParams }: { searchParams: Promis
     .filter((s) => s.scheduled_at && s.status !== "completed" && new Date(s.scheduled_at) > new Date())
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0];
 
-  const recentEvents = sortEventsDesc(data.events).slice(0, 10);
   const latestDiagnosis = data.diagnoses[0];
 
   return (
@@ -63,42 +62,11 @@ export default async function RaporPage({ searchParams }: { searchParams: Promis
         </Card>
       )}
 
-      <Card>
-        <h2 className="mb-3 font-semibold text-slate-900">Genel Durum Raporu</h2>
-        <div className="flex flex-col gap-2">
-          {data.overviewParagraphs.map((p, i) => (
-            <p key={i} className="text-sm text-slate-600">
-              {p}
-            </p>
-          ))}
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard
-          label="Çözülen Soru"
-          value={data.totalSolved}
-          hint={`${data.totalCorrect} doğru · ${data.totalWrong} yanlış · ${data.totalEmpty} boş`}
-        />
-        <StatCard label="Başarı Oranı" value={data.accuracy !== null ? `%${data.accuracy}` : "-"} />
-        <StatCard label="İzlenen Konu Anlatımı" value={data.distinctContentViewed} />
-        <StatCard label="Hedeflenen Kalan Soru" value={data.targetQuestionsRemaining} />
-      </div>
-
-      <Card>
-        <h2 className="mb-3 font-semibold text-slate-900">Son Aktiviteler</h2>
-        {!recentEvents.length && <p className="text-sm text-slate-500">Henüz herhangi bir aktivite yok.</p>}
-        <ul className="flex flex-col gap-2">
-          {recentEvents.map((e) => (
-            <li key={e.id} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-              <span className="text-slate-700">{e.description}</span>
-              <span className="whitespace-nowrap text-xs text-slate-400">
-                {new Date(e.occurredAt).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {/* Veli ekranindaki rapor govdesi, admin/ogretmen tarafinda kullanilan
+          StudentReportView ile birebir ayni - grafikler, calisma programi,
+          gecmis sinav sonuclari, izleme gecmisi, eksik analizleri ve ozel
+          ders talepleri dahil tam rapor. */}
+      <StudentReportView data={data} />
     </div>
   );
 }

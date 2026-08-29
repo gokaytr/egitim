@@ -1,5 +1,6 @@
 import { Card, Badge } from "@/components/ui";
 import { StudentSwitcher } from "@/components/student-switcher";
+import { StudentReportSearchList } from "@/components/student-report-search-list";
 import { AddChildForm } from "@/components/add-child-form";
 import type { ReportData } from "@/lib/reports/report-data";
 
@@ -23,12 +24,11 @@ export function ReportHeader({ data }: { data: ReportData }) {
         </Card>
       )}
 
-      {data.studentId && (
-        <StudentSwitcher
-          candidates={data.candidates}
-          currentId={data.studentId}
-          label={data.role === "parent" ? "Çocuk seç" : "Öğrenci seç"}
-        />
+      {data.studentId && data.role === "parent" && (
+        <StudentSwitcher candidates={data.candidates} currentId={data.studentId} label="Çocuk seç" />
+      )}
+      {data.studentId && data.role !== "parent" && (
+        <StudentReportSearchList candidates={data.candidates} currentId={data.studentId} />
       )}
 
       <div>

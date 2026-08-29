@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, Badge, StatCard } from "@/components/ui";
 import { TeacherApprovalButtons } from "./teacher-approval-buttons";
 import { SimpleTabs } from "@/components/simple-tabs";
+import { TeacherSubjectManager } from "@/components/teacher-subject-manager";
 import { loadTeacherActivityReport } from "@/lib/reports/teacher-activity";
 
 export default async function OgretmenBasvurulariPage() {
@@ -16,6 +17,12 @@ export default async function OgretmenBasvurulariPage() {
   const totalQuestions = rows.reduce((s, r) => s + r.questionsAdded, 0);
   const totalLessonContents = rows.reduce((s, r) => s + r.lessonContentsAdded, 0);
   const totalCompletedReferrals = rows.reduce((s, r) => s + r.referralsCompleted, 0);
+
+  const [{ data: teacherProfiles }, { data: subjects }, { data: assignments }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "teacher").order("full_name"),
+    supabase.from("subjects").select("id, name").order("name"),
+    supabase.from("teacher_subjects").select("teacher_id, subject_id"),
+  ]);
 
   const basvurularTab = (
     <div className="flex flex-col gap-3">
@@ -94,17 +101,22 @@ export default async function OgretmenBasvurulariPage() {
     </div>
   );
 
+  const bransTab = (
+    <TeacherSubjectManager teachers={teacherProfiles ?? []} subjects={subjects ?? []} assignments={assignments ?? []} />
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Öğretmenler</h1>
-        <p className="text-sm text-slate-500">Öğretmen başvuruları ve öğretmenlerin platformdaki aktivite kaydı.</p>
+        <p className="text-sm text-slate-500">Öğretmen başvuruları, branş atamaları ve öğretmenlerin platformdaki aktivite kaydı.</p>
       </div>
 
       <SimpleTabs
         defaultKey="basvurular"
         tabs={[
           { key: "basvurular", label: "Öğretmen Başvuruları", content: basvurularTab },
+          { key: "brans", label: "Branş Atamaları", content: bransTab },
           { key: "aktivite", label: "Öğretmen Aktivitesi", content: aktiviteTab },
         ]}
       />

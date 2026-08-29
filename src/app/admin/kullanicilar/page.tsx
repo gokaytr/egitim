@@ -1,9 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge } from "@/components/ui";
 import { NewUserForm } from "./new-user-form";
-import { AdminAllowlistForm } from "./admin-allowlist-form";
 import { RoleSelect } from "./role-select";
-import { TeacherSubjectManager } from "@/components/teacher-subject-manager";
 import { TeacherStudentManager } from "@/components/teacher-student-manager";
 import { ParentLinkForm } from "@/components/parent-link-form";
 import { DeleteParentLinkButton } from "@/components/delete-parent-link-button";
@@ -33,11 +31,6 @@ export default async function KullanicilarPage() {
     .select("id, full_name, email, role, grade_level, exam_target, created_at, is_demo")
     .order("created_at", { ascending: false });
 
-  const { data: allowlist } = await supabase
-    .from("admin_allowlist")
-    .select("email")
-    .order("email", { ascending: true });
-
   const showDemoData = await getShowDemoData();
   const visibleUsers = showDemoData ? (users ?? []) : (users ?? []).filter((u) => !u.is_demo);
 
@@ -45,9 +38,7 @@ export default async function KullanicilarPage() {
   const students = visibleUsers.filter((u) => u.role === "student");
   const parents = visibleUsers.filter((u) => u.role === "parent");
 
-  const [{ data: subjects }, { data: assignments }, { data: teacherStudentAssignments }, { data: parentLinks }] = await Promise.all([
-    supabase.from("subjects").select("id, name").order("name"),
-    supabase.from("teacher_subjects").select("teacher_id, subject_id"),
+  const [{ data: teacherStudentAssignments }, { data: parentLinks }] = await Promise.all([
     supabase.from("teacher_students").select("teacher_id, student_id"),
     supabase
       .from("parent_student_links")
@@ -60,12 +51,6 @@ export default async function KullanicilarPage() {
   const usersTab = (
     <div className="flex flex-col gap-6">
       <NewUserForm />
-      <AdminAllowlistForm emails={allowlist?.map((a) => a.email) ?? []} />
-      <TeacherSubjectManager
-        teachers={teachers.map((t) => ({ id: t.id, full_name: t.full_name }))}
-        subjects={subjects ?? []}
-        assignments={assignments ?? []}
-      />
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-100 text-slate-500">
