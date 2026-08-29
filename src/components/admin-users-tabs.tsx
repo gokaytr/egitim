@@ -2,25 +2,33 @@
 
 import { ReactNode, useState } from "react";
 
-type TabKey = "users" | "veli" | "ogretmen-ogrenci";
+type TabKey = "users" | "veli" | "ogretmen-ogrenci" | "test-kullanicilar" | "test-veliler";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "users", label: "Kullanıcılar" },
   { key: "veli", label: "Veli Bağlantıları" },
   { key: "ogretmen-ogrenci", label: "Öğretmen-Öğrenci Bağlantıları" },
+  { key: "test-kullanicilar", label: "Test Kullanıcılar" },
+  { key: "test-veliler", label: "Test Veliler" },
 ];
 
-// Kullanicilar sayfasindaki 3 sekme. Veri cekme sunucu tarafinda
+// Kullanicilar sayfasindaki sekmeler. Veri cekme sunucu tarafinda
 // (kullanicilar/page.tsx) yapiliyor, bu bileşen sadece hazir render
 // edilmis icerikleri (ReactNode) sekmeler arasinda gosterip gizliyor.
+// "Test Kullanicilar" ve "Test Veliler" sekmeleri sadece admin'in
+// gordugu bu sayfada yer aliyor; gercek kullanicilara hic gosterilmiyor.
 export function AdminUsersTabs({
   usersTab,
   veliTab,
   ogretmenOgrenciTab,
+  testKullanicilarTab,
+  testVelilerTab,
 }: {
   usersTab: ReactNode;
   veliTab: ReactNode;
   ogretmenOgrenciTab: ReactNode;
+  testKullanicilarTab: ReactNode;
+  testVelilerTab: ReactNode;
 }) {
   const [tab, setTab] = useState<TabKey>("users");
 
@@ -28,6 +36,8 @@ export function AdminUsersTabs({
     users: usersTab,
     veli: veliTab,
     "ogretmen-ogrenci": ogretmenOgrenciTab,
+    "test-kullanicilar": testKullanicilarTab,
+    "test-veliler": testVelilerTab,
   };
 
   return (

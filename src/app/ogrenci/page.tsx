@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, StatCard, Badge, Button } from "@/components/ui";
 import { DiagnosisAcknowledgeButton } from "@/components/diagnosis-acknowledge-button";
 import { DenemeActionButton } from "@/components/deneme-action-button";
+import { StudentPreviewSwitcher } from "@/components/student-preview-switcher";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 import { gradeBackgroundVariant } from "@/lib/grade-level";
 import { LEVEL_TITLES, type LevelLabel } from "@/lib/deneme/level";
 
@@ -13,28 +15,44 @@ const DENEME_INTRO: Record<ReturnType<typeof gradeBackgroundVariant>, string> = 
   default: "Kendini test etmeye ne dersin? Seviyeni bulalım, sana en uygun soruları önerelim. 🎯",
 };
 
-export default async function OgrenciDashboard() {
+export default async function OgrenciDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ studentId?: string }>;
+}) {
+  const { studentId: requestedStudentId } = await searchParams;
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
+  const { studentId, isAdminPreview, candidates } = await resolveEffectiveStudent(requestedStudentId);
+
+  if (isAdminPreview && !studentId) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Öğrenci Ekranı Önizlemesi</h1>
+          <p className="text-sm text-slate-500">Henüz önizlenebilecek bir test öğrenci bulunmuyor.</p>
+        </div>
+      </div>
+    );
+  }
 
   const [{ data: profile }, { count: attemptCount }, { data: lastDiagnosis }, { data: planItems }] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, grade_level, exam_target, level_label, level_score")
-      .eq("id", userData.user?.id)
+      .eq("id", studentId)
       .single(),
-    supabase.from("student_attempts").select("*", { count: "exact", head: true }).eq("student_id", userData.user?.id),
+    supabase.from("student_attempts").select("*", { count: "exact", head: true }).eq("student_id", studentId),
     supabase
       .from("diagnoses")
       .select("id, ai_summary, weakness_level, recommended_action, acknowledged_at, topics(name)")
-      .eq("student_id", userData.user?.id)
+      .eq("student_id", studentId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
     supabase
       .from("study_plan_items")
       .select("id, status, target_minutes, target_questions, topics(id, name), study_plans!inner(student_id, status)")
-      .eq("study_plans.student_id", userData.user?.id)
+      .eq("study_plans.student_id", studentId)
       .neq("status", "done"),
   ]);
 
@@ -45,6 +63,15 @@ export default async function OgrenciDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
+      {isAdminPreview && (
+        <Card className="border border-dashed border-indigo-300 bg-indigo-50/50">
+          <p className="mb-2 text-sm font-medium text-indigo-700">
+            Admin önizlemesi — aşağıdaki ekran, seçtiğin test öğrencinin gerçek görünümüdür.
+          </p>
+          <StudentPreviewSwitcher candidates={candidates} currentId={studentId} />
+        </Card>
+      )}
+
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Merhaba {profile?.full_name?.split(" ")[0]} 👋</h1>
         <p className="text-sm text-slate-500">

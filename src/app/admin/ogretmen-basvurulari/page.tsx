@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge, StatCard } from "@/components/ui";
 import { TeacherApprovalButtons } from "./teacher-approval-buttons";
@@ -19,10 +20,21 @@ export default async function OgretmenBasvurulariPage() {
   const totalCompletedReferrals = rows.reduce((s, r) => s + r.referralsCompleted, 0);
 
   const [{ data: teacherProfiles }, { data: subjects }, { data: assignments }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").eq("role", "teacher").order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, is_demo").eq("role", "teacher").order("full_name"),
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("teacher_subjects").select("teacher_id, subject_id"),
   ]);
+
+  const testTeachers = (teacherProfiles ?? []).filter((t) => t.is_demo);
+  const subjectNameById = new Map((subjects ?? []).map((s) => [s.id, s.name]));
+  const subjectNamesByTeacherId = new Map<string, string[]>();
+  for (const a of assignments ?? []) {
+    const name = subjectNameById.get(a.subject_id);
+    if (!name) continue;
+    const list = subjectNamesByTeacherId.get(a.teacher_id) ?? [];
+    list.push(name);
+    subjectNamesByTeacherId.set(a.teacher_id, list);
+  }
 
   const basvurularTab = (
     <div className="flex flex-col gap-3">
@@ -105,6 +117,44 @@ export default async function OgretmenBasvurulariPage() {
     <TeacherSubjectManager teachers={teacherProfiles ?? []} subjects={subjects ?? []} assignments={assignments ?? []} />
   );
 
+  const testOgretmenlerTab = (
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-slate-500">
+        Her branş için birer demo öğretmen hesabı. Bu hesaplar Branş Atamaları sekmesinde de atanabilir. Görüntüle
+        bağlantısına tıklayarak o öğretmenin gerçek panelini tek tıkla görebilirsin.
+      </p>
+      <Card className="overflow-x-auto p-0">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-slate-100 text-slate-500">
+            <tr>
+              <th className="px-5 py-3 font-medium">Ad Soyad</th>
+              <th className="px-5 py-3 font-medium">Branş</th>
+              <th className="px-5 py-3 font-medium">E-posta</th>
+              <th className="px-5 py-3 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {testTeachers.map((t) => (
+              <tr key={t.id} className="border-b border-slate-50 last:border-0">
+                <td className="px-5 py-3 font-medium text-slate-900">{t.full_name}</td>
+                <td className="px-5 py-3 text-slate-600">
+                  {(subjectNamesByTeacherId.get(t.id) ?? []).join(", ") || <span className="text-slate-400">-</span>}
+                </td>
+                <td className="px-5 py-3 text-slate-600">{t.email}</td>
+                <td className="px-5 py-3 text-right">
+                  <Link href={`/ogretmen?teacherId=${t.id}`} className="font-medium text-indigo-600 underline">
+                    Görüntüle →
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!testTeachers.length && <p className="p-5 text-sm text-slate-500">Henüz test öğretmen yok.</p>}
+      </Card>
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -118,6 +168,7 @@ export default async function OgretmenBasvurulariPage() {
           { key: "basvurular", label: "Öğretmen Başvuruları", content: basvurularTab },
           { key: "brans", label: "Branş Atamaları", content: bransTab },
           { key: "aktivite", label: "Öğretmen Aktivitesi", content: aktiviteTab },
+          { key: "test-ogretmenler", label: "Test Öğretmenler", content: testOgretmenlerTab },
         ]}
       />
     </div>
