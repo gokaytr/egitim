@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { firstOf } from "@/lib/reports/report-data";
 
-// Admin panelindeki "Analitik" sayfasi icin, page_views tablosundan son 30
+// Admin panelindeki "İstatistikler" sayfasi icin, page_views tablosundan son 30
 // gunun verisini cekip JS tarafinda ozetleyen fonksiyon. Diger rapor
 // dosyalarindaki (report-data.ts, teacher-activity.ts) desenle ayni:
 // veritabaninda groupby yapmak yerine satirlari cekip burada topluyoruz -

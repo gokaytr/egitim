@@ -1,6 +1,6 @@
 import type { SiteAnalytics } from "@/lib/reports/site-analytics";
 
-// Admin "Analitik" sayfasi icin, harici kutuphane kullanmadan (proje
+// Admin "İstatistikler" sayfasi icin, harici kutuphane kullanmadan (proje
 // genelindeki tercihe uygun) saf SVG/CSS ile cizilen kucuk grafik/liste
 // bilesenleri: gunluk sayfa goruntuleme cubuk grafigi ve siralanmis
 // yatay cubuk listeleri (en cok gezilen sayfalar, ulkeler).

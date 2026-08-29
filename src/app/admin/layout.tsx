@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/soru-ekle", label: "Soru Ekle", tone: "emerald" as const },
     { href: "/admin/ogrenci-raporlari", label: "Öğrenci Raporları" },
     { href: "/admin/ogretmen-aktivite", label: "Öğretmen Aktivitesi" },
-    { href: "/admin/analitik", label: "Analitik" },
+    { href: "/admin/istatistikler", label: "İstatistikler" },
     { href: "/admin/genel-ayarlar", label: "Genel Ayarlar" },
   ];
 

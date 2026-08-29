@@ -13,13 +13,13 @@ function timeAgo(iso: string): string {
   return `${diffD} gün önce`;
 }
 
-export default async function AnalitikPage() {
+export default async function IstatistiklerPage() {
   const data = await loadSiteAnalytics();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Analitik</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">İstatistikler</h1>
         <p className="text-sm text-slate-500">Son 30 günün ziyaret ve sayfa görüntüleme özeti</p>
       </div>
 
