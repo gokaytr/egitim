@@ -8,7 +8,8 @@ import { useEffect, useState } from "react";
 // bir gorsele geciliyor - "canli" ama metin/soru okunurlugunu bozmayacak
 // kadar soluk. prefers-reduced-motion acirken donme durduruluyor.
 
-export type GradeBackgroundVariant = "ilkokul" | "ortaokul" | "lise" | "default";
+import type { GradeBackgroundVariant } from "@/lib/grade-level";
+export type { GradeBackgroundVariant } from "@/lib/grade-level";
 
 const IMAGES: Record<GradeBackgroundVariant, string[]> = {
   // 1-4. sinif: 3 gorsel arasinda rastgele doner
@@ -63,9 +64,3 @@ export function GradeBackground({ variant }: { variant: GradeBackgroundVariant }
   );
 }
 
-export function gradeBackgroundVariant(gradeLevel: number | null | undefined): GradeBackgroundVariant {
-  if (gradeLevel == null) return "default";
-  if (gradeLevel <= 4) return "ilkokul";
-  if (gradeLevel <= 8) return "ortaokul";
-  return "lise";
-}

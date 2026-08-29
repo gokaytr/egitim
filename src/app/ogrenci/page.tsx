@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, StatCard, Badge, Button } from "@/components/ui";
 import { DiagnosisAcknowledgeButton } from "@/components/diagnosis-acknowledge-button";
 import { DenemeActionButton } from "@/components/deneme-action-button";
-import { gradeBackgroundVariant } from "@/components/grade-background";
+import { gradeBackgroundVariant } from "@/lib/grade-level";
 import { LEVEL_TITLES, type LevelLabel } from "@/lib/deneme/level";
 
 const DENEME_INTRO: Record<ReturnType<typeof gradeBackgroundVariant>, string> = {

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { GradeBackground, gradeBackgroundVariant } from "@/components/grade-background";
+import { GradeBackground } from "@/components/grade-background";
+import { gradeBackgroundVariant } from "@/lib/grade-level";
 
 type NavItem = { href: string; label: string; tone?: "default" | "accent" | "emerald" | "amber"; dot?: boolean };
 
