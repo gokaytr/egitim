@@ -83,7 +83,7 @@ export default async function AdminGorevlerPage() {
                   {t.description && <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{t.description}</p>}
                   <p className="mt-1 text-xs text-slate-400">{new Date(t.created_at).toLocaleDateString("tr-TR")}</p>
                 </div>
-                <AdminTaskStatusSelect taskId={t.id} status={t.status} />
+                <AdminTaskStatusSelect taskId={t.id} title={t.title} status={t.status} />
               </div>
 
               {taskAttachments.length > 0 && (

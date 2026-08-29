@@ -1,5 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/server";
 import { sendMail } from "@/lib/notifications/mailer";
+import { getAdminNotificationEmails } from "@/lib/notifications/admin-recipients";
 
 /**
  * Yeni bir öğretmen başvurusu geldiğinde tüm adminlere bildirim e-postası
@@ -14,10 +14,7 @@ import { sendMail } from "@/lib/notifications/mailer";
  */
 export async function notifyAdminOfTeacherApplication(applicant: { fullName: string; email: string }) {
   try {
-    const admin = createAdminClient();
-    const { data: admins } = await admin.from("profiles").select("email").eq("role", "admin");
-    const adminEmails = (admins ?? []).map((a) => a.email).filter((e): e is string => !!e);
-
+    const adminEmails = await getAdminNotificationEmails();
     if (!adminEmails.length) return;
 
     await sendMail({

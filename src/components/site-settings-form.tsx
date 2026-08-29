@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Card, Button, Input } from "@/components/ui";
+import { Card, Button, Input, Textarea } from "@/components/ui";
 
-type Settings = { site_name: string; support_email: string | null; maintenance_mode: boolean; show_demo_data: boolean };
+type Settings = { site_name: string; support_email: string | null; maintenance_mode: boolean; show_demo_data: boolean; admin_notification_emails: string | null };
 
 export function SiteSettingsForm({ settings }: { settings: Settings }) {
   const router = useRouter();
@@ -13,6 +13,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
   const [supportEmail, setSupportEmail] = useState(settings.support_email ?? "");
   const [maintenanceMode, setMaintenanceMode] = useState(settings.maintenance_mode);
   const [showDemoData, setShowDemoData] = useState(settings.show_demo_data);
+  const [adminEmails, setAdminEmails] = useState(settings.admin_notification_emails ?? "");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         support_email: supportEmail || null,
         maintenance_mode: maintenanceMode,
         show_demo_data: showDemoData,
+        admin_notification_emails: adminEmails.trim() || null,
       })
       .eq("id", true);
     setLoading(false);
@@ -50,6 +52,19 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Destek e-postası</label>
           <Input type="email" placeholder="destek@odak-egitim.com" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Sistem bildirimi alacak admin e-postaları</label>
+          <Textarea
+            rows={2}
+            placeholder="ornek1@mail.com, ornek2@mail.com"
+            value={adminEmails}
+            onChange={(e) => setAdminEmails(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-400">
+            Öğretmen başvurusu, yapılacak eklenmesi/güncellenmesi gibi bildirimler buraya gönderilir. Virgülle birden
+            fazla adres yazabilirsin. Boş bırakılırsa, rolü &quot;Yönetici&quot; olan tüm kullanıcıların e-postalarına gider.
+          </p>
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} />

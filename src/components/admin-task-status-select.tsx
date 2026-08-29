@@ -11,7 +11,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "done", label: "Tamamlandı" },
 ];
 
-export function AdminTaskStatusSelect({ taskId, status }: { taskId: string; status: string }) {
+export function AdminTaskStatusSelect({ taskId, title, status }: { taskId: string; title: string; status: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -20,6 +20,14 @@ export function AdminTaskStatusSelect({ taskId, status }: { taskId: string; stat
     const supabase = createClient();
     await supabase.from("admin_tasks").update({ status: value, updated_at: new Date().toISOString() }).eq("id", taskId);
     setLoading(false);
+
+    // Admine bildirim denemesi - sonucunu beklemiyoruz, hata olsa da yutuluyor.
+    fetch("/api/admin/task-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "status_updated", title, status: value }),
+    }).catch(() => {});
+
     router.refresh();
   }
 

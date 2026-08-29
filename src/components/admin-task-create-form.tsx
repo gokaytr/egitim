@@ -35,6 +35,14 @@ export function AdminTaskCreateForm() {
       setError(`Hata: ${insertError.message}`);
       return;
     }
+
+    // Admine bildirim denemesi - sonucunu beklemiyoruz, hata olsa da yutuluyor.
+    fetch("/api/admin/task-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "created", title: title.trim(), description: description.trim() || null }),
+    }).catch(() => {});
+
     setTitle("");
     setDescription("");
     router.refresh();

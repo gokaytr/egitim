@@ -49,7 +49,7 @@ function useContentRightsAck() {
   return { ackAt, saving, acknowledge };
 }
 
-export function QuestionAddScreen() {
+export function QuestionAddScreen({ showAiTab = false }: { showAiTab?: boolean }) {
   const subjectIds = useMyAssignedSubjectIds();
   const [topicId, setTopicId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -80,36 +80,38 @@ export function QuestionAddScreen() {
         <TopicPickerTabs value={topicId} onChange={setTopicId} subjectIds={subjectIds} />
       </div>
 
-      <div className="flex max-w-md gap-1 rounded-xl bg-slate-100 p-1">
-        <button
-          type="button"
-          onClick={() => setTab("add")}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-            tab === "add" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Soru Ekle
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("ai")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-            tab === "ai" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Yapay Zeka ile Soru Üret
-          <Badge tone="amber">Test</Badge>
-        </button>
-      </div>
+      {showAiTab && (
+        <div className="flex max-w-md gap-1 rounded-xl bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setTab("add")}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              tab === "add" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Soru Ekle
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("ai")}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              tab === "ai" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Yapay Zeka ile Soru Üret
+            <Badge tone="amber">Test</Badge>
+          </button>
+        </div>
+      )}
 
-      {tab === "add" && (
+      {(!showAiTab || tab === "add") && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ManualQuestionForm topicId={topicId} />
           <BulkQuestionImport topicId={topicId} subjectIds={subjectIds} />
         </div>
       )}
 
-      {tab === "ai" && (
+      {showAiTab && tab === "ai" && (
         <div className="max-w-xl">
           <div className="mb-3 flex items-center gap-2">
             <Badge tone="amber">Test aşamasında</Badge>

@@ -10,7 +10,7 @@ export default function AdminSoruEklePage() {
           ekran öğretmen panelindeki soru ekleme ekranıyla aynı işlevi görür.
         </p>
       </div>
-      <QuestionAddScreen />
+      <QuestionAddScreen showAiTab />
     </div>
   );
 }
