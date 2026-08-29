@@ -7,8 +7,10 @@ import type { QuizDisplaySettings } from "@/components/question-answer-list";
 // Ogrencinin deneme/konu testi ekranlarindaki soru basi sure siniri ve
 // gosterim bicimi tercihlerini duzenledigi form. Kaydet'e basinca
 // /api/student/quiz-settings'e yazilir; sayfa yenilenince yeni deger
-// deneme/konu testi ekranlarina yansir.
-export function QuizSettingsForm({ initial }: { initial: QuizDisplaySettings }) {
+// deneme/konu testi ekranlarina yansir. Admin bir test ogrenciyi
+// onizlerken `studentId` gecilir - o zaman kaydedilen ayar admin'in kendi
+// hesabina degil, onizlenen ogrenciye yazilir.
+export function QuizSettingsForm({ initial, studentId }: { initial: QuizDisplaySettings; studentId?: string }) {
   const [timerEnabled, setTimerEnabled] = useState(initial.timerEnabled);
   const [minutesPerQuestion, setMinutesPerQuestion] = useState(Math.max(1, Math.round(initial.secondsPerQuestion / 60)));
   const [oneQuestionPerPage, setOneQuestionPerPage] = useState(initial.oneQuestionPerPage);
@@ -27,6 +29,7 @@ export function QuizSettingsForm({ initial }: { initial: QuizDisplaySettings }) 
           timerEnabled,
           secondsPerQuestion: minutesPerQuestion * 60,
           oneQuestionPerPage,
+          ...(studentId ? { studentId } : {}),
         }),
       });
       const json = await res.json().catch(() => null);

@@ -4,6 +4,7 @@ import { SimpleTabs } from "@/components/simple-tabs";
 import { DOC_SECTIONS } from "@/lib/docs/content";
 import { QuizSettingsForm } from "@/components/quiz-settings-form";
 import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
 export default async function OgrenciGenelAyarlarPage() {
   const supabase = await createClient();
@@ -18,11 +19,12 @@ export default async function OgrenciGenelAyarlarPage() {
     role === "parent" ? s.role === "parent" : role === "admin" ? s.role === "student" || s.role === "parent" : s.role === "student"
   );
 
-  // Sinav Ayarlari sekmesi sadece gercek ogrenci hesabinda anlamli - veli
-  // gorunumunde ve admin onizlemesinde (kendi hesabina ait olmayan bir satir
-  // duzenlenemeyecegi icin) gosterilmiyor.
-  const isRealStudent = role === "student";
-  const quizSettings = isRealStudent ? await getStudentQuizSettings(userData.user?.id) : null;
+  // Sinav Ayarlari sekmesi gercek ogrenci hesabinda kendi ayarlarini,
+  // admin onizlemesinde ise onizlenen test ogrencinin ayarlarini gosterir -
+  // boylece admin, ogrenci panelindeki bu sekmeyi de guncel olarak gorur.
+  const { studentId: effectiveStudentId, isAdminPreview } = await resolveEffectiveStudent();
+  const canShowQuizSettings = role === "student" || (role === "admin" && isAdminPreview);
+  const quizSettings = canShowQuizSettings ? await getStudentQuizSettings(effectiveStudentId) : null;
 
   const sistemBilgisiTab = (
     <div className="flex flex-col gap-6">
@@ -42,7 +44,18 @@ export default async function OgrenciGenelAyarlarPage() {
     </div>
   );
 
-  const sinavAyarlariTab = quizSettings && <QuizSettingsForm initial={quizSettings} />;
+  const sinavAyarlariTab = quizSettings && (
+    <QuizSettingsForm initial={quizSettings} studentId={role === "admin" ? effectiveStudentId : undefined} />
+  );
+
+  // Sinav Ayarlari varsa ilk acilista o gorunsun, Sistem Bilgisi saga
+  // (ikinci sekme olarak) alinsin.
+  const tabs = sinavAyarlariTab
+    ? [
+        { key: "sinav-ayarlari", label: "Sınav Ayarları", content: sinavAyarlariTab },
+        { key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab },
+      ]
+    : [{ key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab }];
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,13 +63,7 @@ export default async function OgrenciGenelAyarlarPage() {
         <h1 className="text-2xl font-semibold text-slate-900">Genel Ayarlar</h1>
         <p className="text-sm text-slate-500">Platformu nasıl kullanacağına dair güncel özet.</p>
       </div>
-      <SimpleTabs
-        defaultKey="sistem-bilgisi"
-        tabs={[
-          { key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab },
-          ...(sinavAyarlariTab ? [{ key: "sinav-ayarlari", label: "Sınav Ayarları", content: sinavAyarlariTab }] : []),
-        ]}
-      />
+      <SimpleTabs defaultKey={tabs[0].key} tabs={tabs} />
     </div>
   );
 }
