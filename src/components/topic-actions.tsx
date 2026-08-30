@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui";
 
@@ -58,6 +59,12 @@ export function TopicActions({ topicId }: { topicId: string }) {
         <Button variant="secondary" onClick={handleDontKnow} disabled={loading} className="text-xs">
           Bilmiyorum, programa ekle
         </Button>
+        <Link
+          href={`/ogrenci/konu/${topicId}/cevaplar`}
+          className="flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+        >
+          Cevaplar
+        </Link>
       </div>
       {message && <p className="text-xs text-slate-500">{message}</p>}
     </div>

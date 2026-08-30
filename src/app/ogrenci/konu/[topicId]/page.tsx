@@ -3,12 +3,16 @@ import { QuizRunner } from "./quiz-runner";
 import { Card } from "@/components/ui";
 import { LessonContentView } from "@/components/lesson-content-view";
 import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
 export default async function KonuTestPage({ params }: { params: Promise<{ topicId: string }> }) {
   const { topicId } = await params;
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  const quizSettings = await getStudentQuizSettings(userData.user?.id);
+  // Admin bir test ogrenciyi onizlerken auth.uid() admin'in kendisi olur;
+  // sinav ayarlarinin (sure/gosterim bicimi) onizlenen ogrenciye gore
+  // uygulanmasi icin etkin ogrenci id'si kullanilmali.
+  const { studentId: effectiveStudentId } = await resolveEffectiveStudent();
+  const quizSettings = await getStudentQuizSettings(effectiveStudentId);
 
   const [{ data: topic }, { data: lessonContents }, { data: questions }] = await Promise.all([
     supabase.from("topics").select("id, name, grade_level").eq("id", topicId).single(),

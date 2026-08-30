@@ -9,6 +9,16 @@ import { gradeBackgroundVariant } from "@/lib/grade-level";
 
 type NavItem = { href: string; label: string; tone?: "default" | "accent" | "emerald" | "amber"; dot?: boolean; badge?: string };
 
+// Genel Ayarlar sayfasi rolden role farkli bir rotada yasiyor - ogrenci ve
+// veli ayni /ogrenci/genel-ayarlar sayfasini (icerigi role gore degisiyor)
+// paylasiyor.
+const SETTINGS_HREF_BY_ROLE: Record<string, string> = {
+  admin: "/admin/genel-ayarlar",
+  student: "/ogrenci/genel-ayarlar",
+  parent: "/ogrenci/genel-ayarlar",
+  teacher: "/ogretmen/genel-ayarlar",
+};
+
 function NavLinks({
   items,
   pathname,
@@ -159,6 +169,31 @@ export function RoleShell({
   const activePreviewSwitcher = effectiveRole ? previewSwitcherByRole?.[effectiveRole] : undefined;
   const displayPreviewSwitcher = activePreviewSwitcher ?? previewSwitcher;
 
+  // Genel Ayarlar artik sol menude degil, her rolde sag ust kosede tek bir
+  // dişli ikonuyla erisiliyor. Admin kendi panelindeyken kendi ayarlarina,
+  // bir paneli onizlerken ise onizledigi rolun ayar sayfasina gider.
+  const settingsHref = effectiveRole ? SETTINGS_HREF_BY_ROLE[effectiveRole] : undefined;
+  const settingsButton = settingsHref ? (
+    <Link
+      href={settingsHref}
+      title="Genel Ayarlar"
+      aria-label="Genel Ayarlar"
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${
+        pathname === settingsHref
+          ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+          : "border-slate-200 text-slate-500 hover:bg-slate-50"
+      }`}
+    >
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path
+          fillRule="evenodd"
+          d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </Link>
+  ) : null;
+
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
       {/* Mobilde ust bar: logo + hamburger. Sol menu md ve ustunde sabit
@@ -172,22 +207,25 @@ export function RoleShell({
             <span className="block text-[11px] leading-tight text-slate-400">{displayTitle}</span>
           </div>
         </Link>
-        <button
-          onClick={() => setMobileNavOpen((v) => !v)}
-          aria-label={mobileNavOpen ? "Menüyü kapat" : "Menüyü aç"}
-          aria-expanded={mobileNavOpen}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
-        >
-          {mobileNavOpen ? (
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L8.94 10l-4.72 4.72a.75.75 0 101.06 1.06L10 11.06l4.72 4.72a.75.75 0 101.06-1.06L11.06 10l4.72-4.72a.75.75 0 00-1.06-1.06L10 8.94 5.28 4.22z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path fillRule="evenodd" d="M3 5.75A.75.75 0 013.75 5h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 5.75zM3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10zm0 4.25a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
-            </svg>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          {settingsButton}
+          <button
+            onClick={() => setMobileNavOpen((v) => !v)}
+            aria-label={mobileNavOpen ? "Menüyü kapat" : "Menüyü aç"}
+            aria-expanded={mobileNavOpen}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
+          >
+            {mobileNavOpen ? (
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L8.94 10l-4.72 4.72a.75.75 0 101.06 1.06L10 11.06l4.72 4.72a.75.75 0 101.06-1.06L11.06 10l4.72-4.72a.75.75 0 00-1.06-1.06L10 8.94 5.28 4.22z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                <path fillRule="evenodd" d="M3 5.75A.75.75 0 013.75 5h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 5.75zM3 10a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10zm0 4.25a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobil acilir menu (overlay + panel) */}
@@ -281,23 +319,36 @@ export function RoleShell({
         )}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {!!topBarLinks?.length && (
-          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end lg:px-6">
-            <div className="flex flex-wrap items-center gap-2">
-              {topBarLinks?.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={
-                    link.tone === "accent"
-                      ? "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
-                      : "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
-                  }
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+        {(!!topBarLinks?.length || settingsButton) && (
+          // lg altinda dişli zaten mobil ust barda (logo + hamburger
+          // yaninda) gosteriliyor; bu satir sadece "Öğrenci Ekranı" gibi
+          // ekstra baglantilar varsa mobilde de gorunur, yoksa sadece lg ve
+          // ustunde (dişli icin) gosterilir.
+          <div
+            className={
+              topBarLinks?.length
+                ? "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end lg:px-6"
+                : "hidden items-center justify-end gap-3 px-4 py-3 lg:flex lg:px-6"
+            }
+          >
+            {!!topBarLinks?.length && (
+              <div className="flex flex-wrap items-center gap-2">
+                {topBarLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={
+                      link.tone === "accent"
+                        ? "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                        : "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                    }
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {settingsButton && <div className="hidden lg:block">{settingsButton}</div>}
           </div>
         )}
         <main className="relative flex-1 overflow-hidden bg-slate-50 p-4 sm:p-6 lg:p-10">

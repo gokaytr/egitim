@@ -7,22 +7,7 @@ import { TeacherStudentManager } from "@/components/teacher-student-manager";
 import { ParentLinkForm } from "@/components/parent-link-form";
 import { DeleteParentLinkButton } from "@/components/delete-parent-link-button";
 import { AdminUsersTabs } from "@/components/admin-users-tabs";
-
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Yönetici",
-  teacher: "Öğretmen",
-  moderator: "Moderatör",
-  student: "Öğrenci",
-  parent: "Veli",
-};
-
-const ROLE_TONE: Record<string, "default" | "green" | "amber" | "red"> = {
-  admin: "red",
-  teacher: "amber",
-  moderator: "amber",
-  student: "green",
-  parent: "default",
-};
+import { ROLE_LABEL, ROLE_TONE } from "@/lib/admin/role-labels";
 
 export default async function KullanicilarPage() {
   const supabase = await createClient();
@@ -73,12 +58,17 @@ export default async function KullanicilarPage() {
               <th className="px-5 py-3 font-medium">Rolü Değiştir</th>
               <th className="px-5 py-3 font-medium">Sınıf / Hedef</th>
               <th className="px-5 py-3 font-medium">Kayıt Tarihi</th>
+              <th className="px-5 py-3 font-medium"></th>
             </tr>
           </thead>
           <tbody>
             {visibleUsers.map((u) => (
               <tr key={u.id} className="border-b border-slate-50 last:border-0">
-                <td className="px-5 py-3 font-medium text-slate-900">{u.full_name}</td>
+                <td className="px-5 py-3 font-medium text-slate-900">
+                  <Link href={`/admin/kullanicilar/${u.id}`} className="hover:text-indigo-600 hover:underline">
+                    {u.full_name}
+                  </Link>
+                </td>
                 <td className="px-5 py-3 text-slate-600">{u.email}</td>
                 <td className="px-5 py-3">
                   <Badge tone={ROLE_TONE[u.role]}>{ROLE_LABEL[u.role] ?? u.role}</Badge>
@@ -90,6 +80,11 @@ export default async function KullanicilarPage() {
                   {u.grade_level ? `${u.grade_level}. sınıf` : "-"} {u.exam_target ? `· ${u.exam_target}` : ""}
                 </td>
                 <td className="px-5 py-3 text-slate-400">{new Date(u.created_at).toLocaleDateString("tr-TR")}</td>
+                <td className="px-5 py-3 text-right">
+                  <Link href={`/admin/kullanicilar/${u.id}`} className="font-medium text-indigo-600 underline">
+                    Profil →
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -168,9 +163,14 @@ export default async function KullanicilarPage() {
                   <td className="px-5 py-3 text-slate-600">{u.grade_level ? `${u.grade_level}. sınıf` : "-"}</td>
                   <td className="px-5 py-3 text-slate-600">{u.email}</td>
                   <td className="px-5 py-3 text-right">
-                    <Link href={`/ogrenci?studentId=${u.id}`} className="font-medium text-indigo-600 underline">
-                      Görüntüle →
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      <Link href={`/admin/kullanicilar/${u.id}`} className="font-medium text-indigo-600 underline">
+                        Profil →
+                      </Link>
+                      <Link href={`/ogrenci?studentId=${u.id}`} className="font-medium text-indigo-600 underline">
+                        Görüntüle →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -201,11 +201,16 @@ export default async function KullanicilarPage() {
                   <td className="px-5 py-3 font-medium text-slate-900">{u.full_name}</td>
                   <td className="px-5 py-3 text-slate-600">{u.email}</td>
                   <td className="px-5 py-3 text-right">
-                    {linkedStudentId && (
-                      <Link href={`/ogrenci/rapor?studentId=${linkedStudentId}`} className="font-medium text-indigo-600 underline">
-                        Öğrencisini Görüntüle →
+                    <div className="flex items-center justify-end gap-3">
+                      <Link href={`/admin/kullanicilar/${u.id}`} className="font-medium text-indigo-600 underline">
+                        Profil →
                       </Link>
-                    )}
+                      {linkedStudentId && (
+                        <Link href={`/ogrenci/rapor?studentId=${linkedStudentId}`} className="font-medium text-indigo-600 underline">
+                          Öğrencisini Görüntüle →
+                        </Link>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

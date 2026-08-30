@@ -2,12 +2,16 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
 import { ExamRunner } from "./exam-runner";
 import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
 export default async function DenemePage({ params }: { params: Promise<{ examId: string }> }) {
   const { examId } = await params;
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  const quizSettings = await getStudentQuizSettings(userData.user?.id);
+  // Admin bir test ogrenciyi onizlerken auth.uid() admin'in kendisi olur;
+  // sinav ayarlarinin (sure/gosterim bicimi) onizlenen ogrenciye gore
+  // uygulanmasi icin etkin ogrenci id'si kullanilmali.
+  const { studentId: effectiveStudentId } = await resolveEffectiveStudent();
+  const quizSettings = await getStudentQuizSettings(effectiveStudentId);
 
   const [{ data: exam }, { data: examQuestions }] = await Promise.all([
     supabase.from("exams").select("id, title, exam_type, duration_minutes").eq("id", examId).single(),
