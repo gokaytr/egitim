@@ -19,10 +19,15 @@ export type QuizDisplaySettings = {
   oneQuestionPerPage: boolean;
 };
 
+// Varsayilan: soru sayisina uygun sekilde soru basina 1 dakika sure siniri
+// acik gelir, sorular da sayfa basi bir soru olarak gosterilir - ogrenci
+// isterse "Genel Ayarlar > Sinav Ayarlari"ndan sure sinirini kaldirabilir,
+// farkli bir sure secebilir veya gosterim bicimini kaydirmali listeye
+// cevirebilir.
 export const DEFAULT_QUIZ_DISPLAY_SETTINGS: QuizDisplaySettings = {
-  timerEnabled: false,
+  timerEnabled: true,
   secondsPerQuestion: 60,
-  oneQuestionPerPage: false,
+  oneQuestionPerPage: true,
 };
 
 function formatRemaining(totalSeconds: number) {
@@ -79,10 +84,10 @@ function QuestionCard({
 
 // Deneme (sinav) ve konu testi ekranlarinin ortak soru listesi/soru kagidi
 // gorunumu. Ogrenci "Genel Ayarlar > Sinav Ayarlari"ndan iki seyi
-// degistirebilir: soru basi sure siniri (varsayilan kapali, acilirsa soru
-// basi 1 dk) ve gosterim bicimi (varsayilan: hepsi tek sayfada kaydirmali
-// liste; alternatif: sayfa basi bir soru, cevaplayinca "Sonraki Soru" ile
-// ilerlenir). Sure rozetine tiklamak da dogrudan ayni ayar sayfasina goturur.
+// degistirebilir: soru basi sure siniri (varsayilan acik, soru basi 1 dk)
+// ve gosterim bicimi (varsayilan: sayfa basi bir soru, cevaplayinca
+// "Sonraki Soru" ile ilerlenir; alternatif: hepsi tek sayfada kaydirmali
+// liste). Sure rozetine tiklamak da dogrudan ayni ayar sayfasina goturur.
 export function QuestionAnswerList({
   questions,
   answers,
