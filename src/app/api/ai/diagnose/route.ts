@@ -36,6 +36,17 @@ export async function POST(req: Request) {
 
     const topic = Array.isArray(attempt.topics) ? attempt.topics[0] : attempt.topics;
 
+    // Ayni ogrencinin ayni konuda DAHA ONCE kac kez "major" (ciddi eksik)
+    // cikip ciktigini sayiyoruz - tek kotu denemede degil, eksik tekrar
+    // tekrar cikinca ozel ders bir secenek olarak onerilsin diye (bkz.
+    // ruleBasedDiagnosis).
+    const { count: priorMajorCount } = await supabase
+      .from("diagnoses")
+      .select("id", { count: "exact", head: true })
+      .eq("student_id", attempt.student_id)
+      .eq("topic_id", attempt.topic_id)
+      .eq("weakness_level", "major");
+
     const wrongAnswers = (logs ?? []).map((l) => {
       const q = Array.isArray(l.questions) ? l.questions[0] : l.questions;
       return {
@@ -53,6 +64,7 @@ export async function POST(req: Request) {
       wrongCount: attempt.wrong_count,
       emptyCount: attempt.empty_count,
       wrongAnswers,
+      priorMajorCount: priorMajorCount ?? 0,
     });
 
     const { data: saved, error: saveError } = await supabase
@@ -73,13 +85,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: saveError.message }, { status: 500 });
     }
 
-    if (diagnosis.recommended_action === "tutor_referral") {
-      await supabase.from("tutor_referrals").insert({
-        student_id: attempt.student_id,
-        topic_id: attempt.topic_id,
-        status: "pending",
-      });
-    }
+    // Not: "tutor_referral" onerisi ciksa bile burada otomatik bir
+    // tutor_referrals kaydi ACILMAZ - bu artik sadece veliye sunulan bir
+    // oneri. Ozel ders talebini veli isterse "Özel Ders Talebi" sayfasindaki
+    // formdan kendisi olusturur (bkz. ParentTutorRequestForm).
 
     return NextResponse.json({ diagnosis: saved });
   } catch (err) {

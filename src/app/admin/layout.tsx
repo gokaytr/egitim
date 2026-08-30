@@ -1,12 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
 
-const TOP_BAR_LINKS = [
-  { href: "/ogrenci", label: "Öğrenci Ekranı" },
-  { href: "/ogretmen", label: "Öğretmen Ekranı" },
-  { href: "/ogrenci/rapor", label: "Veli Görünümü" },
-  { href: "/admin/gorevler", label: "Yapılacaklar", tone: "accent" as const },
-];
+// Ogrenci/Ogretmen/Veli onizlemesine gecis artik sol menu altindaki "Panel
+// değiştir" butonlarindan (RoleShell) yapiliyor - burada sadece admin'in
+// kendi paneline ozel "Yapilacaklar" kisayolu kaliyor.
+const TOP_BAR_LINKS = [{ href: "/admin/gorevler", label: "Yapılacaklar", tone: "accent" as const }];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();

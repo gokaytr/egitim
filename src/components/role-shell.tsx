@@ -90,7 +90,6 @@ export function RoleShell({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const [isAdminPreviewing, setIsAdminPreviewing] = useState(false);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [gradeLevel, setGradeLevel] = useState<number | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -115,9 +114,6 @@ export function RoleShell({
       if (cancelled) return;
       setCurrentRole(profile?.role ?? null);
       setGradeLevel(profile?.grade_level ?? null);
-      if (profile?.role === "admin" && !pathname.startsWith("/admin")) {
-        setIsAdminPreviewing(true);
-      }
     }
     loadRole();
     return () => {
@@ -148,14 +144,14 @@ export function RoleShell({
   // kendi rolune gore degil, hangi paneli onizledigine gore secilmeli - yoksa
   // veli/ogretmen ekranlarinda hep admin'in kendi (kisitli) nav'i gorunuyordu.
   const effectiveRole =
-    currentRole === "admin" && isAdminPreviewing
+    currentRole === "admin"
       ? pathname.startsWith("/ogrenci/rapor")
         ? "parent"
         : pathname.startsWith("/ogretmen")
           ? "teacher"
           : pathname.startsWith("/ogrenci")
             ? "student"
-            : currentRole
+            : "admin"
       : currentRole;
 
   const roleTitle = effectiveRole ? titleByRole?.[effectiveRole] : undefined;
@@ -194,6 +190,64 @@ export function RoleShell({
     </Link>
   ) : null;
 
+  // Cikis butonu artik sol menu yerine sag ust kosede, ayarlar ikonunun
+  // hemen saginda gosteriliyor.
+  const logoutButton = (
+    <button
+      onClick={handleLogout}
+      title="Çıkış yap"
+      aria-label="Çıkış yap"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+    >
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path
+          fillRule="evenodd"
+          d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
+          clipRule="evenodd"
+        />
+        <path
+          fillRule="evenodd"
+          d="M6 10a.75.75 0 0 1 .75-.75h9.546l-1.048-.943a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 1 1-1.004-1.114l1.048-.943H6.75A.75.75 0 0 1 6 10Z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </button>
+  );
+
+  // Admin icin (ister kendi panelinde ister bir test panelini onizlerken)
+  // her zaman diger 3 panele tek tikla gecis butonlari gosteriliyor - eskiden
+  // sadece "Admin paneline geçiş yap" vardi ve sadece onizlerken cikiyordu.
+  const PANEL_DEFS: { key: string; label: string; href: string }[] = [
+    { key: "admin", label: "Admin paneline geç", href: "/admin" },
+    { key: "student", label: "Demo öğrenci paneline geç", href: "/ogrenci" },
+    { key: "teacher", label: "Demo öğretmen paneline geç", href: "/ogretmen" },
+    { key: "parent", label: "Demo veli paneline geç", href: "/ogrenci/rapor" },
+  ];
+  const otherPanels = currentRole === "admin" ? PANEL_DEFS.filter((p) => p.key !== effectiveRole) : [];
+  function renderPanelSwitcher(onNavigate?: () => void) {
+    if (currentRole !== "admin") return null;
+    return (
+      <>
+        {displayPreviewSwitcher}
+        {otherPanels.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Panel değiştir</p>
+            {otherPanels.map((p) => (
+              <Link
+                key={p.key}
+                href={p.href}
+                onClick={onNavigate}
+                className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+              >
+                {p.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
       {/* Mobilde ust bar: logo + hamburger. Sol menu md ve ustunde sabit
@@ -209,6 +263,7 @@ export function RoleShell({
         </Link>
         <div className="flex items-center gap-2">
           {settingsButton}
+          {logoutButton}
           <button
             onClick={() => setMobileNavOpen((v) => !v)}
             aria-label={mobileNavOpen ? "Menüyü kapat" : "Menüyü aç"}
@@ -236,24 +291,7 @@ export function RoleShell({
             <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
             <NavLinks items={displayNav} pathname={pathname} onNavigate={() => setMobileNavOpen(false)} />
             <div className="mt-auto flex flex-col gap-3 pt-4">
-              {isAdminPreviewing && (
-                <>
-                  {displayPreviewSwitcher}
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileNavOpen(false)}
-                    className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-                  >
-                    Admin paneline geçiş yap
-                  </Link>
-                </>
-              )}
-              <button
-                onClick={handleLogout}
-                className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
-              >
-                Çıkış yap
-              </button>
+              {renderPanelSwitcher(() => setMobileNavOpen(false))}
             </div>
           </div>
         </div>
@@ -296,61 +334,44 @@ export function RoleShell({
             </div>
             <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{displayTitle}</p>
             <NavLinks items={displayNav} pathname={pathname} />
-            <div className="mt-auto flex flex-col gap-3 pt-4">
-              {isAdminPreviewing && (
-                <>
-                  {displayPreviewSwitcher}
-                  <Link
-                    href="/admin"
-                    className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-                  >
-                    Admin paneline geçiş yap
-                  </Link>
-                </>
-              )}
-              <button
-                onClick={handleLogout}
-                className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 hover:bg-slate-100"
-              >
-                Çıkış yap
-              </button>
-            </div>
+            <div className="mt-auto flex flex-col gap-3 pt-4">{renderPanelSwitcher()}</div>
           </>
         )}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {(!!topBarLinks?.length || settingsButton) && (
-          // lg altinda dişli zaten mobil ust barda (logo + hamburger
-          // yaninda) gosteriliyor; bu satir sadece "Öğrenci Ekranı" gibi
-          // ekstra baglantilar varsa mobilde de gorunur, yoksa sadece lg ve
-          // ustunde (dişli icin) gosterilir.
-          <div
-            className={
-              topBarLinks?.length
-                ? "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end lg:px-6"
-                : "hidden items-center justify-end gap-3 px-4 py-3 lg:flex lg:px-6"
-            }
-          >
-            {!!topBarLinks?.length && (
-              <div className="flex flex-wrap items-center gap-2">
-                {topBarLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={
-                      link.tone === "accent"
-                        ? "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
-                        : "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
-                    }
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-            {settingsButton && <div className="hidden lg:block">{settingsButton}</div>}
+        {/* lg altinda dişli/çıkış zaten mobil ust barda (logo + hamburger
+            yaninda) gosteriliyor; bu satir sadece "Öğrenci Ekranı" gibi
+            ekstra baglantilar varsa mobilde de gorunur, dişli/çıkış ikonlari
+            ise sadece lg ve ustunde burada tekrar gosterilir. */}
+        <div
+          className={
+            topBarLinks?.length
+              ? "flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end lg:px-6"
+              : "hidden items-center justify-end gap-3 px-4 py-3 lg:flex lg:px-6"
+          }
+        >
+          {!!topBarLinks?.length && (
+            <div className="flex flex-wrap items-center gap-2">
+              {topBarLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={
+                    link.tone === "accent"
+                      ? "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                      : "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                  }
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          )}
+          <div className="hidden items-center gap-2 lg:flex">
+            {settingsButton}
+            {logoutButton}
           </div>
-        )}
+        </div>
         <main className="relative flex-1 overflow-hidden bg-slate-50 p-4 sm:p-6 lg:p-10">
           {showGradeBackground && currentRole === "student" && (
             <GradeBackground variant={gradeBackgroundVariant(gradeLevel)} />

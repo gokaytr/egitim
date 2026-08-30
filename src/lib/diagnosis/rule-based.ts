@@ -47,13 +47,20 @@ export function ruleBasedDiagnosis(params: {
   wrongCount: number;
   emptyCount: number;
   wrongAnswers: WrongAnswer[];
+  // Bu ogrencinin bu konuda DAHA ONCE "major" (ciddi eksik) cikan analiz
+  // sayisi (bu deneme haric). Tek bir kotu denemede hemen ozel derse
+  // yonlendirmek yerine, once konuyu tekrar etmesi istenir; ozel ders ancak
+  // ayni konuda tekrar tekrar basarisiz olunca (bu sayi >= 1 iken) onerilir -
+  // ve o zaman bile otomatik talep olusturulmaz, sadece veliye bu secenek
+  // sunulur (veli isterse "Özel Ders Talebi" sayfasindan kendisi talep eder).
+  priorMajorCount?: number;
 }): {
   weakness_level: WeaknessLevel;
   ai_summary: string;
   common_error_pattern: string | null;
   recommended_action: RecommendedAction;
 } {
-  const { topicName, correctCount, wrongCount, emptyCount, wrongAnswers } = params;
+  const { topicName, correctCount, wrongCount, emptyCount, wrongAnswers, priorMajorCount = 0 } = params;
   const attempted = correctCount + wrongCount;
   const total = attempted + emptyCount;
   const accuracy = attempted > 0 ? correctCount / attempted : 0;
@@ -72,10 +79,15 @@ export function ruleBasedDiagnosis(params: {
   }
 
   // --- Önerilen aksiyon --------------------------------------------------
+  // Öğrenci tek bir denemede kötü sonuç aldı diye hemen özel derse
+  // yönlendirilmez - önce konuyu tekrar etmesi (video + yeni sorular)
+  // istenir. Aynı konuda daha önce de "major" (ciddi eksik) çıkmışsa, yani
+  // eksik tekrar tekrar sürüyorsa, ancak o zaman özel ders bir seçenek
+  // olarak öne çıkarılır (veliye - otomatik talep oluşturulmadan).
   let recommended_action: RecommendedAction;
   if (weakness_level === "none") {
     recommended_action = "none";
-  } else if (accuracy < 0.35 || (weakness_level === "major" && wrongCount >= 5)) {
+  } else if (weakness_level === "major" && priorMajorCount >= 1) {
     recommended_action = "tutor_referral";
   } else if (weakness_level === "major") {
     recommended_action = "watch_video";
@@ -156,14 +168,14 @@ export function ruleBasedDiagnosis(params: {
   // 5) Somut yönlendirme + kapanış motivasyon cümlesi
   if (recommended_action === "tutor_referral") {
     paragraphs.push(
-      `Bu konudaki eksik, tek başına tekrar ederek kısa sürede kapanacak gibi görünmüyor; bu yüzden bir öğretmenle birebir çalışmanı öneriyoruz. ` +
-      `Senin adına özel ders talebini zaten oluşturduk, yakında bir öğretmen seninle iletişime geçecek. ` +
-      `Bu arada konuyu tamamen bırakma, öğretmenle görüşene kadar en azından temel tanımları tekrar gözden geçir.`
+      `Bu konuda daha önce de zorlandığını gördük - yani eksik tek seferlik değil, tekrar tekrar karşımıza çıkıyor. ` +
+      `Bu durumu ailenle paylaştık; ailen isterse "Özel Ders Talebi" sayfasından senin için bir öğretmenle birebir ders talep edebilir. ` +
+      `Bu arada konuyu tamamen bırakma, aşağıdaki alt başlıkları tekrar tekrar gözden geçirmeye devam et.`
     );
   } else if (recommended_action === "watch_video") {
     paragraphs.push(
-      `Yeni soru çözmeden önce bu konunun anlatım videosunu baştan izlemeni öneririz, çünkü şu anki hataların büyük ölçüde konunun temelinden kaynaklanıyor. ` +
-      `Videoyu izledikten sonra aynı konudan birkaç soru daha çözerek gelişimini kontrol edebilirsin.`
+      `Şu an yapman gereken en önemli şey bu konuyu tekrar etmek: önce anlatım videosunu baştan izle, sonra aynı konudan birkaç soru daha çöz. ` +
+      `Hemen özel ders gerekmiyor - çoğu zaman bir tekrar bu tür eksikleri kapatmaya yeter, bir sonraki denemende ne kadar geliştiğini göreceksin.`
     );
   } else if (recommended_action === "practice_more") {
     paragraphs.push(

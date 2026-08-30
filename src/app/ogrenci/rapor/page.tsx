@@ -1,7 +1,20 @@
-import { Card } from "@/components/ui";
+import Link from "next/link";
+import { Card, Badge } from "@/components/ui";
 import { ReportHeader } from "@/components/report-header";
 import { StudentReportView } from "@/components/student-report-view";
 import { loadReportData, firstOf } from "@/lib/reports/report-data";
+
+const WEAKNESS_TONE: Record<string, "green" | "amber" | "red"> = {
+  none: "green",
+  minor: "amber",
+  major: "red",
+};
+
+const WEAKNESS_CARD_TONE: Record<string, string> = {
+  none: "border-emerald-200 bg-emerald-50",
+  minor: "border-amber-200 bg-amber-50",
+  major: "border-red-200 bg-red-50",
+};
 
 export default async function RaporPage({ searchParams }: { searchParams: Promise<{ studentId?: string }> }) {
   const { studentId } = await searchParams;
@@ -28,17 +41,51 @@ export default async function RaporPage({ searchParams }: { searchParams: Promis
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0];
 
   const latestDiagnosis = data.diagnoses[0];
+  const studentFirstName = data.studentProfile?.full_name?.split(" ")[0] ?? "Öğrenci";
+  const latestTopic = latestDiagnosis ? firstOf(latestDiagnosis.topics) : undefined;
 
   return (
     <div className="flex flex-col gap-6">
       <ReportHeader data={data} />
 
-      {data.role === "parent" && latestDiagnosis && !latestDiagnosis.acknowledged_at && (
-        <Card className="border-amber-200 bg-amber-50">
-          <p className="text-sm text-amber-900">
-            <span className="font-semibold">Uyarı:</span> {data.studentProfile?.full_name?.split(" ")[0] ?? "Öğrenci"} son
-            analizi ve tavsiyeleri henüz “Okudum, Anladım” diyerek onaylamadı.
+      {/* Ogrencinin son test sonucunda gordugu degerlendirmenin (ai_summary)
+          birebir aynisi burada da gosteriliyor - veli "ogrenciye ne
+          soylendigini" gormek icin Raporlama sekmesine gitmek zorunda
+          kalmasin. Tek kotu denemede hemen ozel ders onerilmez; bu ancak
+          ayni konuda eksik tekrar tekrar cikinca (recommended_action ===
+          "tutor_referral") bir secenek olarak veliye sunulur - otomatik
+          talep olusturulmaz, veli isterse kendisi talep eder. */}
+      {data.role === "parent" && latestDiagnosis && (
+        <Card className={WEAKNESS_CARD_TONE[latestDiagnosis.weakness_level] ?? "border-slate-200 bg-slate-50"}>
+          <div className="mb-1 flex items-center gap-2">
+            <h2 className="font-semibold text-slate-900">Öğrenciye Söylenenler</h2>
+            <Badge tone={WEAKNESS_TONE[latestDiagnosis.weakness_level] ?? "default"}>{latestDiagnosis.weakness_level}</Badge>
+          </div>
+          <p className="mb-2 text-xs text-slate-500">
+            {latestTopic?.name ?? "Genel"} konusunda çözdüğü son testten sonra {studentFirstName}&apos;a gösterilen
+            değerlendirme:
           </p>
+          <p className="whitespace-pre-line text-sm text-slate-700">{latestDiagnosis.ai_summary}</p>
+          <p className="mt-2 text-xs font-medium">
+            {latestDiagnosis.acknowledged_at ? (
+              <span className="text-green-700">✓ {studentFirstName} okudu</span>
+            ) : (
+              <span className="text-amber-700">{studentFirstName} henüz okumadı</span>
+            )}
+          </p>
+          {latestDiagnosis.recommended_action === "tutor_referral" && (
+            <div className="mt-3 rounded-lg bg-white/70 p-3">
+              <p className="text-sm font-medium text-red-800">
+                {studentFirstName} bu konuda tekrar tekrar zorlanıyor. İstersen özel ders talebinde bulunabilirsin.
+              </p>
+              <Link
+                href={`/ogrenci/rapor/ozel-ders-talebi${data.studentId ? `?studentId=${data.studentId}` : ""}`}
+                className="mt-1 inline-block text-sm font-semibold text-indigo-700 underline"
+              >
+                Özel Ders Talebi sayfasına git →
+              </Link>
+            </div>
+          )}
         </Card>
       )}
 

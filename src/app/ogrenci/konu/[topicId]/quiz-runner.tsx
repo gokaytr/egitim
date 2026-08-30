@@ -127,7 +127,8 @@ export function QuizRunner({
               )}
               {result.diagnosis.recommended_action === "tutor_referral" && (
                 <p className="mt-2 text-sm font-medium text-indigo-700">
-                  Bu konuda özel derse yönlendirme talebin oluşturuldu, bir öğretmen seninle iletişime geçecek.
+                  Bu konuda tekrar tekrar zorlandığını fark ettik. Bu durumu ailenle paylaştık; ailen isterse senin için
+                  özel ders talebinde bulunabilir.
                 </p>
               )}
             </div>
