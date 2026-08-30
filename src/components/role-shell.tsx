@@ -37,7 +37,7 @@ function NavLinks({
             ? "bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100"
             : item.tone === "amber"
               ? "bg-amber-50 text-amber-700 font-semibold hover:bg-amber-100"
-              : "text-slate-600 hover:bg-slate-100";
+              : "text-slate-800 hover:bg-slate-100";
         return (
           <Link
             key={item.href}
@@ -258,7 +258,7 @@ export function RoleShell({
       {/* Mobilde ust bar: logo + hamburger. Sol menu md ve ustunde sabit
           gorunur, mobilde ise gizli - bunun yerine bu bar ve acilir menu
           kullanicinin tek erisim yolu. */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+      <div className="relative z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <Link href={homeHref} className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">O</div>
           <div>
@@ -303,7 +303,7 @@ export function RoleShell({
       )}
 
       <aside
-        className={`sticky top-0 hidden h-dvh shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white lg:flex ${
+        className={`sticky top-0 z-20 hidden h-dvh shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white lg:flex ${
           sidebarCollapsed ? "w-16 items-center p-3" : "w-64 p-5"
         }`}
       >

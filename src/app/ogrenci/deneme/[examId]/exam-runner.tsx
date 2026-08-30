@@ -7,6 +7,7 @@ import { Card, Badge, Button } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
 import { PreQuizCountdown } from "@/components/pre-quiz-countdown";
+import { EvaluationHeartbeat } from "@/components/evaluation-heartbeat";
 import { levelFromScore, LEVEL_TITLES } from "@/lib/deneme/level";
 
 type Question = {
@@ -33,6 +34,7 @@ export function ExamRunner({
   durationMinutes,
   questions,
   quizSettings = DEFAULT_QUIZ_DISPLAY_SETTINGS,
+  gradeLevel,
 }: {
   examId: string;
   examTitle: string;
@@ -40,6 +42,7 @@ export function ExamRunner({
   durationMinutes?: number | null;
   questions: Question[];
   quizSettings?: QuizDisplaySettings;
+  gradeLevel?: number | null;
 }) {
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -232,6 +235,7 @@ export function ExamRunner({
       <PreQuizCountdown
         topicLabel={examTitle}
         durationLabel={durationMinutes ? `${questions.length} soru · yaklaşık ${durationMinutes} dakika` : `${questions.length} soru`}
+        gradeLevel={gradeLevel}
         onDone={() => setStarted(true)}
       />
     );
@@ -255,6 +259,7 @@ export function ExamRunner({
         finishLabel="Denemeyi Bitir"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
+      <EvaluationHeartbeat active={submitting} />
     </div>
   );
 }

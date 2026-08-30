@@ -7,6 +7,7 @@ import { Card, Button } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
 import { PreQuizCountdown } from "@/components/pre-quiz-countdown";
+import { EvaluationHeartbeat } from "@/components/evaluation-heartbeat";
 
 type Question = {
   id: string;
@@ -23,11 +24,13 @@ export function QuizRunner({
   topicName,
   questions,
   quizSettings = DEFAULT_QUIZ_DISPLAY_SETTINGS,
+  gradeLevel,
 }: {
   topicId: string;
   topicName: string;
   questions: Question[];
   quizSettings?: QuizDisplaySettings;
+  gradeLevel?: number | null;
 }) {
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -162,6 +165,7 @@ export function QuizRunner({
       <PreQuizCountdown
         topicLabel={topicName}
         durationLabel={`${questions.length} soru`}
+        gradeLevel={gradeLevel}
         onDone={() => setStarted(true)}
       />
     );
@@ -179,6 +183,7 @@ export function QuizRunner({
         finishLabel="Testi Bitir"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
+      <EvaluationHeartbeat active={submitting} />
     </div>
   );
 }

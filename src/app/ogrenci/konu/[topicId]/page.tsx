@@ -14,7 +14,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
   const { studentId: effectiveStudentId } = await resolveEffectiveStudent();
   const quizSettings = await getStudentQuizSettings(effectiveStudentId);
 
-  const [{ data: topic }, { data: lessonContents }, { data: questions }] = await Promise.all([
+  const [{ data: topic }, { data: lessonContents }, { data: questions }, { data: studentProfile }] = await Promise.all([
     supabase.from("topics").select("id, name, grade_level").eq("id", topicId).single(),
     supabase
       .from("lesson_contents")
@@ -27,6 +27,9 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
       .eq("topic_id", topicId)
       .eq("is_approved", true)
       .limit(8),
+    // Tam ekran geri sayim ekranindaki arka plan gorseli, onizlenen/gercek
+    // ogrencinin sinif duzeyine gore secilsin diye (bkz. pre-quiz-countdown.tsx).
+    supabase.from("profiles").select("grade_level").eq("id", effectiveStudentId).single(),
   ]);
 
   return (
@@ -56,7 +59,13 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
           </p>
         </Card>
       ) : (
-        <QuizRunner topicId={topicId} topicName={topic?.name ?? "Konu"} questions={questions} quizSettings={quizSettings} />
+        <QuizRunner
+          topicId={topicId}
+          topicName={topic?.name ?? "Konu"}
+          questions={questions}
+          quizSettings={quizSettings}
+          gradeLevel={studentProfile?.grade_level}
+        />
       )}
     </div>
   );

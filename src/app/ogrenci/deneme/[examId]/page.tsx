@@ -13,7 +13,7 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
   const { studentId: effectiveStudentId } = await resolveEffectiveStudent();
   const quizSettings = await getStudentQuizSettings(effectiveStudentId);
 
-  const [{ data: exam }, { data: examQuestions }] = await Promise.all([
+  const [{ data: exam }, { data: examQuestions }, { data: studentProfile }] = await Promise.all([
     supabase.from("exams").select("id, title, exam_type, duration_minutes").eq("id", examId).single(),
     supabase
       .from("exam_questions")
@@ -22,6 +22,9 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
       )
       .eq("exam_id", examId)
       .order("order_index"),
+    // Tam ekran geri sayim ekranindaki arka plan gorseli, onizlenen/gercek
+    // ogrencinin sinif duzeyine gore secilsin diye (bkz. pre-quiz-countdown.tsx).
+    supabase.from("profiles").select("grade_level").eq("id", effectiveStudentId).single(),
   ]);
 
   if (!exam) {
@@ -51,6 +54,7 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
         durationMinutes={exam.duration_minutes}
         questions={questions}
         quizSettings={quizSettings}
+        gradeLevel={studentProfile?.grade_level}
       />
     </div>
   );

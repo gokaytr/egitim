@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, StatCard, Badge } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
 import { DiagnosisAcknowledgeButton } from "@/components/diagnosis-acknowledge-button";
 import { DenemeActionButton } from "@/components/deneme-action-button";
+import { PendingHistoryCard } from "@/components/pending-history-card";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 import { gradeBackgroundVariant } from "@/lib/grade-level";
 import { LEVEL_TITLES, type LevelLabel } from "@/lib/deneme/level";
@@ -34,13 +35,23 @@ export default async function OgrenciDashboard({
     );
   }
 
-  const [{ data: profile }, { count: attemptCount }, { data: lastDiagnosis }, { data: planItems }] = await Promise.all([
+  const [{ data: profile }, { data: recentAttempts }, { data: lastDiagnosis }, { data: planItems }] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, grade_level, exam_target, level_label, level_score")
       .eq("id", studentId)
       .single(),
-    supabase.from("student_attempts").select("*", { count: "exact", head: true }).eq("student_id", studentId),
+    // "Geçmiş Sonuçlarım" sekmesinde gösterilecek son bitirilmiş
+    // test/denemeler - eskiden ayrı bir istatistik kartından yeni sekmede
+    // /ogrenci/gecmis'e gidiliyordu, artık aynı kartın ikinci sekmesinde
+    // burada özet olarak gösteriliyor.
+    supabase
+      .from("student_attempts")
+      .select("id, finished_at, total_questions, correct_count, wrong_count, empty_count, topics(name), exams(title, exam_type)")
+      .eq("student_id", studentId)
+      .not("finished_at", "is", null)
+      .order("finished_at", { ascending: false })
+      .limit(8),
     supabase
       .from("diagnoses")
       .select("id, ai_summary, weakness_level, recommended_action, acknowledged_at, topics(name)")
@@ -54,6 +65,25 @@ export default async function OgrenciDashboard({
       .eq("study_plans.student_id", studentId)
       .neq("status", "done"),
   ]);
+
+  const attemptSummaries = (recentAttempts ?? []).map((a) => {
+    const topic = Array.isArray(a.topics) ? a.topics[0] : a.topics;
+    const exam = Array.isArray(a.exams) ? a.exams[0] : a.exams;
+    const title = topic?.name ?? exam?.title ?? "Test";
+    const kind = exam ? (exam.exam_type === "seviye_tespit" ? "Seviye Tespit" : "Deneme") : "Konu Testi";
+    const total = a.total_questions || a.correct_count + a.wrong_count + a.empty_count || 1;
+    const pct = Math.round((a.correct_count / total) * 100);
+    return {
+      id: a.id,
+      finishedAt: a.finished_at,
+      title,
+      kind,
+      correct: a.correct_count,
+      wrong: a.wrong_count,
+      empty: a.empty_count,
+      pct,
+    };
+  });
 
   const lastTopic = lastDiagnosis && (Array.isArray(lastDiagnosis.topics) ? lastDiagnosis.topics[0] : lastDiagnosis.topics);
   const gradeBand = gradeBackgroundVariant(profile?.grade_level ?? null);
@@ -114,16 +144,7 @@ export default async function OgrenciDashboard({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Link
-          href="/ogrenci/gecmis"
-          target="_blank"
-          rel="noreferrer"
-          className="block transition hover:-translate-y-0.5 hover:shadow-md"
-          title="Geçmiş sonuçlarını yeni sekmede aç"
-        >
-          <StatCard label="Çözülen Test/Deneme" value={attemptCount ?? 0} hint="Geçmişi görmek için tıkla →" />
-        </Link>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="flex flex-col justify-between gap-2">
           <div>
             <span className="text-sm text-slate-500">Seviyen</span>
@@ -146,26 +167,7 @@ export default async function OgrenciDashboard({
         </Card>
       </div>
 
-      {pendingTopics.length > 0 && (
-        <Card>
-          <h2 className="mb-1 font-semibold text-slate-900">Çözülmesi Gerekenler</h2>
-          <p className="mb-3 text-xs text-slate-500">Sınıfına ait henüz hiç bitirmediğin konular.</p>
-          <ul className="flex flex-col gap-2">
-            {pendingTopics.map((t) => (
-              <li key={t.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-800">{t.name}</span>
-                  {t.subjectName && <span className="text-xs text-slate-400">{t.subjectName}</span>}
-                  {t.recommended && <Badge tone="amber">Seviye Tespit Önerisi</Badge>}
-                </div>
-                <Link href={`/ogrenci/konu/${t.id}`} className="font-medium text-indigo-600 underline">
-                  Çöz →
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <PendingHistoryCard pendingTopics={pendingTopics} attempts={attemptSummaries} />
 
       {lastDiagnosis && (
         <Card>
