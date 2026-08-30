@@ -71,6 +71,10 @@ export default async function GecmisDetayPage({ params }: { params: Promise<{ at
       </Card>
 
       {questions.length > 0 && <AnswerReviewList questions={questions} answers={answers} />}
+
+      <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
+        ← Panel Anasayfasına Dön
+      </Link>
     </div>
   );
 }

@@ -73,6 +73,10 @@ export default async function KonuCevaplarPage({ params }: { params: Promise<{ t
           ))}
         </div>
       )}
+
+      <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
+        ← Panel Anasayfasına Dön
+      </Link>
     </div>
   );
 }

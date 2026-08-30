@@ -66,9 +66,15 @@ export default async function OgrenciDashboard({
   // gotursun diye. Zaten Hedeflerim (study_plan_items) sadece bir plan
   // olusturulmussa gorunuyordu; bu liste plan olsun olmasin her zaman
   // ogrencinin onunde ne kaldigini gosteriyor.
-  let pendingTopics: { id: string; name: string; subjectName: string }[] = [];
+  //
+  // Seviye tespit sinavi bittiginde zorlandigi konular icin study_plan_items
+  // satirlari "seviye_tespit" kaynagiyla otomatik ekleniyor (bkz.
+  // exam-runner.tsx) - bu konulari burada ayri bir rozetle one cikariyoruz
+  // ki ogrenci "bunlari sana onerdik, calisma takvimine eklendi" farkini
+  // gorsun.
+  let pendingTopics: { id: string; name: string; subjectName: string; recommended: boolean }[] = [];
   if (profile?.grade_level != null) {
-    const [{ data: gradeTopics }, { data: doneAttempts }] = await Promise.all([
+    const [{ data: gradeTopics }, { data: doneAttempts }, { data: recommendedItems }] = await Promise.all([
       supabase
         .from("topics")
         .select("id, name, order_index, subjects(name)")
@@ -80,14 +86,22 @@ export default async function OgrenciDashboard({
         .eq("student_id", studentId)
         .not("topic_id", "is", null)
         .not("finished_at", "is", null),
+      supabase
+        .from("study_plan_items")
+        .select("topic_id, study_plans!inner(student_id, status)")
+        .eq("study_plans.student_id", studentId)
+        .eq("source", "seviye_tespit")
+        .neq("status", "done"),
     ]);
     const doneTopicIds = new Set((doneAttempts ?? []).map((a) => a.topic_id));
+    const recommendedTopicIds = new Set((recommendedItems ?? []).map((i) => i.topic_id));
     pendingTopics = (gradeTopics ?? [])
       .filter((t) => !doneTopicIds.has(t.id))
       .map((t) => {
         const subject = Array.isArray(t.subjects) ? t.subjects[0] : t.subjects;
-        return { id: t.id, name: t.name, subjectName: subject?.name ?? "" };
+        return { id: t.id, name: t.name, subjectName: subject?.name ?? "", recommended: recommendedTopicIds.has(t.id) };
       })
+      .sort((a, b) => (a.recommended === b.recommended ? 0 : a.recommended ? -1 : 1))
       .slice(0, 8);
   }
 
@@ -101,7 +115,15 @@ export default async function OgrenciDashboard({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Çözülen Test/Deneme" value={attemptCount ?? 0} />
+        <Link
+          href="/ogrenci/gecmis"
+          target="_blank"
+          rel="noreferrer"
+          className="block transition hover:-translate-y-0.5 hover:shadow-md"
+          title="Geçmiş sonuçlarını yeni sekmede aç"
+        >
+          <StatCard label="Çözülen Test/Deneme" value={attemptCount ?? 0} hint="Geçmişi görmek için tıkla →" />
+        </Link>
         <Card className="flex flex-col justify-between gap-2">
           <div>
             <span className="text-sm text-slate-500">Seviyen</span>
@@ -131,9 +153,10 @@ export default async function OgrenciDashboard({
           <ul className="flex flex-col gap-2">
             {pendingTopics.map((t) => (
               <li key={t.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="text-slate-800">{t.name}</span>
-                  {t.subjectName && <span className="ml-2 text-xs text-slate-400">{t.subjectName}</span>}
+                  {t.subjectName && <span className="text-xs text-slate-400">{t.subjectName}</span>}
+                  {t.recommended && <Badge tone="amber">Seviye Tespit Önerisi</Badge>}
                 </div>
                 <Link href={`/ogrenci/konu/${t.id}`} className="font-medium text-indigo-600 underline">
                   Çöz →

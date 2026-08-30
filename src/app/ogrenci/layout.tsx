@@ -94,10 +94,11 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
   }
 
   // Dersler artik dashboard'da tiklanacak kartlar degil, soldaki sekmelerde
-  // dogrudan gorunuyor.
+  // dogrudan gorunuyor. "Gecmis Sonuclarim" artik sol menude ayri bir sekme
+  // degil - dashboard'daki "Cozulen Test/Deneme" istatistik kartina
+  // tiklayinca yeni sekmede aciliyor (bkz. ogrenci/page.tsx).
   const navStudent = [
     { href: "/ogrenci", label: "Genel Bakış" },
-    { href: "/ogrenci/gecmis", label: "Geçmiş Sonuçlarım" },
     ...(subjects ?? []).map((s) => {
       const total = totalsBySubject.get(s.id) ?? 0;
       return {

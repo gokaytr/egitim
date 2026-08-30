@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
+import { PreQuizCountdown } from "@/components/pre-quiz-countdown";
 
 type Question = {
   id: string;
@@ -18,13 +20,16 @@ type Question = {
 
 export function QuizRunner({
   topicId,
+  topicName,
   questions,
   quizSettings = DEFAULT_QUIZ_DISPLAY_SETTINGS,
 }: {
   topicId: string;
+  topicName: string;
   questions: Question[];
   quizSettings?: QuizDisplaySettings;
 }) {
+  const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +150,20 @@ export function QuizRunner({
           )}
         </Card>
         {showReview && <AnswerReviewList questions={questions} answers={answers} />}
+        <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
+          ← Panel Anasayfasına Dön
+        </Link>
       </div>
+    );
+  }
+
+  if (!started) {
+    return (
+      <PreQuizCountdown
+        topicLabel={topicName}
+        durationLabel={`${questions.length} soru`}
+        onDone={() => setStarted(true)}
+      />
     );
   }
 

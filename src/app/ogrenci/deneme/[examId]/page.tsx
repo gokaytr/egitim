@@ -44,7 +44,14 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
           {questions.length} soru · yaklaşık {exam.duration_minutes} dakika
         </p>
       </div>
-      <ExamRunner examId={exam.id} examType={exam.exam_type} questions={questions} quizSettings={quizSettings} />
+      <ExamRunner
+        examId={exam.id}
+        examTitle={exam.title}
+        examType={exam.exam_type}
+        durationMinutes={exam.duration_minutes}
+        questions={questions}
+        quizSettings={quizSettings}
+      />
     </div>
   );
 }

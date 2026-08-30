@@ -42,6 +42,7 @@ export default async function OgretmenSorularPage({
     body: string;
     options: Record<string, string>;
     correct_option: string;
+    explanation: string | null;
     is_approved: boolean;
     source: string;
     difficulty: number | null;
@@ -59,7 +60,7 @@ export default async function OgretmenSorularPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("questions")
-        .select("id, body, options, correct_option, is_approved, source, difficulty, topic_id, topics!inner(subject_id)")
+        .select("id, body, options, correct_option, explanation, is_approved, source, difficulty, topic_id, topics!inner(subject_id)")
         .in("topics.subject_id", subjectIds)
         .order("created_at", { ascending: false }),
     ]);
@@ -88,6 +89,7 @@ export default async function OgretmenSorularPage({
       body: q.body,
       options: (q.options ?? {}) as Record<string, string>,
       correct_option: q.correct_option,
+      explanation: q.explanation,
       is_approved: q.is_approved,
       source: q.source,
       difficulty: q.difficulty,

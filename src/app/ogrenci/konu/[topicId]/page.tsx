@@ -56,7 +56,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
           </p>
         </Card>
       ) : (
-        <QuizRunner topicId={topicId} questions={questions} quizSettings={quizSettings} />
+        <QuizRunner topicId={topicId} topicName={topic?.name ?? "Konu"} questions={questions} quizSettings={quizSettings} />
       )}
     </div>
   );

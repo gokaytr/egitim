@@ -8,6 +8,7 @@ type Question = {
   body: string;
   options: Record<string, string>;
   correct_option: string;
+  explanation?: string | null;
   is_approved: boolean;
   source: string;
   difficulty: number | null;
@@ -195,15 +196,26 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
                   <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
                   <Badge>{q.source === "ai" ? "AI üretimi" : q.source}</Badge>
                   {q.difficulty != null && <Badge>Zorluk {q.difficulty}/5</Badge>}
+                  <Badge tone="green">Doğru cevap: {q.correct_option}</Badge>
                 </div>
                 <p className="font-medium text-slate-900">{i + 1}. {q.body}</p>
                 <ul className="mt-1.5 grid grid-cols-1 gap-1 text-slate-600 sm:grid-cols-2">
-                  {Object.entries(q.options ?? {}).map(([key, val]) => (
-                    <li key={key} className={key === q.correct_option ? "font-semibold text-emerald-700" : ""}>
-                      {key}) {val}
-                    </li>
-                  ))}
+                  {Object.entries(q.options ?? {}).map(([key, val]) => {
+                    const isCorrect = key === q.correct_option;
+                    return (
+                      <li key={key} className={isCorrect ? "font-semibold text-emerald-700" : ""}>
+                        {key}) {val}
+                        {isCorrect && " ✓"}
+                      </li>
+                    );
+                  })}
                 </ul>
+                {q.explanation && (
+                  <div className="mt-2 rounded-lg bg-indigo-50 p-2.5 text-xs text-indigo-900">
+                    <p className="mb-0.5 font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
+                    <p>{q.explanation}</p>
+                  </div>
+                )}
               </div>
             ))
           )}
