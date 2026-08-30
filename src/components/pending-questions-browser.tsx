@@ -10,6 +10,7 @@ export type PendingQuestion = {
   body: string;
   options: Record<string, string>;
   correct_option: string;
+  explanation?: string | null;
   source: string;
   difficulty: number | null;
   topic_id: string;
@@ -227,19 +228,37 @@ export function PendingQuestionsBrowser({ topics, questions }: { topics: TopicRe
           ) : (
             questionsForTopic.map((q) => (
               <Card key={q.id}>
-                <div className="mb-2 flex items-center gap-2">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Badge tone="amber">{q.source === "ai" ? "AI üretimi" : q.source}</Badge>
                   <Badge>{selectedTopic.name}</Badge>
                   {q.difficulty != null && <Badge>Zorluk {q.difficulty}/5</Badge>}
+                  <Badge tone="green">Doğru cevap: {q.correct_option}</Badge>
                 </div>
                 <p className="font-medium text-slate-900">{q.body}</p>
-                <ul className="mt-2 grid grid-cols-1 gap-1 text-sm text-slate-600 md:grid-cols-2">
-                  {Object.entries(q.options ?? {}).map(([key, val]) => (
-                    <li key={key} className={key === q.correct_option ? "font-semibold text-emerald-700" : ""}>
-                      {key}) {val}
-                    </li>
-                  ))}
+                <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm md:grid-cols-2">
+                  {Object.entries(q.options ?? {}).map(([key, val]) => {
+                    const isCorrect = key === q.correct_option;
+                    return (
+                      <li
+                        key={key}
+                        className={`rounded-lg border px-2.5 py-1.5 ${
+                          isCorrect
+                            ? "border-emerald-400 bg-emerald-50 font-semibold text-emerald-800"
+                            : "border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {key}) {val}
+                        {isCorrect && " ✓"}
+                      </li>
+                    );
+                  })}
                 </ul>
+                {q.explanation && (
+                  <div className="mt-2 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
+                    <p>{q.explanation}</p>
+                  </div>
+                )}
                 <AiCheckButton questionId={q.id} />
                 <ApproveButton questionId={q.id} />
               </Card>

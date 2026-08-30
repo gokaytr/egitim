@@ -55,7 +55,34 @@ export default async function RaporPage({ searchParams }: { searchParams: Promis
           ayni konuda eksik tekrar tekrar cikinca (recommended_action ===
           "tutor_referral") bir secenek olarak veliye sunulur - otomatik
           talep olusturulmaz, veli isterse kendisi talep eder. */}
-      {data.role === "parent" && latestDiagnosis && (
+      {/* Sorumlu ogretmen karti - hem gercek veli hem de admin onizlemesinde
+          (paritesi kurali) ayni sekilde gorunur. Bir ogrencinin ogretmeni
+          olmayabilir (pakete gore opsiyonel), o zaman kart hic gosterilmez. */}
+      {(data.role === "parent" || data.role === "admin") && data.responsibleTeacher && (
+        <Card>
+          <h2 className="mb-1 font-semibold text-slate-900">Sorumlu Öğretmen</h2>
+          <p className="text-sm text-slate-700">
+            {data.responsibleTeacher.full_name}
+            {data.responsibleTeacher.subjects.length > 0 && (
+              <span className="text-slate-500"> · {data.responsibleTeacher.subjects.join(", ")}</span>
+            )}
+          </p>
+          {data.responsibleTeacher.email ? (
+            <a
+              href={`mailto:${data.responsibleTeacher.email}?subject=${encodeURIComponent(
+                `${studentFirstName} hakkında`
+              )}`}
+              className="mt-2 inline-block text-sm font-medium text-indigo-600 underline"
+            >
+              ✉️ İletişime geç
+            </a>
+          ) : (
+            <p className="mt-2 text-xs text-slate-400">Bu öğretmen için e-posta adresi kayıtlı değil.</p>
+          )}
+        </Card>
+      )}
+
+      {(data.role === "parent" || data.role === "admin") && latestDiagnosis && (
         <Card className={WEAKNESS_CARD_TONE[latestDiagnosis.weakness_level] ?? "border-slate-200 bg-slate-50"}>
           <div className="mb-1 flex items-center gap-2">
             <h2 className="font-semibold text-slate-900">Öğrenciye Söylenenler</h2>

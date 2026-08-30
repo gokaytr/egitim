@@ -29,7 +29,7 @@ export default async function SorularPage() {
         .order("grade_level"),
       supabase
         .from("questions")
-        .select("id, body, options, correct_option, source, difficulty, topic_id")
+        .select("id, body, options, correct_option, explanation, source, difficulty, topic_id")
         .eq("is_approved", false)
         .order("created_at", { ascending: false }),
       supabase
@@ -60,6 +60,7 @@ export default async function SorularPage() {
     body: q.body,
     options: (q.options ?? {}) as Record<string, string>,
     correct_option: q.correct_option,
+    explanation: q.explanation,
     source: q.source,
     difficulty: q.difficulty,
     topic_id: q.topic_id,

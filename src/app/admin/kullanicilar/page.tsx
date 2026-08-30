@@ -45,6 +45,29 @@ export default async function KullanicilarPage() {
     }
   }
 
+  // "Kullanicilar" listesinde ogrenci satirlarinda velisini ve bagli oldugu
+  // ogretmeni de gosterebilmek icin ogrenci id -> veli/ogretmen adlari
+  // haritalari. Bir ogrencinin birden fazla velisi veya ogretmeni olabilir
+  // (ornegin farkli branslardan) - hepsi virgulle listeleniyor. Paket geregi
+  // hicbiri olmayabilir, o durumda "-" gosteriliyor.
+  const teacherNameById = new Map(teachers.map((t) => [t.id, t.full_name]));
+  const parentNamesByStudentId = new Map<string, string[]>();
+  for (const l of parentLinks ?? []) {
+    const parent = Array.isArray(l.parent) ? l.parent[0] : l.parent;
+    if (!parent) continue;
+    const list = parentNamesByStudentId.get(l.student_id) ?? [];
+    list.push(parent.full_name);
+    parentNamesByStudentId.set(l.student_id, list);
+  }
+  const teacherNamesByStudentId = new Map<string, string[]>();
+  for (const a of teacherStudentAssignments ?? []) {
+    const name = teacherNameById.get(a.teacher_id);
+    if (!name) continue;
+    const list = teacherNamesByStudentId.get(a.student_id) ?? [];
+    list.push(name);
+    teacherNamesByStudentId.set(a.student_id, list);
+  }
+
   const usersTab = (
     <div className="flex flex-col gap-6">
       <NewUserForm />
@@ -57,6 +80,8 @@ export default async function KullanicilarPage() {
               <th className="px-5 py-3 font-medium">Rol</th>
               <th className="px-5 py-3 font-medium">Rolü Değiştir</th>
               <th className="px-5 py-3 font-medium">Sınıf / Hedef</th>
+              <th className="px-5 py-3 font-medium">Veli</th>
+              <th className="px-5 py-3 font-medium">Öğretmen</th>
               <th className="px-5 py-3 font-medium">Kayıt Tarihi</th>
               <th className="px-5 py-3 font-medium"></th>
             </tr>
@@ -78,6 +103,12 @@ export default async function KullanicilarPage() {
                 </td>
                 <td className="px-5 py-3 text-slate-600">
                   {u.grade_level ? `${u.grade_level}. sınıf` : "-"} {u.exam_target ? `· ${u.exam_target}` : ""}
+                </td>
+                <td className="px-5 py-3 text-slate-600">
+                  {u.role === "student" ? (parentNamesByStudentId.get(u.id)?.join(", ") ?? "-") : "-"}
+                </td>
+                <td className="px-5 py-3 text-slate-600">
+                  {u.role === "student" ? (teacherNamesByStudentId.get(u.id)?.join(", ") ?? "-") : "-"}
                 </td>
                 <td className="px-5 py-3 text-slate-400">{new Date(u.created_at).toLocaleDateString("tr-TR")}</td>
                 <td className="px-5 py-3 text-right">

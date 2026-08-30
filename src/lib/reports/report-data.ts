@@ -10,6 +10,7 @@ import {
 } from "@/lib/reports/activity-feed";
 import { buildOverviewSummary } from "@/lib/reports/overview-summary";
 import { getShowDemoData } from "@/lib/site-settings";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
 // Veli raporlama ekraninin ("Genel Bakis" / "Gunluk Aktivite" / "Genel
 // Raporlama" - artik ayri sayfalar) ortak veri yukleyicisi. Ucu sayfa da
@@ -84,6 +85,10 @@ export type StudentReportCore = {
   lastActivity: ActivityEvent | undefined;
   dailyGroups: ReturnType<typeof groupEventsByDay>;
   overviewParagraphs: string[];
+  // Ogrencinin sorumlu (teacher_students uzerinden atanmis) ogretmeni - pakete
+  // gore opsiyonel oldugu icin null olabilir. Veli ekraninda "sorumlu
+  // ogretmenin" karti + e-posta ile iletisim baglantisi icin kullaniliyor.
+  responsibleTeacher: { id: string; full_name: string; email: string | null; subjects: string[] } | null;
 };
 
 export type ReportData = StudentReportCore & {
@@ -221,6 +226,30 @@ export async function loadStudentReportCore(studentId: string): Promise<StudentR
     );
   }
 
+  // Ogrencinin sorumlu ogretmeni (varsa) - teacher_students uzerinden tek
+  // (ilk) atama. Bir ogrencinin ogretmeni olmayabilir (pakete gore
+  // opsiyonel), bu durumda responsibleTeacher null donuyor ve veli ekrani
+  // bu karti hic gostermiyor.
+  const { data: teacherAssignments } = await supabase
+    .from("teacher_students")
+    .select("profiles!teacher_students_teacher_id_fkey(id, full_name, email)")
+    .eq("student_id", studentId)
+    .limit(1);
+  const teacherProfile = teacherAssignments?.[0] ? firstOf(teacherAssignments[0].profiles) : undefined;
+  let teacherSubjectNames: string[] = [];
+  if (teacherProfile?.id) {
+    const { data: subjectRows } = await supabase
+      .from("teacher_subjects")
+      .select("subjects(name)")
+      .eq("teacher_id", teacherProfile.id);
+    teacherSubjectNames = (subjectRows ?? [])
+      .map((r) => firstOf(r.subjects)?.name)
+      .filter((n): n is string => !!n);
+  }
+  const responsibleTeacher = teacherProfile
+    ? { id: teacherProfile.id, full_name: teacherProfile.full_name, email: teacherProfile.email, subjects: teacherSubjectNames }
+    : null;
+
   const sortedEvents = sortEventsDesc(events);
   const lastActivity = sortedEvents[0];
   const dailyGroups = groupEventsByDay(events);
@@ -268,6 +297,7 @@ export async function loadStudentReportCore(studentId: string): Promise<StudentR
     lastActivity,
     dailyGroups,
     overviewParagraphs,
+    responsibleTeacher,
   };
 }
 
@@ -286,13 +316,9 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
   let candidates: ReportCandidate[] = [];
   let pageTitle = "İlerleme Raporu";
   let showAddChild = false;
+  let studentId: string | undefined;
 
-  if (role === "parent" || role === "admin") {
-    // Admin de veli onizlemesinde artik tum ogrenci listesinden serbestce
-    // secim yapmiyor - gercek bir veli gibi, admin panelinden kendisine
-    // baglanmis ogrenci(ler)in verisini goruyor (parent_student_links).
-    // (Admin'in TUM ogrencileri gorebildigi genel raporlama ekrani ayri:
-    // loadStaffStudentReport / /admin/ogrenci-raporlari.)
+  if (role === "parent") {
     const { data: links } = await supabase
       .from("parent_student_links")
       .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name, is_demo)")
@@ -302,13 +328,27 @@ export async function loadReportData(requestedStudentId?: string): Promise<Repor
       .filter((p): p is ReportCandidate => !!p);
     const showDemoDataParent = await getShowDemoData();
     candidates = showDemoDataParent ? candidates : candidates.filter((c) => !c.is_demo);
-    pageTitle = role === "admin" ? "Veli Görünümü (Admin Önizleme)" : "Veli Raporu";
-    showAddChild = role === "parent";
+    pageTitle = "Veli Raporu";
+    showAddChild = true;
+    studentId =
+      (requestedStudentId && candidates.some((c) => c.id === requestedStudentId) ? requestedStudentId : candidates[0]?.id) ??
+      undefined;
+  } else if (role === "admin") {
+    // Admin veli panelini onizlerken artik kendi hesabina baglanmis
+    // (genelde hic olmayan, bos) bir parent_student_links kaydi aramiyor -
+    // bunun yerine ogrenci panelinde onizlenen AYNI test ogrenciyi
+    // kullaniyor (resolveEffectiveStudent), boylece "ilk acilan ogrenci ile
+    // veli birbirine ait olsun" saglanmis oluyor: hangi test ogrenci
+    // seciliyse, veli onizlemesi de o ogrencinin gercek velisinin gorecegi
+    // raporu gosteriyor.
+    const { studentId: effectiveId, candidates: studentCandidates } = await resolveEffectiveStudent(requestedStudentId);
+    candidates = studentCandidates.map((c) => ({ id: c.id, full_name: c.full_name, is_demo: true }));
+    pageTitle = "Veli Görünümü (Admin Önizleme)";
+    showAddChild = false;
+    studentId = effectiveId;
+  } else {
+    studentId = userData.user?.id;
   }
-
-  const studentId =
-    (requestedStudentId && candidates.some((c) => c.id === requestedStudentId) ? requestedStudentId : candidates[0]?.id) ??
-    (role === "parent" || role === "admin" ? undefined : userData.user?.id);
 
   if ((role === "parent" || role === "admin") && !studentId) {
     return { needsSetup: true, role, pageTitle };

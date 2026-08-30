@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getShowDemoData } from "@/lib/site-settings";
+import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
 // Ogretmen panelini admin onizlerken "ben" (auth.uid()) admin'in kendisi
 // oluyor - bu da butun "benim" sorgularinin (branslarim, derslerim, vb.)
@@ -12,6 +13,14 @@ import { getShowDemoData } from "@/lib/site-settings";
 // cookie'sinden okunuyor (sol menudeki ogretmen seciciyi degistirince bu
 // cookie /api/admin/preview-teacher uzerinden yaziliyor) - boylece admin bir
 // test ogretmeni secip baska bir sayfaya gectiginde secim korunuyor.
+//
+// Hicbir acik secim (ne query param ne cookie) yoksa - yani admin panelini
+// ilk kez aciyorsa - rastgele/alfabetik bir ogretmen yerine, su an onizlenen
+// test ogrencinin GERCEKTEN bagli oldugu sorumlu ogretmeni (teacher_students)
+// varsayilan olarak gosteriyoruz. Boylece admin ogrenci panelinden ogretmen
+// paneline gectiginde ayni "aile" (ogrenci + veli + ogretmen) tutarli kalip
+// test edilebiliyor. Ogrencinin bagli bir ogretmeni yoksa (pakete gore
+// opsiyonel) normal alfabetik varsayilana dusuluyor.
 
 export type TeacherCandidate = { id: string; full_name: string };
 type TeacherCandidateRow = TeacherCandidate & { is_demo: boolean };
@@ -44,7 +53,19 @@ export async function resolveEffectiveTeacher(requestedTeacherId?: string): Prom
 
     const cookieStore = await cookies();
     const cookieTeacherId = cookieStore.get("admin_preview_teacher_id")?.value;
-    const preferredId = requestedTeacherId ?? cookieTeacherId;
+    let preferredId = requestedTeacherId ?? cookieTeacherId;
+
+    if (!preferredId) {
+      const { studentId: previewedStudentId } = await resolveEffectiveStudent();
+      if (previewedStudentId) {
+        const { data: assignments } = await supabase
+          .from("teacher_students")
+          .select("teacher_id")
+          .eq("student_id", previewedStudentId)
+          .limit(1);
+        if (assignments?.[0]?.teacher_id) preferredId = assignments[0].teacher_id;
+      }
+    }
 
     const teacherId =
       (preferredId && candidates.some((c) => c.id === preferredId) ? preferredId : candidates[0]?.id) ?? undefined;

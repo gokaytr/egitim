@@ -1,11 +1,8 @@
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
 import { CoachChat } from "@/components/coach-chat";
 import { StudentPreviewSwitcher } from "@/components/student-preview-switcher";
-import { ChildPreviewSwitcher } from "@/components/child-preview-switcher";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
-import { getShowDemoData } from "@/lib/site-settings";
 
 const NAV_PARENT = [
   { href: "/ogrenci/rapor", label: "Genel Durum" },
@@ -117,23 +114,17 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
   if (callerProfile?.role === "admin") {
     const { studentId: previewStudentId, candidates: studentCandidates } = await resolveEffectiveStudent();
 
-    const { data: childLinks } = await supabase
-      .from("parent_student_links")
-      .select("student_id, profiles!parent_student_links_student_id_fkey(id, full_name, is_demo)")
-      .eq("parent_id", userData.user?.id);
-    let childCandidates = (childLinks ?? [])
-      .map((l) => (Array.isArray(l.profiles) ? l.profiles[0] : l.profiles))
-      .filter((p): p is { id: string; full_name: string; is_demo: boolean } => !!p);
-    const showDemoData = await getShowDemoData();
-    childCandidates = showDemoData ? childCandidates : childCandidates.filter((c) => !c.is_demo);
-    const cookieStore = await cookies();
-    const cookieChildId = cookieStore.get("admin_preview_child_id")?.value;
-    const currentChildId =
-      cookieChildId && childCandidates.some((c) => c.id === cookieChildId) ? cookieChildId : childCandidates[0]?.id;
-
+    // Veli onizlemesi artik ayri bir "hangi cocuk" secimi degil - ayni test
+    // ogrenci seciciyle (StudentPreviewSwitcher) ayni ogrenciyi gosteriyor
+    // (bkz. lib/reports/report-data.ts loadReportData, ki artik
+    // resolveEffectiveStudent'in sectigi ogrenciyi kullaniyor). Boylece
+    // "ilk acilan ogrenci" ile veli onizlemesi her zaman ayni kisiyi
+    // gosterir - onceden admin'in kendi hesabina baglanmis (bos) bir
+    // parent_student_links kaydi arandigi icin veli onizlemesi hep bos
+    // cikiyordu.
     previewSwitcherByRole = {
       student: <StudentPreviewSwitcher candidates={studentCandidates} currentId={previewStudentId} />,
-      parent: <ChildPreviewSwitcher candidates={childCandidates} currentId={currentChildId} />,
+      parent: <StudentPreviewSwitcher candidates={studentCandidates} currentId={previewStudentId} />,
     };
   }
 
