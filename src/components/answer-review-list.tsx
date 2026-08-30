@@ -13,7 +13,8 @@ export type ReviewQuestion = {
 // degil, dogru cevaplanan sorularda da aynen gosterilir - boylece ogrenci
 // dogru yaptigi sorunun mantigini da pekistirir (bkz. CLAUDE.md "Soru cevap
 // aciklamasi kurali"). Sadece rozet/renk vurgusu dogru/yanlis/bos'a gore
-// degisir, aciklama kutusu her zaman ayni bicimde gorunur.
+// degisir, aciklama kutusu her zaman ayni bicimde gorunur - ancak metnin
+// basligi dogru cevaplanan sorularda "Dogru bilmissin!" olarak degisir.
 export function AnswerReviewList({
   questions,
   answers,
@@ -65,9 +66,9 @@ export function AnswerReviewList({
               })}
             </ul>
             {q.explanation && (
-              <div className="mt-3 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-500">
-                  Cevap böyle olmalıydı
+              <div className={`mt-3 rounded-lg p-3 text-sm ${isCorrect ? "bg-emerald-50 text-emerald-900" : "bg-indigo-50 text-indigo-900"}`}>
+                <p className={`mb-1 text-xs font-semibold uppercase tracking-wide ${isCorrect ? "text-emerald-600" : "text-indigo-500"}`}>
+                  {isCorrect ? "Doğru bilmişsin!" : "Cevap böyle olmalıydı"}
                 </p>
                 <p>{q.explanation}</p>
               </div>

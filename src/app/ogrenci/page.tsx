@@ -60,6 +60,37 @@ export default async function OgrenciDashboard({
   const levelLabel = profile?.level_label as LevelLabel | null | undefined;
   const hasLevel = !!levelLabel;
 
+  // "Çözülmesi Gerekenler": ogrencinin sinif duzeyindeki konulardan henuz
+  // hic bitirilmemis (student_attempts'te finished_at dolu bir kaydi
+  // olmayan) olanlar - karsilama ekraninda siralanip dogrudan konuya
+  // gotursun diye. Zaten Hedeflerim (study_plan_items) sadece bir plan
+  // olusturulmussa gorunuyordu; bu liste plan olsun olmasin her zaman
+  // ogrencinin onunde ne kaldigini gosteriyor.
+  let pendingTopics: { id: string; name: string; subjectName: string }[] = [];
+  if (profile?.grade_level != null) {
+    const [{ data: gradeTopics }, { data: doneAttempts }] = await Promise.all([
+      supabase
+        .from("topics")
+        .select("id, name, order_index, subjects(name)")
+        .eq("grade_level", profile.grade_level)
+        .order("order_index"),
+      supabase
+        .from("student_attempts")
+        .select("topic_id")
+        .eq("student_id", studentId)
+        .not("topic_id", "is", null)
+        .not("finished_at", "is", null),
+    ]);
+    const doneTopicIds = new Set((doneAttempts ?? []).map((a) => a.topic_id));
+    pendingTopics = (gradeTopics ?? [])
+      .filter((t) => !doneTopicIds.has(t.id))
+      .map((t) => {
+        const subject = Array.isArray(t.subjects) ? t.subjects[0] : t.subjects;
+        return { id: t.id, name: t.name, subjectName: subject?.name ?? "" };
+      })
+      .slice(0, 8);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -92,6 +123,26 @@ export default async function OgrenciDashboard({
           <DenemeActionButton mode="rastgele" label="🎲 Rastgele Deneme Çöz" />
         </Card>
       </div>
+
+      {pendingTopics.length > 0 && (
+        <Card>
+          <h2 className="mb-1 font-semibold text-slate-900">Çözülmesi Gerekenler</h2>
+          <p className="mb-3 text-xs text-slate-500">Sınıfına ait henüz hiç bitirmediğin konular.</p>
+          <ul className="flex flex-col gap-2">
+            {pendingTopics.map((t) => (
+              <li key={t.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <div>
+                  <span className="text-slate-800">{t.name}</span>
+                  {t.subjectName && <span className="ml-2 text-xs text-slate-400">{t.subjectName}</span>}
+                </div>
+                <Link href={`/ogrenci/konu/${t.id}`} className="font-medium text-indigo-600 underline">
+                  Çöz →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {lastDiagnosis && (
         <Card>

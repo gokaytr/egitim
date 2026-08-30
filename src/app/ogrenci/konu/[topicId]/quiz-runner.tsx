@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Card } from "@/components/ui";
+import { Card, Button } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
 
@@ -119,18 +119,16 @@ export function QuizRunner({
       <div className="flex max-w-2xl flex-col gap-6">
         <Card>
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç</h2>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-slate-600">
-              Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowReview((v) => !v)}
-              className="text-sm font-medium text-indigo-600 underline"
-            >
-              {showReview ? "İncelemeyi kapat" : "Yanlışlarımı incele"}
-            </button>
-          </div>
+          <p className="text-sm text-slate-600">
+            Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
+          </p>
+          <Button
+            variant={showReview ? "secondary" : "primary"}
+            onClick={() => setShowReview((v) => !v)}
+            className="mt-3 w-full justify-center sm:w-auto"
+          >
+            {showReview ? "İncelemeyi kapat" : "📋 Yanlışlarımı incele"}
+          </Button>
           {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
           {result.diagnosis && (
             <div className="mt-4 rounded-xl bg-indigo-50 p-4">

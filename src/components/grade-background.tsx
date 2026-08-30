@@ -50,8 +50,15 @@ export function GradeBackground({ variant }: { variant: GradeBackgroundVariant }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variant]);
 
+  // "fixed" kullanıyoruz - "absolute inset-0" olsaydı bu kutu, onu saran
+  // <main>'in yüksekliğine bağlı kalırdı; <main> ise mobilde dvh tabanlı
+  // (adres çubuğu gizlenip görününce degisen) bir flex kapsayıcının içinde
+  // olduğundan, sayfa kaydırılırken yüksekliği sürekli değişip arka plan
+  // görselinin büyüyüp küçülüyormuş gibi görünmesine yol açıyordu. "fixed"
+  // konumlandırma, tarayıcı görünüm alanına sabitlenip bu dalgalanmadan
+  // etkilenmiyor.
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
       {images.map((src, i) => (
         <div
           key={src}
@@ -63,4 +70,3 @@ export function GradeBackground({ variant }: { variant: GradeBackgroundVariant }
     </div>
   );
 }
-
