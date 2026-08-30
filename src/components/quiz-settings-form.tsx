@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { Card, Button, Select } from "@/components/ui";
-import type { QuizDisplaySettings } from "@/components/question-answer-list";
+import {
+  QUESTION_FONT_FAMILY_CLASSES,
+  QUESTION_FONT_SIZE_CLASSES,
+  type QuizDisplaySettings,
+} from "@/components/question-answer-list";
 
 type TimerMode = "one_minute" | "none" | "custom";
 
@@ -26,6 +30,8 @@ export function QuizSettingsForm({ initial, studentId }: { initial: QuizDisplayS
   const [timerMode, setTimerMode] = useState<TimerMode>(modeFromInitial(initial.timerEnabled, initial.secondsPerQuestion));
   const [customMinutes, setCustomMinutes] = useState(Math.max(1, Math.round(initial.secondsPerQuestion / 60)));
   const [oneQuestionPerPage, setOneQuestionPerPage] = useState(initial.oneQuestionPerPage);
+  const [fontSize, setFontSize] = useState(initial.fontSize);
+  const [fontFamily, setFontFamily] = useState(initial.fontFamily);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +50,8 @@ export function QuizSettingsForm({ initial, studentId }: { initial: QuizDisplayS
           timerEnabled,
           secondsPerQuestion: minutesPerQuestion * 60,
           oneQuestionPerPage,
+          fontSize,
+          fontFamily,
           ...(studentId ? { studentId } : {}),
         }),
       });
@@ -103,6 +111,37 @@ export function QuizSettingsForm({ initial, studentId }: { initial: QuizDisplayS
             <option value="sayfa-basi-bir-soru">Sayfa başı bir soru (varsayılan)</option>
             <option value="kaydirmali-liste">Kaydırmalı liste</option>
           </Select>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="font-semibold text-slate-900">Soru Yazı Boyutu ve Fontu</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Sayfa başı bir soru gösterildiği için yazı boyutu varsayılan olarak biraz büyütülmüş gelir; istersen normale
+          döndürebilir, daha da büyütebilir ya da yazı tipini değiştirebilirsin.
+        </p>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <div className="max-w-xs flex-1">
+            <label className="mb-1 block text-xs font-medium text-slate-500">Yazı boyutu</label>
+            <Select value={fontSize} onChange={(e) => setFontSize(e.target.value as QuizDisplaySettings["fontSize"])}>
+              <option value="normal">Normal</option>
+              <option value="large">Büyük (varsayılan)</option>
+              <option value="xlarge">Çok Büyük</option>
+            </Select>
+          </div>
+          <div className="max-w-xs flex-1">
+            <label className="mb-1 block text-xs font-medium text-slate-500">Yazı tipi</label>
+            <Select value={fontFamily} onChange={(e) => setFontFamily(e.target.value as QuizDisplaySettings["fontFamily"])}>
+              <option value="sans">Standart (varsayılan)</option>
+              <option value="serif">Klasik (Serif)</option>
+              <option value="mono">Eşit Aralıklı (Mono)</option>
+            </Select>
+          </div>
+        </div>
+        <div
+          className={`mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 ${QUESTION_FONT_SIZE_CLASSES[fontSize].question} ${QUESTION_FONT_FAMILY_CLASSES[fontFamily]}`}
+        >
+          Örnek: 1. Aşağıdakilerden hangisi doğrudur?
         </div>
       </div>
 

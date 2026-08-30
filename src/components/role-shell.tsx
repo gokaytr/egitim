@@ -182,7 +182,7 @@ export function RoleShell({
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${
         pathname === settingsHref
           ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-          : "border-slate-200 text-slate-500 hover:bg-slate-50"
+          : "border-slate-300 text-slate-700 hover:bg-slate-100"
       }`}
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -202,7 +202,7 @@ export function RoleShell({
       onClick={handleLogout}
       title="Çıkış yap"
       aria-label="Çıkış yap"
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
         <path

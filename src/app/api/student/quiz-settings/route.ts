@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
   const oneQuestionPerPage = !!body?.oneQuestionPerPage;
   const requestedStudentId = typeof body?.studentId === "string" ? body.studentId : null;
 
+  const FONT_SIZES = ["normal", "large", "xlarge"];
+  const FONT_FAMILIES = ["sans", "serif", "mono"];
+  const fontSize = FONT_SIZES.includes(body?.fontSize) ? body.fontSize : "large";
+  const fontFamily = FONT_FAMILIES.includes(body?.fontFamily) ? body.fontFamily : "sans";
+
   if (!Number.isFinite(secondsPerQuestion) || secondsPerQuestion < 10 || secondsPerQuestion > 3600) {
     return NextResponse.json({ error: "Soru başı süre 10 saniye ile 60 dakika arasında olmalı." }, { status: 400 });
   }
@@ -38,6 +43,8 @@ export async function POST(req: NextRequest) {
     timer_enabled: timerEnabled,
     seconds_per_question: Math.round(secondsPerQuestion),
     one_question_per_page: oneQuestionPerPage,
+    font_size: fontSize,
+    font_family: fontFamily,
     updated_at: new Date().toISOString(),
   });
 

@@ -13,21 +13,45 @@ export type AnswerableQuestion = {
   topicLabel?: string;
 };
 
+export type QuizFontSize = "normal" | "large" | "xlarge";
+export type QuizFontFamily = "sans" | "serif" | "mono";
+
 export type QuizDisplaySettings = {
   timerEnabled: boolean;
   secondsPerQuestion: number;
   oneQuestionPerPage: boolean;
+  fontSize: QuizFontSize;
+  fontFamily: QuizFontFamily;
 };
 
 // Varsayilan: soru sayisina uygun sekilde soru basina 1 dakika sure siniri
 // acik gelir, sorular da sayfa basi bir soru olarak gosterilir - ogrenci
 // isterse "Genel Ayarlar > Sinav Ayarlari"ndan sure sinirini kaldirabilir,
 // farkli bir sure secebilir veya gosterim bicimini kaydirmali listeye
-// cevirebilir.
+// cevirebilir. Sayfa basi tek soru gosterildigi icin yazi boyutu varsayilan
+// olarak biraz buyutulmus ("large") geliyor - ogrenci isterse normal boyuta
+// dondurebilir ya da daha da buyutebilir, yazi tipini de degistirebilir.
 export const DEFAULT_QUIZ_DISPLAY_SETTINGS: QuizDisplaySettings = {
   timerEnabled: true,
   secondsPerQuestion: 60,
   oneQuestionPerPage: true,
+  fontSize: "large",
+  fontFamily: "sans",
+};
+
+// Yazi boyutu/tipi tercihine gore soru govdesi ve siklarin Tailwind
+// siniflari - hem QuestionCard hem de baska bir yerde ayni haritaya
+// ihtiyac duyulursa diye disari da aciliyor.
+export const QUESTION_FONT_SIZE_CLASSES: Record<QuizFontSize, { question: string; option: string }> = {
+  normal: { question: "text-base", option: "text-sm" },
+  large: { question: "text-lg", option: "text-base" },
+  xlarge: { question: "text-xl", option: "text-lg" },
+};
+
+export const QUESTION_FONT_FAMILY_CLASSES: Record<QuizFontFamily, string> = {
+  sans: "font-sans",
+  serif: "font-serif",
+  mono: "font-mono",
 };
 
 function formatRemaining(totalSeconds: number) {
@@ -42,18 +66,24 @@ function QuestionCard({
   index,
   selected,
   onSelect,
+  fontSize = "normal",
+  fontFamily = "sans",
 }: {
   question: AnswerableQuestion;
   index: number;
   selected?: string;
   onSelect: (option: string) => void;
+  fontSize?: QuizFontSize;
+  fontFamily?: QuizFontFamily;
 }) {
+  const sizeClasses = QUESTION_FONT_SIZE_CLASSES[fontSize];
+  const familyClass = QUESTION_FONT_FAMILY_CLASSES[fontFamily];
   return (
     <Card>
       {question.topicLabel && (
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-indigo-500">{question.topicLabel}</p>
       )}
-      <p className="font-medium text-slate-900">
+      <p className={`font-medium text-slate-900 ${sizeClasses.question} ${familyClass}`}>
         {index + 1}. {question.body}
       </p>
       {question.image_url && <DrawingCanvas backgroundImageUrl={question.image_url} />}
@@ -61,7 +91,7 @@ function QuestionCard({
         {Object.entries(question.options).map(([key, val]) => (
           <label
             key={key}
-            className={`flex touch-manipulation cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 text-sm active:bg-slate-50 ${
+            className={`flex touch-manipulation cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 active:bg-slate-50 ${sizeClasses.option} ${familyClass} ${
               selected === key ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
             }`}
           >
@@ -84,10 +114,10 @@ function QuestionCard({
 
 // Deneme (sinav) ve konu testi ekranlarinin ortak soru listesi/soru kagidi
 // gorunumu. Ogrenci "Genel Ayarlar > Sinav Ayarlari"ndan iki seyi
-// degistirebilir: soru basi sure siniri (varsayilan acik, soru basi 1 dk)
-// ve gosterim bicimi (varsayilan: sayfa basi bir soru, cevaplayinca
-// "Sonraki Soru" ile ilerlenir; alternatif: hepsi tek sayfada kaydirmali
-// liste). Sure rozetine tiklamak da dogrudan ayni ayar sayfasina goturur.
+// degistirebilir: soru basi sure siniri (varsayilan kapali, acilirsa soru
+// basi 1 dk) ve gosterim bicimi (varsayilan: hepsi tek sayfada kaydirmali
+// liste; alternatif: sayfa basi bir soru, cevaplayinca "Sonraki Soru" ile
+// ilerlenir). Sure rozetine tiklamak da dogrudan ayni ayar sayfasina goturur.
 export function QuestionAnswerList({
   questions,
   answers,
@@ -163,6 +193,8 @@ export function QuestionAnswerList({
           index={pageIndex}
           selected={answers[question.id]}
           onSelect={(key) => onAnswer(question.id, key)}
+          fontSize={settings.fontSize}
+          fontFamily={settings.fontFamily}
         />
         <div className="flex items-center justify-between gap-3">
           <Button variant="secondary" onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0}>
@@ -184,7 +216,15 @@ export function QuestionAnswerList({
     <div className="flex flex-col gap-4">
       {timerBadge}
       {questions.map((q, i) => (
-        <QuestionCard key={q.id} question={q} index={i} selected={answers[q.id]} onSelect={(key) => onAnswer(q.id, key)} />
+        <QuestionCard
+          key={q.id}
+          question={q}
+          index={i}
+          selected={answers[q.id]}
+          onSelect={(key) => onAnswer(q.id, key)}
+          fontSize={settings.fontSize}
+          fontFamily={settings.fontFamily}
+        />
       ))}
       {finishButton && <div className="flex justify-end">{finishButton}</div>}
     </div>

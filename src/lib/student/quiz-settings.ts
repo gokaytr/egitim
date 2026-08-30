@@ -10,7 +10,7 @@ export async function getStudentQuizSettings(studentId: string | undefined): Pro
   const supabase = await createClient();
   const { data } = await supabase
     .from("student_quiz_settings")
-    .select("timer_enabled, seconds_per_question, one_question_per_page")
+    .select("timer_enabled, seconds_per_question, one_question_per_page, font_size, font_family")
     .eq("student_id", studentId)
     .maybeSingle();
 
@@ -20,5 +20,7 @@ export async function getStudentQuizSettings(studentId: string | undefined): Pro
     timerEnabled: data.timer_enabled,
     secondsPerQuestion: data.seconds_per_question,
     oneQuestionPerPage: data.one_question_per_page,
+    fontSize: (data.font_size as QuizDisplaySettings["fontSize"]) ?? DEFAULT_QUIZ_DISPLAY_SETTINGS.fontSize,
+    fontFamily: (data.font_family as QuizDisplaySettings["fontFamily"]) ?? DEFAULT_QUIZ_DISPLAY_SETTINGS.fontFamily,
   };
 }
