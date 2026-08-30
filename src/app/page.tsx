@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EducationBackground } from "@/components/education-background";
 import { SiteHeader } from "@/components/site-header";
+import { createClient } from "@/lib/supabase/server";
 
 const FEATURES = [
   {
@@ -32,7 +33,59 @@ const FEATURES = [
 
 const EXAM_COURSES = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 
-export default function Home() {
+// site-header.tsx ve middleware.ts'teki ROLE_HOME ile ayni esleme - bkz.
+// site-header.tsx'teki not: middleware server-only import'lar icerdigi icin
+// dogrudan paylasilamiyor, kucuk bir kopyasi tutuluyor.
+const ROLE_HOME: Record<string, string> = {
+  admin: "/admin",
+  teacher: "/ogretmen",
+  moderator: "/ogretmen",
+  student: "/ogrenci",
+  parent: "/ogrenci/rapor",
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Yönetici paneli",
+  teacher: "Öğretmen paneli",
+  moderator: "Öğretmen paneli",
+  student: "Öğrenci paneli",
+  parent: "Veli paneli",
+};
+
+// Hero'daki tek buton icin "git" fiiliyle biten kisa metin - ROLE_LABEL
+// ("Öğrenci paneli") ile ayni ama cumle icinde dogal dursun diye.
+const ROLE_PANEL_CTA: Record<string, string> = {
+  admin: "Yönetici paneline git",
+  teacher: "Öğretmen paneline git",
+  moderator: "Öğretmen paneline git",
+  student: "Öğrenci paneline git",
+  parent: "Veli paneline git",
+};
+
+// Anasayfa artik server component: oturum durumu SSR sirasinda (cookie
+// uzerinden) cozuluyor. Boylece hem SiteHeader'da "once cikis yap/ucretsiz
+// basla gorunup sonra panel butonuna donusme" yanip sonme sorunu ortadan
+// kalkiyor, hem de zaten giris yapmis bir ziyaretciye anlamsiz "Ogrenci
+// olarak basla" / "Zaten hesabim var" butonlari yerine dogrudan kendi
+// paneline goturen tek bir buton gosteriliyor.
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+
+  let panelHref: string | null = null;
+  let panelLabel = "Panelim";
+  let panelCta = "Panelime git";
+
+  if (userData.user) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", userData.user.id).single();
+    const role = profile?.role;
+    panelHref = role ? ROLE_HOME[role] ?? "/ogrenci" : "/ogrenci";
+    panelLabel = role ? ROLE_LABEL[role] ?? "Panelim" : "Panelim";
+    panelCta = role ? ROLE_PANEL_CTA[role] ?? "Panelime git" : "Panelime git";
+  }
+
+  const isLoggedIn = !!panelHref;
+
   return (
     <div className="relative flex flex-1 flex-col">
       {/* Sayfa boyunca sabit kalan (scroll ile kaybolmayan), soluk ve
@@ -51,7 +104,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100/25 via-transparent to-sky-100/25" />
       </div>
 
-      <SiteHeader />
+      <SiteHeader initialIsLoggedIn={isLoggedIn} initialPanelHref={panelHref} initialPanelLabel={panelLabel} />
 
       <section className="relative overflow-hidden">
         <EducationBackground />
@@ -64,12 +117,23 @@ export default function Home() {
             özel derse yönlendiren yapay zeka destekli sınav hazırlık platformu.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/kayit" className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
-              Öğrenci olarak başla
-            </Link>
-            <Link href="/giris" className="rounded-lg border border-slate-300 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-              Zaten hesabım var
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href={panelHref!}
+                className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+              >
+                {panelCta} →
+              </Link>
+            ) : (
+              <>
+                <Link href="/kayit" className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
+                  Öğrenci olarak başla
+                </Link>
+                <Link href="/giris" className="rounded-lg border border-slate-300 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                  Zaten hesabım var
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

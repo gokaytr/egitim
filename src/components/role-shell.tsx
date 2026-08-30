@@ -69,6 +69,7 @@ export function RoleShell({
   titleByRole,
   topBarLinks,
   showGradeBackground,
+  gradeLevel,
   previewSwitcher,
   previewSwitcherByRole,
 }: {
@@ -79,6 +80,12 @@ export function RoleShell({
   titleByRole?: Partial<Record<string, string>>;
   topBarLinks?: NavItem[];
   showGradeBackground?: boolean;
+  // Arka plandaki sinif temali gorselin hangi varyantini (ilkokul/ortaokul/
+  // lise) gosterecegini belirleyen sinif duzeyi - cagiran taraftan (server
+  // component) geliyor. Boylece admin bir test ogrenciyi onizlerken bu
+  // deger ADMIN'in kendi (bos) grade_level'i degil, ONIZLENEN ogrencinin
+  // sinif duzeyi olur. Verilmezse arka plan gorseli gosterilmez.
+  gradeLevel?: number | null;
   // Admin bir paneli (ogrenci/ogretmen/veli) onizlerken sol menude "Cikis
   // yap" butonunun ustunde gosterilecek test kullanici secici. Tek rollu
   // sayfalar (orn. ogretmen) icin previewSwitcher, birden fazla rolu ayni
@@ -91,7 +98,6 @@ export function RoleShell({
   const router = useRouter();
   const supabase = createClient();
   const [currentRole, setCurrentRole] = useState<string | null>(null);
-  const [gradeLevel, setGradeLevel] = useState<number | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Soru cozme ekranlarina (deneme/konu testi) girildiginde odaklanmayi
   // kolaylastirmak icin sol menu varsayilan olarak daraltiliyor - ama
@@ -110,10 +116,9 @@ export function RoleShell({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("role, grade_level").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
       if (cancelled) return;
       setCurrentRole(profile?.role ?? null);
-      setGradeLevel(profile?.grade_level ?? null);
     }
     loadRole();
     return () => {
@@ -373,8 +378,8 @@ export function RoleShell({
           </div>
         </div>
         <main className="relative flex-1 overflow-hidden bg-slate-50 p-4 sm:p-6 lg:p-10">
-          {showGradeBackground && currentRole === "student" && (
-            <GradeBackground variant={gradeBackgroundVariant(gradeLevel)} />
+          {showGradeBackground && effectiveRole === "student" && (
+            <GradeBackground variant={gradeBackgroundVariant(gradeLevel ?? null)} />
           )}
           <div className="relative z-10">{children}</div>
         </main>

@@ -137,6 +137,7 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
       navItemsByRole={{ parent: NAV_PARENT, student: navStudent, admin: navStudent }}
       previewSwitcherByRole={previewSwitcherByRole}
       showGradeBackground
+      gradeLevel={effectiveProfile?.grade_level}
     >
       {children}
       {coachContext && <CoachChat context={coachContext} />}

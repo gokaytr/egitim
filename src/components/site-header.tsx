@@ -23,10 +23,24 @@ const ROLE_LABEL: Record<string, string> = {
   parent: "Veli paneli",
 };
 
-export function SiteHeader() {
-  const [checked, setChecked] = useState(false);
-  const [panelHref, setPanelHref] = useState<string | null>(null);
-  const [panelLabel, setPanelLabel] = useState<string>("Panelim");
+// Anasayfa (server component) oturumu SSR sirasinda cozup baslangic
+// degerlerini buraya prop olarak geciriyor - boylece ilk render'da dogrudan
+// dogru durum (giris yapilmis/yapilmamis) gosteriliyor, "once cikis
+// yap/ucretsiz basla, sonra birden panel butonuna donusme" yanip sonme
+// sorunu olmuyor. useEffect + onAuthStateChange hala calisir, ama sadece
+// arka planda (baska sekmede giris/cikis gibi) degisiklikleri yakalamak
+// icin - ilk boyamada zaten dogru deger ekranda.
+export function SiteHeader({
+  initialIsLoggedIn,
+  initialPanelHref,
+  initialPanelLabel,
+}: {
+  initialIsLoggedIn: boolean;
+  initialPanelHref: string | null;
+  initialPanelLabel: string;
+}) {
+  const [panelHref, setPanelHref] = useState<string | null>(initialIsLoggedIn ? initialPanelHref : null);
+  const [panelLabel, setPanelLabel] = useState<string>(initialPanelLabel);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -41,7 +55,6 @@ export function SiteHeader() {
       if (!user) {
         if (!cancelled) {
           setPanelHref(null);
-          setChecked(true);
         }
         return;
       }
@@ -51,13 +64,12 @@ export function SiteHeader() {
       const role = profile?.role ?? null;
       setPanelHref(role ? ROLE_HOME[role] ?? "/ogrenci" : "/ogrenci");
       setPanelLabel(role ? ROLE_LABEL[role] ?? "Panelim" : "Panelim");
-      setChecked(true);
     }
 
-    loadSession();
-
     // Baska bir sekmede giris/cikis yapilirsa ya da oturum yenilenirse
-    // anasayfa acikken bile buton durumu guncellensin.
+    // anasayfa acikken bile buton durumu guncellensin. Ilk yuklemede
+    // server'dan gelen baslangic degeri zaten dogru oldugu icin burada
+    // tekrar sorgulamiyoruz - sadece sonraki degisiklikleri dinliyoruz.
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       loadSession();
     });
@@ -76,7 +88,7 @@ export function SiteHeader() {
     window.location.href = "/";
   }
 
-  const isLoggedIn = checked && !!panelHref;
+  const isLoggedIn = !!panelHref;
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/70 bg-white/70 px-6 py-5 backdrop-blur md:px-16">
