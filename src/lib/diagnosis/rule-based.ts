@@ -57,6 +57,10 @@ export function ruleBasedDiagnosis(params: {
 }): {
   weakness_level: WeaknessLevel;
   ai_summary: string;
+  // Ogrenciye test bittiginde ekranda gosterilen KISA versiyon - detayli
+  // (cok paragrafli) ai_summary sadece veliye ve gecmis analiz listesine
+  // gosterilir, ogrencinin sonuc ekraninda karsisina bu kisa cumle cikar.
+  student_summary: string;
   common_error_pattern: string | null;
   recommended_action: RecommendedAction;
 } {
@@ -184,9 +188,22 @@ export function ruleBasedDiagnosis(params: {
     );
   }
 
+  // --- Öğrenciye gösterilecek kısa özet -----------------------------------
+  let student_summary: string;
+  if (weakness_level === "none") {
+    student_summary = `Harika! "${topicName}" konusunda %${percent} başarı gösterdin, bu seviyeni korumaya devam et.`;
+  } else if (recommended_action === "tutor_referral") {
+    student_summary = `"${topicName}" konusunda tekrar zorlandın (%${percent}). Bu durumu ailenle paylaştık; ailen isterse senin için özel ders talep edebilir.`;
+  } else if (recommended_action === "watch_video") {
+    student_summary = `"${topicName}" konusunda bu sefer zorlandın (%${percent}). Anlatım videosunu tekrar izleyip aynı konudan birkaç soru daha çöz.`;
+  } else {
+    student_summary = `"${topicName}" konusunda %${percent} başarı gösterdin, birkaç eksiğini kapatırsan konuyu tamamen kendine mal edebilirsin.`;
+  }
+
   return {
     weakness_level,
     ai_summary: paragraphs.join("\n\n"),
+    student_summary,
     common_error_pattern,
     recommended_action,
   };

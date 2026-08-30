@@ -89,12 +89,22 @@ export function QuestionAnswerList({
   onAnswer,
   settings,
   settingsHref = "/ogrenci/genel-ayarlar",
+  onFinish,
+  finishing,
+  finishLabel,
 }: {
   questions: AnswerableQuestion[];
   answers: Record<string, string>;
   onAnswer: (questionId: string, option: string) => void;
   settings: QuizDisplaySettings;
   settingsHref?: string;
+  // Verilirse "Testi Bitir" / "Denemeyi Bitir" butonu artik cagiran tarafta
+  // ayri gosterilmez - sayfa basi bir soru modunda son sorudaki "Sonraki
+  // Soru" ile ayni sirada/mantikta (en sagda), tam liste modunda ise
+  // listenin altinda sagda gosterilir.
+  onFinish?: () => void;
+  finishing?: boolean;
+  finishLabel?: string;
 }) {
   const totalSeconds = questions.length * settings.secondsPerQuestion;
   const [remaining, setRemaining] = useState(totalSeconds);
@@ -112,16 +122,24 @@ export function QuestionAnswerList({
 
   const timeIsLow = settings.timerEnabled && remaining <= 30;
 
+  // Kalan süre rozeti artik normal akista degil - sayfanin sag ust
+  // kosesinde (arka plandaki gorselin uzerinde), sabit konumda yuzuyor.
   const timerBadge = settings.timerEnabled ? (
     <Link
       href={settingsHref}
       title="Süre ayarlarını değiştirmek için tıkla"
-      className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-        timeIsLow ? "border-red-300 bg-red-50 text-red-700" : "border-indigo-200 bg-indigo-50 text-indigo-700"
+      className={`fixed right-4 top-16 z-20 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur-sm transition sm:right-6 sm:top-20 lg:right-10 lg:top-24 ${
+        timeIsLow ? "border-red-300 bg-red-50/90 text-red-700" : "border-indigo-200 bg-indigo-50/90 text-indigo-700"
       }`}
     >
       ⏱ Kalan süre: {formatRemaining(remaining)}
     </Link>
+  ) : null;
+
+  const finishButton = onFinish ? (
+    <Button onClick={onFinish} disabled={finishing}>
+      {finishing ? "Değerlendiriliyor..." : (finishLabel ?? "Testi Bitir")}
+    </Button>
   ) : null;
 
   if (settings.oneQuestionPerPage) {
@@ -145,11 +163,13 @@ export function QuestionAnswerList({
           <Button variant="secondary" onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0}>
             ← Önceki Soru
           </Button>
-          {!isLast && (
-            <Button variant={hasAnswer ? "primary" : "secondary"} onClick={() => setPageIndex((i) => Math.min(questions.length - 1, i + 1))}>
-              {hasAnswer ? "Sonraki Soru →" : "Soruyu Atla →"}
-            </Button>
-          )}
+          {isLast
+            ? finishButton
+            : (
+              <Button variant={hasAnswer ? "primary" : "secondary"} onClick={() => setPageIndex((i) => Math.min(questions.length - 1, i + 1))}>
+                {hasAnswer ? "Sonraki Soru →" : "Soruyu Atla →"}
+              </Button>
+            )}
         </div>
       </div>
     );
@@ -161,6 +181,7 @@ export function QuestionAnswerList({
       {questions.map((q, i) => (
         <QuestionCard key={q.id} question={q} index={i} selected={answers[q.id]} onSelect={(key) => onAnswer(q.id, key)} />
       ))}
+      {finishButton && <div className="flex justify-end">{finishButton}</div>}
     </div>
   );
 }

@@ -14,6 +14,8 @@ Sohbet yanıtlarında kod bloğu/kod parçası gösterme — yapılan değişikl
 
 Değişiklikler temizse (tsc hatasız geçtiyse) commit etmeden önce izin sorma — otomatik commit et, sonra bana çalıştırmam gereken `git push origin main` komutunu ver. Push'u ASLA sen çalıştırma.
 
+Stop hook "unpushed commit" uyarısı geldiğinde veya push hatırlatması gerektiğinde her seferinde "CLAUDE.md kuralı gereği push yapmıyorum" tarzı açıklamayı tekrarlama — sadece kısaca çalıştırmam gereken `git push origin main` komutunu ver, uzun bir gerekçe yazma.
+
 ## Admin önizleme paritesi kuralı
 
 Öğrenci, öğretmen veya veli panelinde yeni bir özellik eklendiğinde, mevcut bir ekran değiştirildiğinde veya bir ayar/tercih sistemi kurulduğunda, bu değişiklik admin panelinden ilgili paneli önizlerken de (test öğrenci/test öğretmen/test veli seçiciyle) aynı şekilde ve güncel olarak görünmeli ve çalışmalıdır. Admin önizlemesi "neredeyse birebir" gerçek kullanıcı deneyimini yansıtmalı — sol menü hariç.

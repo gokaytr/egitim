@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, StatCard, Badge, Button } from "@/components/ui";
+import { Card, StatCard, Badge } from "@/components/ui";
 import { DiagnosisAcknowledgeButton } from "@/components/diagnosis-acknowledge-button";
 import { DenemeActionButton } from "@/components/deneme-action-button";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
@@ -69,7 +69,7 @@ export default async function OgrenciDashboard({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Çözülen Test/Deneme" value={attemptCount ?? 0} />
         <Card className="flex flex-col justify-between gap-2">
           <div>
@@ -84,28 +84,14 @@ export default async function OgrenciDashboard({
             label={hasLevel ? "🔄 Yeniden Seviye Tespit Sınavı" : "🧭 Seviye Tespit Sınavına Başla"}
           />
         </Card>
-      </div>
-
-      <Card className="bg-gradient-to-br from-indigo-50 to-white">
-        <h2 className="mb-1 font-semibold text-slate-900">Deneme Zamanı 🎉</h2>
-        <p className="mb-4 text-sm text-slate-600">{DENEME_INTRO[gradeBand]}</p>
-        <div className="flex flex-wrap items-start gap-3">
+        <Card className="flex flex-col justify-between gap-2 bg-gradient-to-br from-indigo-50 to-white">
+          <div>
+            <span className="text-sm text-slate-500">Deneme Çöz</span>
+            <p className="mt-0.5 text-sm text-slate-600">{DENEME_INTRO[gradeBand]}</p>
+          </div>
           <DenemeActionButton mode="rastgele" label="🎲 Rastgele Deneme Çöz" />
-          {hasLevel ? (
-            <DenemeActionButton mode="onerilen" variant="secondary" label="⭐ Sana Uygun Deneme" />
-          ) : (
-            <div className="flex flex-col gap-1">
-              <Button variant="secondary" disabled>
-                ⭐ Sana Uygun Deneme
-              </Button>
-              <p className="max-w-xs text-xs text-slate-500">
-                Şu an seviyenizi tam bilmediğimden size uygun bir deneme gösteremiyorum. Önce Seviye Tespit
-                Sınavı&apos;nı çözelim mi?
-              </p>
-            </div>
-          )}
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       {lastDiagnosis && (
         <Card>

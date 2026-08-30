@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Card, Button, Badge } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
 import { levelFromScore, LEVEL_TITLES } from "@/lib/deneme/level";
@@ -39,6 +39,7 @@ export function ExamRunner({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showReview, setShowReview] = useState(false);
   const [result, setResult] = useState<{ correct: number; wrong: number; empty: number; pct: number } | null>(null);
 
   const isSeviyeTespit = examType === "seviye_tespit";
@@ -106,9 +107,18 @@ export function ExamRunner({
       <div className="flex max-w-2xl flex-col gap-6">
         <Card>
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç 🎉</h2>
-          <p className="text-sm text-slate-600">
-            Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty} · Başarı: %{result.pct}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-600">
+              Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty} · Başarı: %{result.pct}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowReview((v) => !v)}
+              className="text-sm font-medium text-indigo-600 underline"
+            >
+              {showReview ? "İncelemeyi kapat" : "Yanlışlarımı incele"}
+            </button>
+          </div>
           {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
           {isSeviyeTespit && (
             <div className="mt-4 rounded-xl bg-indigo-50 p-4">
@@ -123,16 +133,18 @@ export function ExamRunner({
             ← Genel Bakışa dön
           </Link>
         </Card>
-        <AnswerReviewList
-          questions={questions.map((q) => ({
-            id: q.id,
-            body: q.body,
-            options: q.options,
-            correct_option: q.correct_option,
-            explanation: q.explanation,
-          }))}
-          answers={answers}
-        />
+        {showReview && (
+          <AnswerReviewList
+            questions={questions.map((q) => ({
+              id: q.id,
+              body: q.body,
+              options: q.options,
+              correct_option: q.correct_option,
+              explanation: q.explanation,
+            }))}
+            answers={answers}
+          />
+        )}
       </div>
     );
   }
@@ -150,11 +162,11 @@ export function ExamRunner({
         answers={answers}
         onAnswer={(questionId, option) => setAnswers({ ...answers, [questionId]: option })}
         settings={quizSettings}
+        onFinish={handleSubmit}
+        finishing={submitting}
+        finishLabel="Denemeyi Bitir"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button onClick={handleSubmit} disabled={submitting} className="w-fit">
-        {submitting ? "Değerlendiriliyor..." : "Denemeyi Bitir"}
-      </Button>
     </div>
   );
 }

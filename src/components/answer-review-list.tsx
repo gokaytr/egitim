@@ -8,12 +8,12 @@ export type ReviewQuestion = {
   explanation?: string | null;
 };
 
-// Deneme/konu testi bittikten sonra ogrenciye gosterilen, soru soru dogru
-// cevap + aciklama ozeti. Ozellikle bos birakilan/yanlis cevaplanan sorularda
-// "dogru cevap bu sikti ve bunun icin dogruydu" bilgisini acikca gosterir -
-// boylece ogrenci nerede yanlis yaptigini anlayabilir (bkz. CLAUDE.md "Soru
-// cevap aciklamasi kurali"). Dogru cevaplanan sorular da listelenir ama
-// vurgusuz gorunur.
+// Deneme/konu testi bittikten sonra "Yanlışlarımı incele" ile acilan, soru
+// soru dogru cevap + aciklama ozeti. Aciklama SADECE yanlis/bos sorularda
+// degil, dogru cevaplanan sorularda da aynen gosterilir - boylece ogrenci
+// dogru yaptigi sorunun mantigini da pekistirir (bkz. CLAUDE.md "Soru cevap
+// aciklamasi kurali"). Sadece rozet/renk vurgusu dogru/yanlis/bos'a gore
+// degisir, aciklama kutusu her zaman ayni bicimde gorunur.
 export function AnswerReviewList({
   questions,
   answers,
@@ -64,7 +64,7 @@ export function AnswerReviewList({
                 );
               })}
             </ul>
-            {!isCorrect && q.explanation && (
+            {q.explanation && (
               <div className="mt-3 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-500">
                   Cevap böyle olmalıydı

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Card, Button, Badge } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
 
@@ -28,11 +28,18 @@ export function QuizRunner({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showReview, setShowReview] = useState(false);
   const [result, setResult] = useState<{
     correct: number;
     wrong: number;
     empty: number;
-    diagnosis?: { ai_summary: string; common_error_pattern: string | null; recommended_action: string; weakness_level: string };
+    diagnosis?: {
+      ai_summary: string;
+      student_summary?: string;
+      common_error_pattern: string | null;
+      recommended_action: string;
+      weakness_level: string;
+    };
   } | null>(null);
 
   async function handleSubmit() {
@@ -112,19 +119,24 @@ export function QuizRunner({
       <div className="flex max-w-2xl flex-col gap-6">
         <Card>
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç</h2>
-          <p className="text-sm text-slate-600">
-            Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-600">
+              Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowReview((v) => !v)}
+              className="text-sm font-medium text-indigo-600 underline"
+            >
+              {showReview ? "İncelemeyi kapat" : "Yanlışlarımı incele"}
+            </button>
+          </div>
           {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
           {result.diagnosis && (
             <div className="mt-4 rounded-xl bg-indigo-50 p-4">
-              <Badge tone={result.diagnosis.weakness_level === "major" ? "red" : result.diagnosis.weakness_level === "minor" ? "amber" : "green"}>
-                Eksik seviyesi: {result.diagnosis.weakness_level}
-              </Badge>
-              <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{result.diagnosis.ai_summary}</p>
-              {result.diagnosis.common_error_pattern && (
-                <p className="mt-1 text-xs text-slate-500">Genel hata örüntün: {result.diagnosis.common_error_pattern}</p>
-              )}
+              <p className="whitespace-pre-line text-sm text-slate-700">
+                {result.diagnosis.student_summary ?? result.diagnosis.ai_summary}
+              </p>
               {result.diagnosis.recommended_action === "tutor_referral" && (
                 <p className="mt-2 text-sm font-medium text-indigo-700">
                   Bu konuda tekrar tekrar zorlandığını fark ettik. Bu durumu ailenle paylaştık; ailen isterse senin için
@@ -134,7 +146,7 @@ export function QuizRunner({
             </div>
           )}
         </Card>
-        <AnswerReviewList questions={questions} answers={answers} />
+        {showReview && <AnswerReviewList questions={questions} answers={answers} />}
       </div>
     );
   }
@@ -146,11 +158,11 @@ export function QuizRunner({
         answers={answers}
         onAnswer={(questionId, option) => setAnswers({ ...answers, [questionId]: option })}
         settings={quizSettings}
+        onFinish={handleSubmit}
+        finishing={submitting}
+        finishLabel="Testi Bitir"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button onClick={handleSubmit} disabled={submitting} className="w-fit">
-        {submitting ? "Değerlendiriliyor..." : "Testi Bitir"}
-      </Button>
     </div>
   );
 }

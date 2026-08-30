@@ -90,7 +90,10 @@ export async function POST(req: Request) {
     // oneri. Ozel ders talebini veli isterse "Özel Ders Talebi" sayfasindaki
     // formdan kendisi olusturur (bkz. ParentTutorRequestForm).
 
-    return NextResponse.json({ diagnosis: saved });
+    // student_summary (ogrenciye gosterilen kisa metin) diagnoses tablosunda
+    // ayri bir sutun degil - sadece bu anlik yanita ekleniyor, veli/gecmis
+    // analiz ekranlari hep detayli ai_summary'yi kullanmaya devam ediyor.
+    return NextResponse.json({ diagnosis: { ...saved, student_summary: diagnosis.student_summary } });
   } catch (err) {
     console.error("/api/ai/diagnose beklenmeyen hata", err);
     return NextResponse.json({ error: "Analiz sırasında beklenmeyen bir hata oluştu." }, { status: 500 });
