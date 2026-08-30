@@ -20,7 +20,8 @@ A) 45
 B) 60
 C) 90
 D) 100
-Cevap: B`;
+Cevap: B
+Açıklama: Üçgenin iç açıları toplamı 180 derece ve eşkenar üçgende üç açı da eşit olduğundan 180/3 = 60 derece bulunur.`;
 
 type TopicOption = { id: string; name: string; subject_id: string };
 
@@ -165,7 +166,9 @@ export function BulkQuestionImport({
         aşağıya yapıştır. Birden fazla konuyu tek seferde eklemek için her konudan önce ayrı bir satıra
         <strong> Konu: &lt;konu adı&gt;</strong> yaz — sistem soruları otomatik olarak doğru konuya dağıtır. Konu
         başlığı yazmazsan, yukarıdan seçtiğin konu kullanılır. Şimdilik yalnızca metin destekleniyor
-        (taranmış/fotoğraflı sorular için görsel okuma henüz yok).
+        (taranmış/fotoğraflı sorular için görsel okuma henüz yok). Her soru için{" "}
+        <strong>Açıklama:</strong> satırı zorunludur — öğrenci yanlış yaptığında doğru cevabın nedenini
+        görebilmeli, açıklaması olmayan sorular kaydedilmez.
       </p>
       <p className="mb-3 text-xs text-amber-700">
         Not: Sadece kullanma hakkına sahip olduğun içerikleri yükle. ÖSYM gibi kurumların telif korumalı sınav
@@ -232,6 +235,7 @@ export function BulkQuestionImport({
                     <p className="mt-1 text-xs text-slate-500">
                       Doğru cevap: {q.correct_option} — {q.options[q.correct_option]}
                     </p>
+                    <p className="mt-1 text-xs text-slate-400">Açıklama: {q.explanation}</p>
                   </li>
                 ))}
               </ul>

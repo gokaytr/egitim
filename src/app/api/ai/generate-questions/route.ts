@@ -37,7 +37,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "AI soru üretemedi, tekrar deneyin" }, { status: 502 });
   }
 
-  const rows = drafts.map((d) => ({
+  // Her sorunun bir cozum aciklamasi olmasi zorunlu (bkz. CLAUDE.md "Soru
+  // cevap aciklamasi kurali") - aciklamasiz gelen taslaklar (nadiren AI
+  // atlarsa) ogretmene onay icin bile gitmesin diye elenir.
+  const validDrafts = drafts.filter((d) => typeof d.explanation === "string" && d.explanation.trim());
+  if (!validDrafts.length) {
+    return NextResponse.json(
+      { error: "AI'nin ürettiği sorularda çözüm açıklaması eksik, tekrar deneyin." },
+      { status: 502 }
+    );
+  }
+
+  const rows = validDrafts.map((d) => ({
     topic_id: topicId,
     created_by: userData.user!.id,
     difficulty,

@@ -4,12 +4,14 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Badge } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
+import { AnswerReviewList } from "@/components/answer-review-list";
 
 type Question = {
   id: string;
   body: string;
   options: Record<string, string>;
   correct_option: string;
+  explanation?: string | null;
   option_error_tags?: Record<string, string> | null;
   image_url?: string | null;
 };
@@ -107,29 +109,32 @@ export function QuizRunner({
 
   if (result) {
     return (
-      <Card className="max-w-2xl">
-        <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç</h2>
-        <p className="text-sm text-slate-600">
-          Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
-        </p>
-        {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
-        {result.diagnosis && (
-          <div className="mt-4 rounded-xl bg-indigo-50 p-4">
-            <Badge tone={result.diagnosis.weakness_level === "major" ? "red" : result.diagnosis.weakness_level === "minor" ? "amber" : "green"}>
-              Eksik seviyesi: {result.diagnosis.weakness_level}
-            </Badge>
-            <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{result.diagnosis.ai_summary}</p>
-            {result.diagnosis.common_error_pattern && (
-              <p className="mt-1 text-xs text-slate-500">Genel hata örüntün: {result.diagnosis.common_error_pattern}</p>
-            )}
-            {result.diagnosis.recommended_action === "tutor_referral" && (
-              <p className="mt-2 text-sm font-medium text-indigo-700">
-                Bu konuda özel derse yönlendirme talebin oluşturuldu, bir öğretmen seninle iletişime geçecek.
-              </p>
-            )}
-          </div>
-        )}
-      </Card>
+      <div className="flex max-w-2xl flex-col gap-6">
+        <Card>
+          <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç</h2>
+          <p className="text-sm text-slate-600">
+            Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
+          </p>
+          {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
+          {result.diagnosis && (
+            <div className="mt-4 rounded-xl bg-indigo-50 p-4">
+              <Badge tone={result.diagnosis.weakness_level === "major" ? "red" : result.diagnosis.weakness_level === "minor" ? "amber" : "green"}>
+                Eksik seviyesi: {result.diagnosis.weakness_level}
+              </Badge>
+              <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{result.diagnosis.ai_summary}</p>
+              {result.diagnosis.common_error_pattern && (
+                <p className="mt-1 text-xs text-slate-500">Genel hata örüntün: {result.diagnosis.common_error_pattern}</p>
+              )}
+              {result.diagnosis.recommended_action === "tutor_referral" && (
+                <p className="mt-2 text-sm font-medium text-indigo-700">
+                  Bu konuda özel derse yönlendirme talebin oluşturuldu, bir öğretmen seninle iletişime geçecek.
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
+        <AnswerReviewList questions={questions} answers={answers} />
+      </div>
     );
   }
 

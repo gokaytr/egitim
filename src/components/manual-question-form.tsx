@@ -12,6 +12,9 @@ export function ManualQuestionForm({ topicId }: { topicId: string }) {
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!topicId) return setStatus("Lütfen bir konu seçin.");
+    if (!manual.explanation.trim()) {
+      return setStatus("Çözüm açıklaması zorunludur — öğrenci yanlış yaptığında doğru cevabın nedenini görebilmeli.");
+    }
     setLoading(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
@@ -52,7 +55,13 @@ export function ManualQuestionForm({ topicId }: { topicId: string }) {
             {["A", "B", "C", "D"].map((k) => <option key={k} value={k}>{k}</option>)}
           </Select>
         </div>
-        <Textarea rows={2} placeholder="Çözüm açıklaması (opsiyonel)" value={manual.explanation} onChange={(e) => setManual({ ...manual, explanation: e.target.value })} />
+        <Textarea
+          required
+          rows={2}
+          placeholder="Çözüm açıklaması — doğru cevap neden doğru? (zorunlu)"
+          value={manual.explanation}
+          onChange={(e) => setManual({ ...manual, explanation: e.target.value })}
+        />
         <Button type="submit" disabled={loading}>{loading ? "Ekleniyor..." : "Soruyu Ekle"}</Button>
       </form>
       {status && <p className="mt-2 text-sm text-slate-600">{status}</p>}

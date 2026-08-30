@@ -18,7 +18,7 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
     supabase
       .from("exam_questions")
       .select(
-        "order_index, questions(id, body, options, correct_option, option_error_tags, image_url, topic_id, topics(name))"
+        "order_index, questions(id, body, options, correct_option, explanation, option_error_tags, image_url, topic_id, topics(name))"
       )
       .eq("exam_id", examId)
       .order("order_index"),

@@ -23,7 +23,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
       .order("created_at", { ascending: false }),
     supabase
       .from("questions")
-      .select("id, body, options, correct_option, option_error_tags, image_url")
+      .select("id, body, options, correct_option, explanation, option_error_tags, image_url")
       .eq("topic_id", topicId)
       .eq("is_approved", true)
       .limit(8),

@@ -14,7 +14,7 @@ export default async function KonuCevaplarPage({ params }: { params: Promise<{ t
     supabase.from("topics").select("id, name").eq("id", topicId).single(),
     supabase
       .from("questions")
-      .select("id, body, options, correct_option, image_url")
+      .select("id, body, options, correct_option, explanation, image_url")
       .eq("topic_id", topicId)
       .eq("is_approved", true)
       .order("created_at"),
@@ -63,6 +63,12 @@ export default async function KonuCevaplarPage({ params }: { params: Promise<{ t
                   );
                 })}
               </div>
+              {q.explanation && (
+                <div className="mt-3 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
+                  <p>{q.explanation}</p>
+                </div>
+              )}
             </Card>
           ))}
         </div>

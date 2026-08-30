@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Badge } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
+import { AnswerReviewList } from "@/components/answer-review-list";
 import { levelFromScore, LEVEL_TITLES } from "@/lib/deneme/level";
 
 type Question = {
@@ -12,6 +13,7 @@ type Question = {
   body: string;
   options: Record<string, string>;
   correct_option: string;
+  explanation?: string | null;
   option_error_tags?: Record<string, string> | null;
   image_url?: string | null;
   topic_id: string;
@@ -101,25 +103,37 @@ export function ExamRunner({
   if (result) {
     const level = levelFromScore(result.pct);
     return (
-      <Card className="max-w-2xl">
-        <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç 🎉</h2>
-        <p className="text-sm text-slate-600">
-          Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty} · Başarı: %{result.pct}
-        </p>
-        {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
-        {isSeviyeTespit && (
-          <div className="mt-4 rounded-xl bg-indigo-50 p-4">
-            <Badge tone="default">Seviyen: {LEVEL_TITLES[level]}</Badge>
-            <p className="mt-2 text-sm text-slate-700">
-              Bu sonuca göre sana uygun zorlukta denemeler önerebiliriz. Genel Bakış sayfasından &quot;Sana Uygun
-              Deneme&quot; ile devam edebilirsin.
-            </p>
-          </div>
-        )}
-        <Link href="/ogrenci" className="mt-4 inline-block text-sm font-medium text-indigo-600 underline">
-          ← Genel Bakışa dön
-        </Link>
-      </Card>
+      <div className="flex max-w-2xl flex-col gap-6">
+        <Card>
+          <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç 🎉</h2>
+          <p className="text-sm text-slate-600">
+            Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty} · Başarı: %{result.pct}
+          </p>
+          {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
+          {isSeviyeTespit && (
+            <div className="mt-4 rounded-xl bg-indigo-50 p-4">
+              <Badge tone="default">Seviyen: {LEVEL_TITLES[level]}</Badge>
+              <p className="mt-2 text-sm text-slate-700">
+                Bu sonuca göre sana uygun zorlukta denemeler önerebiliriz. Genel Bakış sayfasından &quot;Sana Uygun
+                Deneme&quot; ile devam edebilirsin.
+              </p>
+            </div>
+          )}
+          <Link href="/ogrenci" className="mt-4 inline-block text-sm font-medium text-indigo-600 underline">
+            ← Genel Bakışa dön
+          </Link>
+        </Card>
+        <AnswerReviewList
+          questions={questions.map((q) => ({
+            id: q.id,
+            body: q.body,
+            options: q.options,
+            correct_option: q.correct_option,
+            explanation: q.explanation,
+          }))}
+          answers={answers}
+        />
+      </div>
     );
   }
 

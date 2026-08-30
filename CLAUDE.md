@@ -23,3 +23,12 @@ Pratikte bu şu anlama gelir:
 - Öğrenci/öğretmen/veli tarafından yazılabilen yeni bir ayar (tercih) tablosu eklenirse, RLS politikaları sadece o kullanıcının kendi satırını değil, admin'in de (önizleme sırasında o kullanıcı adına) okuyup yazabilmesine izin vermeli.
 - Yeni bir sekme/form/gösterge eklerken, "bu sadece gerçek kullanıcı girişinde mi görünüyor, yoksa admin önizlemesinde de mi?" sorusu her seferinde kontrol edilmeli — varsayılan olarak admin önizlemesinde de görünmesi ve işlevsel olması beklenir.
 - Bir özellik gerçekten sadece gerçek hesapta anlamlıysa (ör. şifre değiştirme), bu bir istisna olarak kabul edilebilir, ama varsayılan davranış "admin önizlemede de aynısını gör" olmalı.
+
+## Soru cevap açıklaması kuralı
+
+Sistemdeki HER soru, sadece doğru şıkkın harfini (`correct_option`) değil, doğru cevabın NEDEN doğru olduğunu açıklayan ayrı bir metni (`questions.explanation`) de içermek zorundadır. Bu, projenin ana kurallarından biridir ve şu şekilde uygulanır:
+
+- Yeni bir soru elle, toplu (kopyala-yapıştır/dosya) veya yapay zeka ile eklenirken açıklama alanı zorunludur — boş bırakılamaz. Formlarda "opsiyonel" ibaresi kullanılmaz.
+- Öğrenci bir deneme veya konu testini bitirdiğinde, özellikle bilemediği/yanlış yaptığı sorularda "doğru cevap bu şıktı ve bu yüzden doğruydu" şeklinde bu açıklama kendisine gösterilir — sadece doğru şıkkın hangisi olduğu değil, çözümün mantığı da görünür olmalı.
+- Öğrenci bir konudaki soruları çözmeden önce/sonra "Cevaplar" (cevap anahtarı) ekranından baktığında da her sorunun açıklaması görünür.
+- Mevcut tüm sorular (Matematik dahil tüm dersler) bu kurala göre güncellenmiş, açıklaması eksik soru kalmamıştır. Yeni eklenen her soru da bu standarda uymalıdır — açıklaması olmayan bir soru onaylanmış/öğrenciye gösterilmiş sayılmamalıdır.

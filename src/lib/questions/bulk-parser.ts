@@ -9,16 +9,20 @@
 //   C) 270
 //   D) 360
 //   Cevap: B
-//   Açıklama: Üçgende iç açılar toplamı her zaman 180 derecedir. (opsiyonel)
+//   Açıklama: Üçgende iç açılar toplamı her zaman 180 derecedir. (ZORUNLU)
 //
 //   Soru: ikinci soru...
 //   ...
+//
+// Açıklama satırı zorunludur: her sorunun dogru cevabinin NEDEN dogru
+// oldugunu anlatan bir metin olmadan soru kaydedilemez (bkz. CLAUDE.md
+// "Soru cevap açıklaması kuralı").
 
 export type ParsedQuestion = {
   body: string;
   options: { A: string; B: string; C: string; D: string };
   correct_option: "A" | "B" | "C" | "D";
-  explanation: string | null;
+  explanation: string;
 };
 
 export type ParseResult = {
@@ -87,6 +91,7 @@ export function parseQuestionsText(raw: string): ParseResult {
       if (!options[k]) missing.push(`${k} şıkkı`);
     });
     if (!correct) missing.push("doğru cevap (Cevap: X)");
+    if (!explanation?.trim()) missing.push("çözüm açıklaması (Açıklama: ... — zorunlu)");
 
     if (missing.length) {
       errors.push(`${label}: eksik alan(lar) - ${missing.join(", ")}`);
@@ -97,7 +102,7 @@ export function parseQuestionsText(raw: string): ParseResult {
       body,
       options: { A: options.A!, B: options.B!, C: options.C!, D: options.D! },
       correct_option: correct as "A" | "B" | "C" | "D",
-      explanation,
+      explanation: explanation!.trim(),
     });
   });
 
