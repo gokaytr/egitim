@@ -101,7 +101,7 @@ export default async function Home() {
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-white/60" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100/25 via-transparent to-sky-100/25" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-red-100/25 via-transparent to-rose-100/25" />
       </div>
 
       <SiteHeader initialIsLoggedIn={isLoggedIn} initialPanelHref={panelHref} initialPanelLabel={panelLabel} />
@@ -120,13 +120,13 @@ export default async function Home() {
             {isLoggedIn ? (
               <Link
                 href={panelHref!}
-                className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+                className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700"
               >
                 {panelCta} →
               </Link>
             ) : (
               <>
-                <Link href="/kayit" className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
+                <Link href="/kayit" className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700">
                   Öğrenci olarak başla
                 </Link>
                 <Link href="/giris" className="rounded-lg border border-slate-300 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
@@ -155,7 +155,7 @@ export default async function Home() {
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {EXAM_COURSES.map((c) => (
-            <span key={c} className="rounded-full border border-indigo-200 bg-indigo-50/80 px-4 py-1.5 text-sm font-semibold text-indigo-700">
+            <span key={c} className="rounded-full border border-red-200 bg-red-50/80 px-4 py-1.5 text-sm font-semibold text-red-700">
               {c}
             </span>
           ))}
