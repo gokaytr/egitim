@@ -40,3 +40,45 @@ body {
     animation: none;
   }
 }
+
+/* Soru ekranindaki soru gecisi (Sonraki Soru/Atla/Onceki Soru) ve sik secimi
+   canlandirma animasyonlari - bkz. question-answer-list.tsx. Amac, ekranin
+   "durgun/uyutucu" hissetmesini onlemek: yeni soru hafifce kayarak/belirerek
+   giriyor, secilen sik kisa bir "pop" ile buyuyup normale donuyor. */
+@keyframes question-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.question-card-enter {
+  animation: question-card-in 0.32s ease-out;
+}
+
+@keyframes option-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.035);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.option-selected-pop {
+  animation: option-pop 0.28s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-card-enter,
+  .option-selected-pop {
+    animation: none;
+  }
+}

@@ -124,39 +124,61 @@ export function QuizRunner({
 
   if (result) {
     return (
-      <div className="flex w-full max-w-4xl flex-col gap-6">
+      <div className="flex w-full max-w-6xl flex-col gap-6">
         <ResultRevealSound />
-        <Card>
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç</h2>
-          <p className="text-sm text-slate-600">
-            Doğru: {result.correct} · Yanlış: {result.wrong} · Boş: {result.empty}
-          </p>
-          <Button
-            variant={showReview ? "secondary" : "primary"}
-            onClick={() => setShowReview((v) => !v)}
-            className="mt-3 w-full justify-center sm:w-auto"
-          >
-            {showReview ? "İncelemeyi kapat" : "📋 Yanlışlarımı incele"}
-          </Button>
-          {error && <p className="mt-2 text-sm text-amber-600">{error}</p>}
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">Sonuç</h2>
+          <p className="mt-1 text-sm text-slate-500">&quot;{topicName}&quot; testini tamamladın, işte sonucun.</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <Card className="flex flex-col items-center gap-1 text-center">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Doğru</span>
+            <span className="text-3xl font-semibold text-emerald-600 sm:text-4xl">{result.correct}</span>
+          </Card>
+          <Card className="flex flex-col items-center gap-1 text-center">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Yanlış</span>
+            <span className="text-3xl font-semibold text-red-600 sm:text-4xl">{result.wrong}</span>
+          </Card>
+          <Card className="flex flex-col items-center gap-1 text-center">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Boş</span>
+            <span className="text-3xl font-semibold text-slate-500 sm:text-4xl">{result.empty}</span>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card className="flex flex-col gap-3">
+            <h3 className="font-semibold text-slate-900">Ne yapmak istersin?</h3>
+            <Button
+              variant={showReview ? "secondary" : "primary"}
+              onClick={() => setShowReview((v) => !v)}
+              className="w-full justify-center"
+            >
+              {showReview ? "İncelemeyi kapat" : "📋 Yanlışlarımı incele"}
+            </Button>
+            <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
+              ← Panel Anasayfasına Dön
+            </Link>
+            {error && <p className="text-sm text-amber-600">{error}</p>}
+          </Card>
+
           {result.diagnosis && (
-            <div className="mt-4 rounded-xl bg-indigo-50 p-4">
-              <p className="whitespace-pre-line text-sm text-slate-700">
+            <Card className="bg-indigo-50">
+              <h3 className="font-semibold text-indigo-900">Değerlendirme</h3>
+              <p className="mt-2 whitespace-pre-line text-sm text-slate-700">
                 {result.diagnosis.student_summary ?? result.diagnosis.ai_summary}
               </p>
               {result.diagnosis.recommended_action === "tutor_referral" && (
-                <p className="mt-2 text-sm font-medium text-indigo-700">
+                <p className="mt-3 rounded-lg bg-white/70 p-3 text-sm font-medium text-indigo-700">
                   Bu konuda tekrar tekrar zorlandığını fark ettik. Bu durumu ailenle paylaştık; ailen isterse senin için
                   özel ders talebinde bulunabilir.
                 </p>
               )}
-            </div>
+            </Card>
           )}
-        </Card>
+        </div>
+
         {showReview && <AnswerReviewList questions={questions} answers={answers} />}
-        <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
-          ← Panel Anasayfasına Dön
-        </Link>
       </div>
     );
   }

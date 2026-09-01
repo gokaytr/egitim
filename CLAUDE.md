@@ -16,6 +16,12 @@ Değişiklikler temizse (tsc hatasız geçtiyse) commit etmeden önce izin sorma
 
 Stop hook "unpushed commit" uyarısı geldiğinde veya push hatırlatması gerektiğinde her seferinde "CLAUDE.md kuralı gereği push yapmıyorum" tarzı açıklamayı tekrarlama — sadece kısaca çalıştırmam gereken `git push origin main` komutunu ver, uzun bir gerekçe yazma.
 
+## Dosya paylaşım kuralı
+
+Bir kod dosyasını değiştirip `git add` + `git commit` ile depoya işlediysem, o dosyayı SendUserFile (veya benzeri "sohbete dosya gönder") aracıyla ayrıca kullanıcıya "işte değişiklik" diye gösterme amacıyla gönderme — kullanıcı zaten commit'i push edince değişikliği GitHub/kendi ortamında görecek, sohbete kod dosyası düşürmek gereksiz ve kafa karıştırıcı. Sohbette sadece değişikliklerin sade Türkçe özetini ve gerekiyorsa `git push origin main` komutunu ver.
+
+İstisna: Cihaz (device bridge) tarafındaki depoyu güncel tutmak için dosyayı önce SendUserFile ile gönderip sonra device_commit_files ile cihaza yazmak zorunlu bir teknik adım — bu durumda çıkan dosya kartı "göster/incele" amaçlı değil, salt mekanik aktarım amaçlı olduğu için istisnadır ve engelli değildir. SendUserFile'ı ayrıca kullanıcının doğrudan "bana bir dosya olarak ver/indir" dediği, depoya commit edilmeyen (rapor, döküm, dışa aktarım vb.) çıktılar için de kullanabilirsin.
+
 ## Ortak çalışma (başka bir geliştirici de bu repoda çalışıyor) kuralı
 
 Bu depoda benimle birlikte başka bir geliştirici de bağımsız olarak çalışıyor ve doğrudan `main` dalına push yapabiliyor (GitHub üzerinde pull request onayı istenmeden). Bu yüzden:

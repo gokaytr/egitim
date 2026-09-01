@@ -90,6 +90,19 @@ export function playQuestionAdvance(ctx: AudioContext) {
   playChimeNote(ctx, t0 + 0.055, 660, 0.09, 0.16);
 }
 
+// "Testi Bitir" / "Denemeyi Bitir" (degerlendir) butonuna basildigi anda
+// caların, gonderim/onay hissi veren yukselen uc notalik bir "whoosh" sesi.
+// Sonuc AI analizi 20 saniyeye kadar surebildigi icin (bkz. quiz-runner/
+// exam-runner), ogrenci tiklamanin gercekten islendigini aninda bu sesle
+// anlar - sonuc ekrani acildiginda ayrica calan playResultChime'dan
+// (bkz. result-reveal-sound.tsx) kasitli olarak farkli bir ton/desen tasiyor.
+export function playSubmitEvaluate(ctx: AudioContext) {
+  const t0 = ctx.currentTime;
+  playChimeNote(ctx, t0, 392, 0.09, 0.2); // G4
+  playChimeNote(ctx, t0 + 0.07, 523.25, 0.09, 0.2); // C5
+  playChimeNote(ctx, t0 + 0.14, 659.25, 0.16, 0.22); // E5
+}
+
 function playChimeNote(ctx: AudioContext, time: number, freq: number, duration: number, peakGain: number) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();

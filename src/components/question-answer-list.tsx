@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, Button } from "@/components/ui";
 import { DrawingCanvas } from "@/components/drawing-canvas";
-import { getAudioCtx, playOptionSelect, playQuestionAdvance } from "@/lib/sound/tension-audio";
+import { getAudioCtx, playOptionSelect, playQuestionAdvance, playSubmitEvaluate } from "@/lib/sound/tension-audio";
 
 export type AnswerableQuestion = {
   id: string;
@@ -69,6 +69,7 @@ function QuestionCard({
   onSelect,
   fontSize = "normal",
   fontFamily = "sans",
+  className,
 }: {
   question: AnswerableQuestion;
   index: number;
@@ -76,11 +77,12 @@ function QuestionCard({
   onSelect: (option: string) => void;
   fontSize?: QuizFontSize;
   fontFamily?: QuizFontFamily;
+  className?: string;
 }) {
   const sizeClasses = QUESTION_FONT_SIZE_CLASSES[fontSize];
   const familyClass = QUESTION_FONT_FAMILY_CLASSES[fontFamily];
   return (
-    <Card>
+    <Card className={className}>
       {question.topicLabel && (
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-indigo-500">{question.topicLabel}</p>
       )}
@@ -92,8 +94,10 @@ function QuestionCard({
         {Object.entries(question.options).map(([key, val]) => (
           <label
             key={key}
-            className={`flex touch-manipulation cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 active:bg-slate-50 ${sizeClasses.option} ${familyClass} ${
-              selected === key ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+            className={`flex touch-manipulation cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 transition-colors duration-150 active:bg-slate-50 ${sizeClasses.option} ${familyClass} ${
+              selected === key
+                ? "option-selected-pop border-indigo-500 bg-indigo-50 shadow-sm ring-1 ring-indigo-200"
+                : "border-slate-200 hover:border-indigo-200 hover:bg-slate-50"
             }`}
           >
             <input
@@ -163,6 +167,15 @@ export function QuestionAnswerList({
     setPageIndex((i) => Math.min(questions.length - 1, i + 1));
   }
 
+  // "Testi Bitir"/"Denemeyi Bitir" (degerlendir) butonuna basildigi anda,
+  // sonuc ekrani AI analizi nedeniyle birkac saniye gecikebildigi icin
+  // ogrenciye aninda "tiklama islendi" hissi veren ayri bir ses.
+  function handleFinish() {
+    const ctx = getAudioCtx(audioCtxRef);
+    if (ctx) playSubmitEvaluate(ctx);
+    onFinish?.();
+  }
+
   useEffect(() => {
     setRemaining(totalSeconds);
   }, [totalSeconds]);
@@ -181,15 +194,18 @@ export function QuestionAnswerList({
   );
 
   const timeIsLow = settings.timerEnabled && remaining <= 30;
+  const answeredCount = questions.reduce((n, q) => (answers[q.id] ? n + 1 : n), 0);
 
   // Kalan süre rozeti artik normal akista degil - sayfanin sag ust
-  // kosesinde (arka plandaki gorselin uzerinde), sabit konumda yuzuyor.
+  // kosesinde (arka plandaki gorselin uzerinde), sabit konumda yuzuyor. Sure
+  // azaldikca (son 30 sn) hem kirmiziya donuyor hem de nabiz gibi atarak
+  // (animate-pulse) daha belirgin/uyari verici hale geliyor.
   const timerBadge = settings.timerEnabled ? (
     <Link
       href={settingsHref}
       title="Süre ayarlarını değiştirmek için tıkla"
       className={`fixed right-4 top-16 z-20 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur-sm transition sm:right-6 sm:top-20 lg:right-10 lg:top-24 ${
-        timeIsLow ? "border-red-300 bg-red-50/90 text-red-700" : "border-indigo-200 bg-indigo-50/90 text-indigo-700"
+        timeIsLow ? "animate-pulse border-red-300 bg-red-50/90 text-red-700" : "border-indigo-200 bg-indigo-50/90 text-indigo-700"
       }`}
     >
       ⏱ Kalan süre: {formatRemaining(remaining)}
@@ -197,7 +213,7 @@ export function QuestionAnswerList({
   ) : null;
 
   const finishButton = onFinish ? (
-    <Button onClick={onFinish} disabled={finishing}>
+    <Button onClick={handleFinish} disabled={finishing}>
       {finishing ? "Değerlendiriliyor..." : (finishLabel ?? "Testi Bitir")}
     </Button>
   ) : null;
@@ -207,19 +223,30 @@ export function QuestionAnswerList({
     if (!question) return null;
     const hasAnswer = !!answers[question.id];
     const isLast = pageIndex === questions.length - 1;
+    const progressPct = Math.round(((pageIndex + 1) / questions.length) * 100);
     return (
       <div className="flex flex-col gap-4">
         {timerBadge}
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-          Soru {pageIndex + 1} / {questions.length}
-        </p>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Soru {pageIndex + 1} / {questions.length}
+          </p>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-indigo-500 transition-all duration-300 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
         <QuestionCard
+          key={pageIndex}
           question={question}
           index={pageIndex}
           selected={answers[question.id]}
           onSelect={(key) => handleAnswer(question.id, key)}
           fontSize={settings.fontSize}
           fontFamily={settings.fontFamily}
+          className="question-card-enter"
         />
         <div className="flex items-center justify-between gap-3">
           <Button variant="secondary" onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0}>
@@ -237,9 +264,22 @@ export function QuestionAnswerList({
     );
   }
 
+  const listProgressPct = Math.round((answeredCount / questions.length) * 100);
+
   return (
     <div className="flex flex-col gap-4">
       {timerBadge}
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Cevaplanan {answeredCount} / {questions.length}
+        </p>
+        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+          <div
+            className="h-full rounded-full bg-indigo-500 transition-all duration-300 ease-out"
+            style={{ width: `${listProgressPct}%` }}
+          />
+        </div>
+      </div>
       {questions.map((q, i) => (
         <QuestionCard
           key={q.id}
