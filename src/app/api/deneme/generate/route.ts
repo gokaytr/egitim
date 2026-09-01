@@ -25,6 +25,13 @@ export async function POST(req: Request) {
       .eq("id", userData.user.id)
       .single();
 
+    if (profile?.grade_level == null || !profile?.exam_target) {
+      return NextResponse.json(
+        { error: "Deneme oluşturabilmen için önce Genel Ayarlar'dan sınıf ve hedef sınav bilgini tamamlaman gerekiyor." },
+        { status: 422 }
+      );
+    }
+
     if (mode === "onerilen" && !profile?.level_label) {
       return NextResponse.json(
         { error: "Şu an seviyenizi tam bilmediğimden size uygun bir deneme gösteremiyorum. Önce Seviye Tespit Sınavı'nı çözelim mi?" },

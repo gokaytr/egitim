@@ -3,6 +3,7 @@ import { Card } from "@/components/ui";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { DOC_SECTIONS } from "@/lib/docs/content";
 import { QuizSettingsForm } from "@/components/quiz-settings-form";
+import { ProfileInfoForm } from "@/components/profile-info-form";
 import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
@@ -26,6 +27,14 @@ export default async function OgrenciGenelAyarlarPage() {
   const canShowQuizSettings = role === "student" || (role === "admin" && isAdminPreview);
   const quizSettings = canShowQuizSettings ? await getStudentQuizSettings(effectiveStudentId) : null;
 
+  // Profil bilgileri (sinif/hedef sinav) - ozellikle Google ile uye olup bu
+  // bilgiyi hic vermemis ogrenciler icin. Ayni "Sinav Ayarlari" mantigiyla
+  // gercek ogrenci kendi bilgisini, admin ise onizledigi test ogrencinin
+  // bilgisini gorup guncelleyebiliyor.
+  const { data: effectiveProfile } = canShowQuizSettings
+    ? await supabase.from("profiles").select("grade_level, exam_target").eq("id", effectiveStudentId).single()
+    : { data: null };
+
   const sistemBilgisiTab = (
     <div className="flex flex-col gap-6">
       {sections.map((section) => (
@@ -48,14 +57,26 @@ export default async function OgrenciGenelAyarlarPage() {
     <QuizSettingsForm initial={quizSettings} studentId={role === "admin" ? effectiveStudentId : undefined} />
   );
 
-  // Sinav Ayarlari varsa ilk acilista o gorunsun, Sistem Bilgisi saga
-  // (ikinci sekme olarak) alinsin.
-  const tabs = sinavAyarlariTab
-    ? [
-        { key: "sinav-ayarlari", label: "Sınav Ayarları", content: sinavAyarlariTab },
-        { key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab },
-      ]
-    : [{ key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab }];
+  const profilBilgileriTab = canShowQuizSettings && (
+    <ProfileInfoForm
+      initialGradeLevel={effectiveProfile?.grade_level ?? null}
+      initialExamTarget={effectiveProfile?.exam_target ?? null}
+      studentId={role === "admin" ? effectiveStudentId : undefined}
+    />
+  );
+
+  const profileMissing = canShowQuizSettings && (effectiveProfile?.grade_level == null || !effectiveProfile?.exam_target);
+
+  // Profil bilgisi eksikse ilk acilista o sekme gorunsun (uyarinin
+  // kaybolmamasi icin); doluysa eskisi gibi Sinav Ayarlari ilk sekme olarak
+  // kalsin, Profil Bilgileri ise her zaman erisilebilir bir sekme olarak
+  // dursun.
+  const tabs = [
+    ...(sinavAyarlariTab ? [{ key: "sinav-ayarlari", label: "Sınav Ayarları", content: sinavAyarlariTab }] : []),
+    ...(profilBilgileriTab ? [{ key: "profil-bilgileri", label: "Profil Bilgileri", content: profilBilgileriTab }] : []),
+    { key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab },
+  ];
+  const defaultKey = profileMissing ? "profil-bilgileri" : tabs[0].key;
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,7 +84,7 @@ export default async function OgrenciGenelAyarlarPage() {
         <h1 className="text-2xl font-semibold text-slate-900">Genel Ayarlar</h1>
         <p className="text-sm text-slate-500">Platformu nasıl kullanacağına dair güncel özet.</p>
       </div>
-      <SimpleTabs defaultKey={tabs[0].key} tabs={tabs} />
+      <SimpleTabs defaultKey={defaultKey} tabs={tabs} />
     </div>
   );
 }

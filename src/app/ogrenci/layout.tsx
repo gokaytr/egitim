@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
 import { CoachChat } from "@/components/coach-chat";
@@ -19,7 +20,7 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
   const { data: userData } = await supabase.auth.getUser();
   const { data: callerProfile } = await supabase
     .from("profiles")
-    .select("role, full_name, grade_level")
+    .select("role, full_name, grade_level, exam_target")
     .eq("id", userData.user?.id)
     .single();
 
@@ -32,8 +33,15 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
 
   const effectiveProfile =
     callerProfile?.role === "admin" && isAdminPreview
-      ? (await supabase.from("profiles").select("full_name, grade_level").eq("id", effectiveStudentId).single()).data
+      ? (await supabase.from("profiles").select("full_name, grade_level, exam_target").eq("id", effectiveStudentId).single()).data
       : callerProfile;
+
+  // Google ile uye olan ogrencilerde sinif/hedef sinav bilgisi kayit
+  // sirasinda alinamadigi icin bos kalabiliyor - bu durumda ogrenci
+  // panelinin her ekraninda ustte kalici bir uyari gosterip ayarlara
+  // yonlendiriyoruz. Admin bir test ogrenciyi onizlerken de onun bilgisi
+  // eksikse ayni uyari gorunur (parite kurali).
+  const profileInfoMissing = isStudentView && (effectiveProfile?.grade_level == null || !effectiveProfile?.exam_target);
 
   // Sol menudeki her brans icin "cozulen/toplam" ilerleme bilgisi -
   // ogrencinin kendi sinifina ait konu sayisi ve bunlardan tamamlanmis
@@ -139,6 +147,17 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
       showGradeBackground
       gradeLevel={effectiveProfile?.grade_level}
     >
+      {profileInfoMissing && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <span>
+            Sınıf ve hedef sınav bilgin eksik görünüyor. Sana uygun konu ve soruları gösterebilmemiz için ayarlardan
+            bu bilgiyi güncellemelisin.
+          </span>
+          <Link href="/ogrenci/genel-ayarlar" className="shrink-0 font-semibold text-amber-900 underline">
+            Şimdi güncelle →
+          </Link>
+        </div>
+      )}
       {children}
       {coachContext && <CoachChat context={coachContext} />}
     </RoleShell>

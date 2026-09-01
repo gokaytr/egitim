@@ -52,7 +52,14 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
         </Card>
       ))}
 
-      {!questions?.length ? (
+      {studentProfile?.grade_level == null ? (
+        <Card>
+          <p className="text-sm text-amber-600">
+            Bu konudaki soruları görebilmen için önce Genel Ayarlar&apos;dan sınıf ve hedef sınav bilgini
+            tamamlaman gerekiyor.
+          </p>
+        </Card>
+      ) : !questions?.length ? (
         <Card>
           <p className="text-sm text-slate-600">
             Bu konuda henüz onaylanmış soru yok. Öğretmenin soru eklemesini bekleyin veya başka bir konu seçin.
