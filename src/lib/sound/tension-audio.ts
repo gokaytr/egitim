@@ -2,9 +2,9 @@
 
 // Ortak, dosya gerektirmeyen (Web Audio API ile aninda sentezlenen) gerilim/
 // heyecan sesleri - hem soru/deneme oncesi tam ekran geri sayimda (bkz.
-// pre-quiz-countdown.tsx) hem de "Değerlendiriliyor..." bekleme ekraninda
-// (bkz. evaluation-heartbeat.tsx) kullaniliyor. Kod tekrarini onlemek icin
-// tek bir yerde toplaniyor.
+// pre-quiz-countdown.tsx) hem de sonuc ekrani ilk gorundugunde caların
+// aninda "sonuc" sesinde (bkz. result-reveal-sound.tsx) kullaniliyor. Kod
+// tekrarini onlemek icin tek bir yerde toplaniyor.
 
 export function getAudioCtx(ref: { current: AudioContext | null }): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -53,6 +53,35 @@ function playThump(ctx: AudioContext, time: number, freq: number, duration: numb
   osc.frequency.setValueAtTime(freq, time);
   gain.gain.setValueAtTime(0.0001, time);
   gain.gain.exponentialRampToValueAtTime(peakGain, time + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  gain.gain.linearRampToValueAtTime(0, time + duration + 0.03);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
+}
+
+// Sonuc ekrani ilk gorundugunde bir kere calan, kisa ve aninda biten
+// yukselen bir "sonuc/basari" cinlemesi (C5-E5-G5-C6 arpej). Eskiden burada
+// "Degerlendiriliyor..." beklerken tekrar eden bir kalp atisi caliyordu, ama
+// o surekli/dongusel bir sesti - burada istenen aninda, tek seferlik bir
+// "sonuc verildi" hissi, o yuzden bekleme sirasinda degil sonuc ekrani
+// acildiginda tek sefer caliyor.
+export function playResultChime(ctx: AudioContext) {
+  const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+  const t0 = ctx.currentTime;
+  notes.forEach((freq, i) => {
+    playChimeNote(ctx, t0 + i * 0.11, freq, 0.35, 0.24);
+  });
+}
+
+function playChimeNote(ctx: AudioContext, time: number, freq: number, duration: number, peakGain: number) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(freq, time);
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(peakGain, time + 0.015);
   gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   gain.gain.linearRampToValueAtTime(0, time + duration + 0.03);
   osc.connect(gain);

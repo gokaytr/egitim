@@ -7,7 +7,7 @@ import { Card, Badge, Button } from "@/components/ui";
 import { QuestionAnswerList, DEFAULT_QUIZ_DISPLAY_SETTINGS, type QuizDisplaySettings } from "@/components/question-answer-list";
 import { AnswerReviewList } from "@/components/answer-review-list";
 import { PreQuizCountdown } from "@/components/pre-quiz-countdown";
-import { EvaluationHeartbeat } from "@/components/evaluation-heartbeat";
+import { ResultRevealSound } from "@/components/result-reveal-sound";
 import { levelFromScore, LEVEL_TITLES } from "@/lib/deneme/level";
 
 type Question = {
@@ -176,7 +176,8 @@ export function ExamRunner({
   if (result) {
     const level = levelFromScore(result.pct);
     return (
-      <div className="flex max-w-2xl flex-col gap-6">
+      <div className="flex w-full max-w-4xl flex-col gap-6">
+        <ResultRevealSound />
         <Card>
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Sonuç 🎉</h2>
           <p className="text-sm text-slate-600">
@@ -259,7 +260,6 @@ export function ExamRunner({
         finishLabel="Denemeyi Bitir"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <EvaluationHeartbeat active={submitting} />
     </div>
   );
 }
