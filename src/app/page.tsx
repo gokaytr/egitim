@@ -114,21 +114,26 @@ export default async function Home() {
           />
         )}
         {/* Video, gorselden daha "canli" kalsin diye gorseldeki kadar
-            koyultulmuyor - metnin okunurlugu icin sadece sol tarafta daha
-            belirgin, sag tarafta hafif bir gradyan yeterli. */}
+            koyultulmuyor. Onceki versiyonda soldan saga gidip koyudan
+            acaya donen bir gradyan kullaniliyordu; bu, videonun sol
+            yarisinin "kayboldugu", sag yarisinin ise oldugu gibi gorundugu
+            bir izlenim yaratiyordu. Artik butun video uzerinde AYNI, tek
+            duz (uniform) bir karartma var - metnin okunurlugu bu sabit
+            karartma ve alttaki text-shadow ile saglaniyor, video hicbir
+            noktada digerinden daha "acik/kapali" gorunmuyor. */}
         <div
           className={
             heroType === "video" && heroUrl
-              ? "absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/45 to-slate-950/10"
+              ? "absolute inset-0 bg-slate-950/45"
               : "absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40"
           }
         />
-        <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
+        <div className="relative mx-auto max-w-6xl px-6 py-20 [text-shadow:0_1px_12px_rgba(0,0,0,0.65)] md:py-28">
           <p className="text-xs font-bold tracking-[0.25em] text-blue-400">TÜRKİYE MÜFREDATINA GÖRE HAZIRLANDI</p>
           <h1 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-white md:text-6xl">
             1. sınıftan YKS&apos;ye, kişiye özel dijital dershanen
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-300 md:text-lg">
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-200 md:text-lg">
             Eksiğini tespit eden, çalışma programı çıkaran ve gerektiğinde özel derse yönlendiren yapay zekâ
             destekli sınav hazırlık platformu.
           </p>
