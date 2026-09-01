@@ -164,52 +164,64 @@ export default async function Home() {
           calisma yontemi acikca anlatiliyor (yonetici/ogretmen paneli gibi
           ic islevlerden hic bahsedilmiyor - bu bolum tamamen ogrenci/veli
           odakli). */}
-      <section id="sinavlar" className="mx-auto max-w-4xl px-6 pt-16 pb-4 text-center">
-        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
-          LGS, TYT, AYT, YKS, KPSS ve ALES hazırlığı tek platformda
-        </h2>
-        <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-          Odak, ilkokul 1. sınıftan üniversite sınavlarına ve kamu personeli sınavlarına kadar geniş bir yaş
-          aralığında kişiselleştirilmiş sınav hazırlığı sunar. Öğrenci önce kısa bir seviye tespiti yapar; sistem
-          hangi konularda eksik olduğunu, hangi soruları çözmesi gerektiğini ve ne kadar süre çalışması gerektiğini
-          otomatik olarak belirler. Matematik, Türkçe, Fen Bilimleri, Fizik, İngilizce ve daha birçok dersten
-          binlerce soru, konu anlatımı ve deneme sınavıyla düzenli çalışma alışkanlığı kazandırır.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          {EXAM_COURSES.map((c) => (
-            <span key={c} className="rounded-md border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-700">
-              {c}
-            </span>
-          ))}
+      <section id="sinavlar" className="pt-16 pb-4 text-center">
+        <div className="mx-auto max-w-4xl px-6">
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
+            LGS, TYT, AYT, YKS, KPSS ve ALES hazırlığı tek platformda
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
+            Odak, ilkokul 1. sınıftan üniversite sınavlarına ve kamu personeli sınavlarına kadar geniş bir yaş
+            aralığında kişiselleştirilmiş sınav hazırlığı sunar. Öğrenci önce kısa bir seviye tespiti yapar; sistem
+            hangi konularda eksik olduğunu, hangi soruları çözmesi gerektiğini ve ne kadar süre çalışması gerektiğini
+            otomatik olarak belirler. Matematik, Türkçe, Fen Bilimleri, Fizik, İngilizce ve daha birçok dersten
+            binlerce soru, konu anlatımı ve deneme sınavıyla düzenli çalışma alışkanlığı kazandırır.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {EXAM_COURSES.map((c) => (
+              <span key={c} className="rounded-md border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-700">
+                {c}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Ozellikler: referans tasarimdaki (DJI Agriculture) kare fotograf
           kartlari - her karede gercek bir fotograf ve uzerine bindirilmis
-          kalin/net iki satirlik baslik. */}
-      <section id="ozellikler" className="mx-auto max-w-6xl px-6 py-16">
-        <h2 className="text-center text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
-          Odak ile neler değişir?
-        </h2>
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURE_TILES.map((f) => (
-            <div key={f.title} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-900">
-              <Image
-                src={f.image}
-                alt=""
-                fill
-                className="object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
-                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60" />
-              <div className="absolute inset-x-5 top-6 text-center">
-                <h3 className="text-lg font-extrabold leading-snug text-white md:text-xl">{f.title}</h3>
+          kalin/net iki satirlik baslik.
+          Not: bu bolum, hero/veliler bolumleriyle ayni desende - disaridaki
+          <section> tam genislikte kaliyor, `mx-auto max-w-*` sadece ICERIDEKI
+          div'e uygulaniyor. Bunun nedeni: sayfanin kok kapsayicisi
+          `flex flex-col` oldugu icin, `<section>`'in KENDISINE `mx-auto`
+          verilirse flexbox'un "cross-axis auto margin" kurali devreye giriyor
+          ve bolum, beklenen max-w genisligi yerine kendi icerigine gore
+          (grid'de bu neredeyse sifir) kuculuyor - masaustunde kartlarin
+          minicik gorunmesinin sebebi buydu. */}
+      <section id="ozellikler" className="py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <h2 className="text-center text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
+            Odak ile neler değişir?
+          </h2>
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURE_TILES.map((f) => (
+              <div key={f.title} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-900">
+                <Image
+                  src={f.image}
+                  alt=""
+                  fill
+                  className="object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60" />
+                <div className="absolute inset-x-5 top-6 text-center">
+                  <h3 className="text-lg font-extrabold leading-snug text-white md:text-xl">{f.title}</h3>
+                </div>
+                <div className="absolute inset-x-5 bottom-5 text-center">
+                  <p className="text-sm font-medium leading-snug text-slate-200">{f.desc}</p>
+                </div>
               </div>
-              <div className="absolute inset-x-5 bottom-5 text-center">
-                <p className="text-sm font-medium leading-snug text-slate-200">{f.desc}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
