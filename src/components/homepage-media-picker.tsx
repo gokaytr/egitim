@@ -118,43 +118,59 @@ export function HomepageMediaPicker({
       </div>
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-        <div className="w-full max-w-[220px] shrink-0 overflow-hidden rounded-lg bg-slate-900 sm:w-40">
-          {previewUrl ? (
-            type === "video" ? (
-              <video src={previewUrl} className="aspect-video w-full object-cover" muted playsInline controls preload="metadata" />
+        <div className="w-full max-w-[220px] shrink-0">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Şu an seçili</p>
+          <div className="overflow-hidden rounded-lg bg-slate-900 sm:w-40">
+            {previewUrl ? (
+              type === "video" ? (
+                <video src={previewUrl} className="aspect-video w-full object-cover" autoPlay muted loop playsInline preload="metadata" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={previewUrl} alt="" className="aspect-video w-full object-cover" />
+              )
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewUrl} alt="" className="aspect-video w-full object-cover" />
-            )
-          ) : (
-            <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-400">Seçim yok</div>
-          )}
+              <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-400">Seçim yok</div>
+            )}
+          </div>
+          <p className="mt-1 truncate text-xs text-slate-500" title={url ?? undefined}>
+            {url ? (options.find((o) => o.url === url)?.label ?? "Yüklenen dosya") : "Varsayılan"}
+          </p>
         </div>
 
         <div className="flex-1">
           {options.length > 0 ? (
-            <div className="grid max-h-40 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-              {options.map((opt) => (
-                <button
-                  key={opt.url}
-                  type="button"
-                  onClick={() => setUrl(opt.url)}
-                  title={opt.label}
-                  className={`overflow-hidden rounded-md border-2 text-left transition ${
-                    url === opt.url ? "border-blue-600" : "border-transparent hover:border-slate-300"
-                  }`}
-                >
-                  {type === "image" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={opt.url} alt="" className="aspect-video w-full object-cover" />
-                  ) : (
-                    <div className="flex aspect-video w-full flex-col items-center justify-center gap-0.5 bg-slate-800 px-1 text-center text-[10px] text-slate-200">
-                      <span>▶</span>
-                      <span className="line-clamp-1">{opt.label}</span>
-                    </div>
-                  )}
-                </button>
-              ))}
+            <div className="grid max-h-48 grid-cols-3 gap-2.5 overflow-y-auto p-0.5 sm:grid-cols-4">
+              {options.map((opt) => {
+                const selected = url === opt.url;
+                return (
+                  <button
+                    key={opt.url}
+                    type="button"
+                    onClick={() => setUrl(opt.url)}
+                    title={opt.label}
+                    className={`relative overflow-hidden rounded-md text-left transition ${
+                      selected
+                        ? "ring-[3px] ring-blue-600 ring-offset-2 ring-offset-white"
+                        : "ring-1 ring-slate-200 hover:ring-slate-400"
+                    }`}
+                  >
+                    {type === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={opt.url} alt="" className="aspect-video w-full object-cover" />
+                    ) : (
+                      <video src={opt.url} className="aspect-video w-full bg-slate-800 object-cover" autoPlay muted loop playsInline preload="metadata" />
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 to-transparent px-1 pb-0.5 pt-2 text-[10px] leading-tight text-white">
+                      {opt.label}
+                    </span>
+                    {selected && (
+                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <p className="text-xs text-slate-400">

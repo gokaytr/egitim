@@ -101,7 +101,7 @@ export default async function Home() {
             muted
             loop
             playsInline
-            className="absolute inset-0 h-full w-full object-cover opacity-60"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
           <Image
@@ -113,7 +113,16 @@ export default async function Home() {
             sizes="100vw"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40" />
+        {/* Video, gorselden daha "canli" kalsin diye gorseldeki kadar
+            koyultulmuyor - metnin okunurlugu icin sadece sol tarafta daha
+            belirgin, sag tarafta hafif bir gradyan yeterli. */}
+        <div
+          className={
+            heroType === "video" && heroUrl
+              ? "absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/45 to-slate-950/10"
+              : "absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40"
+          }
+        />
         <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
           <p className="text-xs font-bold tracking-[0.25em] text-blue-400">TÜRKİYE MÜFREDATINA GÖRE HAZIRLANDI</p>
           <h1 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-white md:text-6xl">
@@ -206,7 +215,7 @@ export default async function Home() {
                       muted
                       loop
                       playsInline
-                      className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
                   ) : (
                     <Image
@@ -217,7 +226,17 @@ export default async function Home() {
                       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60" />
+                  {/* Video secildiginde gorseldeki kadar koyu bir kaplama
+                      kullanmiyoruz - sadece baslik/aciklamanin okunmasi icin
+                      ust ve altta hafif bir gradyan birakiyoruz, orta kisim
+                      videonun net gorunmesi icin acik kaliyor. */}
+                  <div
+                    className={
+                      mediaType === "video" && mediaUrl
+                        ? "absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-slate-950/45"
+                        : "absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60"
+                    }
+                  />
                   <div className="absolute inset-x-5 top-6 text-center">
                     <h3 className="text-lg font-extrabold leading-snug text-white md:text-xl">{f.title}</h3>
                   </div>
