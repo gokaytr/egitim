@@ -1,33 +1,43 @@
 import Image from "next/image";
 import Link from "next/link";
-import { EducationBackground } from "@/components/education-background";
 import { SiteHeader } from "@/components/site-header";
 import { createClient } from "@/lib/supabase/server";
 
-const FEATURES = [
+// Referans (DJI Agriculture) tasarimindaki gibi: her ozellik gercek bir
+// fotografin uzerine bindirilmis, kalin/net iki satirlik bir baslikla
+// anlatiliyor - ikon + aciklama kutusu yerine kare fotograf kartlari.
+// Gorseller /public/grade-bg altindaki, sitede zaten kullanilan gercek
+// ogrenci fotograflari (yapay zeka gorseli degil).
+const FEATURE_TILES = [
   {
-    title: "1-2 soruyla eksik tespiti",
-    desc: "Öğrenci bir konuda kendini nasıl hissettiğini söyler, sistem birkaç soruyla tam olarak nerede takıldığını bulur.",
+    image: "/grade-bg/ilkokul-1.jpg",
+    title: "1-2 Soruyla Eksik Tespiti",
+    desc: "Birkaç soruyla tam olarak nerede takıldığını bulur",
   },
   {
-    title: "Kişisel yıllık program",
-    desc: "Hedef sınava (LGS, TYT, AYT, YKS, KPSS, ALES) göre otomatik çalışma takvimi ve haftalık hedefler.",
+    image: "/grade-bg/ortaokul-1.jpg",
+    title: "Kişisel Yıllık Program",
+    desc: "Hedefe göre otomatik çalışma takvimi ve haftalık hedefler",
   },
   {
-    title: "Yapay zeka destekli analiz",
-    desc: "Yanlışlardaki ortak hata örüntüsünü (işlem hatası, kavram yanılgısı, dikkatsizlik) tespit eder.",
+    image: "/grade-bg/lise-1.jpg",
+    title: "Yapay Zekâ Destekli Analiz",
+    desc: "Yanlışlardaki ortak hata örüntüsünü tespit eder",
   },
   {
-    title: "Gerekirse özel derse yönlendirme",
-    desc: "Öğrenci tek başına aşamadığı konularda alanında uzman bir öğretmenle eşleştirilir ve online ders randevusu oluşturulur.",
+    image: "/grade-bg/ortaokul-2.jpg",
+    title: "Gerektiğinde Özel Ders",
+    desc: "Uzman bir öğretmenle eşleştirilir, online ders randevusu alınır",
   },
   {
-    title: "Veli bilgilendirmesi",
-    desc: "İlerleme raporları, çözülen/çözülmesi gereken sorular ve geçmiş sınav sonuçları veliye anlık olarak yansır.",
+    image: "/grade-bg/ilkokul-2.jpg",
+    title: "Anlık Veli Bilgilendirmesi",
+    desc: "İlerleme raporları ve sınav sonuçları veliye anlık yansır",
   },
   {
-    title: "1. sınıftan 12. sınıfa tüm dersler",
-    desc: "Matematik, Türkçe, Fen Bilimleri, Fizik, İngilizce ve daha fazlası - müfredata birebir uygun konu ağacıyla.",
+    image: "/grade-bg/ilkokul-3.jpg",
+    title: "1. Sınıftan 12. Sınıfa Tüm Dersler",
+    desc: "Müfredata birebir uygun konu ağacıyla tüm dersler",
   },
 ];
 
@@ -68,6 +78,14 @@ const ROLE_PANEL_CTA: Record<string, string> = {
 // kalkiyor, hem de zaten giris yapmis bir ziyaretciye anlamsiz "Ogrenci
 // olarak basla" / "Zaten hesabim var" butonlari yerine dogrudan kendi
 // paneline goturen tek bir buton gosteriliyor.
+//
+// Tasarim notu: sayfanin tamaminda daha once kullanilan, "yapay zeka ile
+// hazirlanmis" izlenimi veren seffaf/soluk arka plan gorseli (sabit
+// dijital-kurs.jpg + beyaz gradyan) ve suzulen formul animasyonu tamamen
+// kaldirildi. Yerine, kurumsal bir referans tasarimdan (DJI Agriculture)
+// esinlenilen koyu lacivert + mavi vurgu renk paleti, kalin/net baslik
+// tipografisi ve gercek fotograflarin uzerine bindirilmis kare kartlar
+// kullanildi.
 export default async function Home() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
@@ -87,49 +105,53 @@ export default async function Home() {
   const isLoggedIn = !!panelHref;
 
   return (
-    <div className="relative flex flex-1 flex-col">
-      {/* Sayfa boyunca sabit kalan (scroll ile kaybolmayan), soluk ve
-          canlandirici arka plan gorseli - metin okunurlugu icin uzerine
-          beyaz agirlikli bir gradyan bindirilmis. */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="flex flex-1 flex-col bg-white">
+      <SiteHeader
+        initialIsLoggedIn={isLoggedIn}
+        initialPanelHref={panelHref}
+        initialPanelLabel={panelLabel}
+        showSectionNav
+      />
+
+      {/* Hero: koyu, tam genislikte, gercek bir fotografin uzerine
+          bindirilmis kalin baslik - kurumsal referans tasarimdaki hero
+          bolumune benzer sade/net yapi. */}
+      <section className="relative overflow-hidden bg-slate-950">
         <Image
-          src="/dijital-kurs.jpg"
+          src="/grade-bg/varsayilan.jpg"
           alt=""
           fill
           priority
-          className="object-cover opacity-40"
+          className="object-cover opacity-60"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-white/60" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-red-100/25 via-transparent to-rose-100/25" />
-      </div>
-
-      <SiteHeader initialIsLoggedIn={isLoggedIn} initialPanelHref={panelHref} initialPanelLabel={panelLabel} />
-
-      <section className="relative overflow-hidden">
-        <EducationBackground />
-        <div className="relative mx-auto max-w-3xl px-6 py-16 text-center md:py-24">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40" />
+        <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <p className="text-xs font-bold tracking-[0.25em] text-blue-400">TÜRKİYE MÜFREDATINA GÖRE HAZIRLANDI</p>
+          <h1 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-white md:text-6xl">
             1. sınıftan YKS&apos;ye, kişiye özel dijital dershanen
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg text-slate-600">
-            Türkiye müfredatına göre eksiğini tespit eden, çalışma programı çıkaran ve gerektiğinde
-            özel derse yönlendiren yapay zeka destekli sınav hazırlık platformu.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-300 md:text-lg">
+            Eksiğini tespit eden, çalışma programı çıkaran ve gerektiğinde özel derse yönlendiren yapay zekâ
+            destekli sınav hazırlık platformu.
           </p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             {isLoggedIn ? (
               <Link
                 href={panelHref!}
-                className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                className="rounded-md bg-blue-600 px-7 py-3.5 text-sm font-bold text-white hover:bg-blue-500"
               >
                 {panelCta} →
               </Link>
             ) : (
               <>
-                <Link href="/kayit" className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700">
+                <Link href="/kayit" className="rounded-md bg-blue-600 px-7 py-3.5 text-sm font-bold text-white hover:bg-blue-500">
                   Öğrenci olarak başla
                 </Link>
-                <Link href="/giris" className="rounded-lg border border-slate-300 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                <Link
+                  href="/giris"
+                  className="rounded-md border border-slate-500 px-7 py-3.5 text-sm font-bold text-white hover:bg-white/10"
+                >
                   Zaten hesabım var
                 </Link>
               </>
@@ -142,8 +164,8 @@ export default async function Home() {
           calisma yontemi acikca anlatiliyor (yonetici/ogretmen paneli gibi
           ic islevlerden hic bahsedilmiyor - bu bolum tamamen ogrenci/veli
           odakli). */}
-      <section className="relative mx-auto max-w-4xl px-6 pb-4 text-center">
-        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
+      <section id="sinavlar" className="mx-auto max-w-4xl px-6 pt-16 pb-4 text-center">
+        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
           LGS, TYT, AYT, YKS, KPSS ve ALES hazırlığı tek platformda
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
@@ -155,31 +177,55 @@ export default async function Home() {
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {EXAM_COURSES.map((c) => (
-            <span key={c} className="rounded-full border border-red-200 bg-red-50/80 px-4 py-1.5 text-sm font-semibold text-red-700">
+            <span key={c} className="rounded-md border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-700">
               {c}
             </span>
           ))}
         </div>
       </section>
 
-      <section className="relative mx-auto grid max-w-5xl grid-cols-1 gap-5 px-6 py-16 sm:grid-cols-2 md:grid-cols-3">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur-sm">
-            <h3 className="font-semibold text-slate-900">{f.title}</h3>
-            <p className="mt-2 text-sm text-slate-600">{f.desc}</p>
-          </div>
-        ))}
+      {/* Ozellikler: referans tasarimdaki (DJI Agriculture) kare fotograf
+          kartlari - her karede gercek bir fotograf ve uzerine bindirilmis
+          kalin/net iki satirlik baslik. */}
+      <section id="ozellikler" className="mx-auto max-w-6xl px-6 py-16">
+        <h2 className="text-center text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
+          Odak ile neler değişir?
+        </h2>
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURE_TILES.map((f) => (
+            <div key={f.title} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-900">
+              <Image
+                src={f.image}
+                alt=""
+                fill
+                className="object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60" />
+              <div className="absolute inset-x-5 top-6 text-center">
+                <h3 className="text-lg font-extrabold leading-snug text-white md:text-xl">{f.title}</h3>
+              </div>
+              <div className="absolute inset-x-5 bottom-5 text-center">
+                <p className="text-sm font-medium leading-snug text-slate-200">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <section className="relative mx-auto max-w-4xl px-6 pb-16 text-center">
-        <h2 className="text-xl font-semibold text-slate-900">Veliler de sürecin içinde</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
-          Veli hesabından çocuğunun genel durumunu, çalışma programını, çözdüğü ve çözmesi gereken soruları, geçmiş
-          sınav sonuçlarını ve gerektiğinde özel ders taleplerini tek ekrandan takip edebilir.
-        </p>
+      {/* Veliler icin: koyu lacivert bir bant - kurumsal sitelerdeki "call to
+          action" seritlerine benzer, ust/alt bolumlerden net ayrisiyor. */}
+      <section id="veliler" className="bg-slate-900">
+        <div className="mx-auto max-w-4xl px-6 py-16 text-center">
+          <h2 className="text-xl font-extrabold tracking-tight text-white md:text-2xl">Veliler de sürecin içinde</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
+            Veli hesabından çocuğunun genel durumunu, çalışma programını, çözdüğü ve çözmesi gereken soruları, geçmiş
+            sınav sonuçlarını ve gerektiğinde özel ders taleplerini tek ekrandan takip edebilir.
+          </p>
+        </div>
       </section>
 
-      <footer className="relative border-t border-slate-200/70 bg-white/70 px-6 py-6 text-center text-xs text-slate-400 backdrop-blur">
+      <footer className="border-t border-slate-800 bg-slate-950 px-6 py-6 text-center text-xs text-slate-500">
         © {new Date().getFullYear()} Odak — Türkiye eğitim sistemine göre geliştirilmiştir.
       </footer>
     </div>
