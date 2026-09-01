@@ -2,46 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { createClient } from "@/lib/supabase/server";
-
-// Referans (DJI Agriculture) tasarimindaki gibi: her ozellik gercek bir
-// fotografin uzerine bindirilmis, kalin/net iki satirlik bir baslikla
-// anlatiliyor - ikon + aciklama kutusu yerine kare fotograf kartlari.
-// Gorseller /public/grade-bg altindaki, sitede zaten kullanilan gercek
-// ogrenci fotograflari (yapay zeka gorseli degil).
-const FEATURE_TILES = [
-  {
-    image: "/grade-bg/ilkokul-1.jpg",
-    title: "1-2 Soruyla Eksik Tespiti",
-    desc: "Birkaç soruyla tam olarak nerede takıldığını bulur",
-  },
-  {
-    image: "/grade-bg/ortaokul-1.jpg",
-    title: "Kişisel Yıllık Program",
-    desc: "Hedefe göre otomatik çalışma takvimi ve haftalık hedefler",
-  },
-  {
-    image: "/grade-bg/lise-1.jpg",
-    title: "Yapay Zekâ Destekli Analiz",
-    desc: "Yanlışlardaki ortak hata örüntüsünü tespit eder",
-  },
-  {
-    image: "/grade-bg/ortaokul-2.jpg",
-    title: "Gerektiğinde Özel Ders",
-    desc: "Uzman bir öğretmenle eşleştirilir, online ders randevusu alınır",
-  },
-  {
-    image: "/grade-bg/ilkokul-2.jpg",
-    title: "Anlık Veli Bilgilendirmesi",
-    desc: "İlerleme raporları ve sınav sonuçları veliye anlık yansır",
-  },
-  {
-    image: "/grade-bg/ilkokul-3.jpg",
-    title: "1. Sınıftan 12. Sınıfa Tüm Dersler",
-    desc: "Müfredata birebir uygun konu ağacıyla tüm dersler",
-  },
-];
-
-const EXAM_COURSES = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+import { FEATURE_TILES, HERO_DEFAULT_IMAGE, EXAM_COURSES } from "@/lib/homepage-content";
 
 // site-header.tsx ve middleware.ts'teki ROLE_HOME ile ayni esleme - bkz.
 // site-header.tsx'teki not: middleware server-only import'lar icerdigi icin
@@ -86,9 +47,19 @@ const ROLE_PANEL_CTA: Record<string, string> = {
 // esinlenilen koyu lacivert + mavi vurgu renk paleti, kalin/net baslik
 // tipografisi ve gercek fotograflarin uzerine bindirilmis kare kartlar
 // kullanildi.
+//
+// Hero ve 6 ozellik kutusunun medyasi (gorsel/video) artik admin panelinden
+// (Ayarlar > Anasayfa Ayarlari) degistirilebilir - bkz. homepage_settings
+// ve homepage_tiles tablolari. Admin hicbir sey secmediyse asagidaki
+// varsayilan gorseller (FEATURE_TILES / HERO_DEFAULT_IMAGE) kullanilmaya
+// devam eder.
 export default async function Home() {
   const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
+  const [{ data: userData }, { data: heroSettings }, { data: tileSettings }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
+    supabase.from("homepage_tiles").select("tile_index, media_type, media_url"),
+  ]);
 
   let panelHref: string | null = null;
   let panelLabel = "Panelim";
@@ -104,6 +75,11 @@ export default async function Home() {
 
   const isLoggedIn = !!panelHref;
 
+  const heroType = heroSettings?.hero_media_type ?? "image";
+  const heroUrl = heroSettings?.hero_media_url ?? (heroType === "image" ? HERO_DEFAULT_IMAGE : null);
+
+  const tileMediaByIndex = new Map((tileSettings ?? []).map((t) => [t.tile_index, t]));
+
   return (
     <div className="flex flex-1 flex-col bg-white">
       <SiteHeader
@@ -113,18 +89,30 @@ export default async function Home() {
         showSectionNav
       />
 
-      {/* Hero: koyu, tam genislikte, gercek bir fotografin uzerine
-          bindirilmis kalin baslik - kurumsal referans tasarimdaki hero
-          bolumune benzer sade/net yapi. */}
+      {/* Hero: koyu, tam genislikte, gercek bir fotografin ya da (admin
+          secerse) bir videonun uzerine bindirilmis kalin baslik - kurumsal
+          referans tasarimdaki (DJI Agriculture) hero bolumune benzer
+          sade/net yapi. */}
       <section className="relative overflow-hidden bg-slate-950">
-        <Image
-          src="/grade-bg/varsayilan.jpg"
-          alt=""
-          fill
-          priority
-          className="object-cover opacity-60"
-          sizes="100vw"
-        />
+        {heroType === "video" && heroUrl ? (
+          <video
+            src={heroUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover opacity-60"
+          />
+        ) : (
+          <Image
+            src={heroUrl ?? HERO_DEFAULT_IMAGE}
+            alt=""
+            fill
+            priority
+            className="object-cover opacity-60"
+            sizes="100vw"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40" />
         <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
           <p className="text-xs font-bold tracking-[0.25em] text-blue-400">TÜRKİYE MÜFREDATINA GÖRE HAZIRLANDI</p>
@@ -186,9 +174,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Ozellikler: referans tasarimdaki (DJI Agriculture) kare fotograf
-          kartlari - her karede gercek bir fotograf ve uzerine bindirilmis
-          kalin/net iki satirlik baslik.
+      {/* Ozellikler: referans tasarimdaki (DJI Agriculture) kare fotograf/
+          video kartlari - her karede gercek bir gorsel ya da (admin
+          secerse) bir video ve uzerine bindirilmis kalin/net iki satirlik
+          baslik.
           Not: bu bolum, hero/veliler bolumleriyle ayni desende - disaridaki
           <section> tam genislikte kaliyor, `mx-auto max-w-*` sadece ICERIDEKI
           div'e uygulaniyor. Bunun nedeni: sayfanin kok kapsayicisi
@@ -203,24 +192,41 @@ export default async function Home() {
             Odak ile neler değişir?
           </h2>
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURE_TILES.map((f) => (
-              <div key={f.title} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-900">
-                <Image
-                  src={f.image}
-                  alt=""
-                  fill
-                  className="object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60" />
-                <div className="absolute inset-x-5 top-6 text-center">
-                  <h3 className="text-lg font-extrabold leading-snug text-white md:text-xl">{f.title}</h3>
+            {FEATURE_TILES.map((f, i) => {
+              const tileIndex = i + 1;
+              const override = tileMediaByIndex.get(tileIndex);
+              const mediaType = override?.media_type ?? "image";
+              const mediaUrl = override?.media_url ?? (mediaType === "image" ? f.defaultImage : null);
+              return (
+                <div key={f.title} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-900">
+                  {mediaType === "video" && mediaUrl ? (
+                    <video
+                      src={mediaUrl}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
+                    />
+                  ) : (
+                    <Image
+                      src={mediaUrl ?? f.defaultImage}
+                      alt=""
+                      fill
+                      className="object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-70"
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/60" />
+                  <div className="absolute inset-x-5 top-6 text-center">
+                    <h3 className="text-lg font-extrabold leading-snug text-white md:text-xl">{f.title}</h3>
+                  </div>
+                  <div className="absolute inset-x-5 bottom-5 text-center">
+                    <p className="text-sm font-medium leading-snug text-slate-200">{f.desc}</p>
+                  </div>
                 </div>
-                <div className="absolute inset-x-5 bottom-5 text-center">
-                  <p className="text-sm font-medium leading-snug text-slate-200">{f.desc}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

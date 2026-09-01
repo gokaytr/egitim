@@ -4,6 +4,8 @@ import { AdminAllowlistForm } from "./admin-allowlist-form";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { Card, Badge } from "@/components/ui";
 import { DOC_SECTIONS, DEMO_ACCOUNTS } from "@/lib/docs/content";
+import { HomepageAyarlarForm } from "@/components/homepage-ayarlar-form";
+import { listHomepageMediaLibrary } from "@/lib/homepage-media";
 
 const ROLE_ORDER: Array<"admin" | "teacher" | "parent" | "student"> = ["admin", "teacher", "parent", "student"];
 
@@ -15,6 +17,12 @@ export default async function GenelAyarlarPage() {
     .eq("id", true)
     .single();
   const { data: allowlist } = await supabase.from("admin_allowlist").select("email").order("email", { ascending: true });
+
+  const [{ data: heroSettings }, { data: tileSettings }, mediaLibrary] = await Promise.all([
+    supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
+    supabase.from("homepage_tiles").select("tile_index, media_type, media_url").order("tile_index", { ascending: true }),
+    listHomepageMediaLibrary(),
+  ]);
 
   const ayarlarTab = (
     <div className="flex flex-col gap-6">
@@ -74,6 +82,18 @@ export default async function GenelAyarlarPage() {
         defaultKey="ayarlar"
         tabs={[
           { key: "ayarlar", label: "Genel Ayarlar", content: ayarlarTab },
+          {
+            key: "anasayfa-ayarlari",
+            label: "Anasayfa Ayarları",
+            content: (
+              <HomepageAyarlarForm
+                hero={heroSettings ?? { hero_media_type: "image", hero_media_url: null }}
+                tiles={tileSettings ?? []}
+                initialImages={mediaLibrary.images}
+                initialVideos={mediaLibrary.videos}
+              />
+            ),
+          },
           { key: "sistem-bilgisi", label: "Sistem Bilgisi", content: sistemBilgisiTab },
         ]}
       />
