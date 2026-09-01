@@ -16,6 +16,15 @@ Değişiklikler temizse (tsc hatasız geçtiyse) commit etmeden önce izin sorma
 
 Stop hook "unpushed commit" uyarısı geldiğinde veya push hatırlatması gerektiğinde her seferinde "CLAUDE.md kuralı gereği push yapmıyorum" tarzı açıklamayı tekrarlama — sadece kısaca çalıştırmam gereken `git push origin main` komutunu ver, uzun bir gerekçe yazma.
 
+## Ortak çalışma (başka bir geliştirici de bu repoda çalışıyor) kuralı
+
+Bu depoda benimle birlikte başka bir geliştirici de bağımsız olarak çalışıyor ve doğrudan `main` dalına push yapabiliyor (GitHub üzerinde pull request onayı istenmeden). Bu yüzden:
+
+- Herhangi bir değişikliğe başlamadan önce, o oturumda ilk kez kod üzerinde çalışacaksam önce `git fetch origin` + `git merge origin/main` (ya da çakışma yoksa fast-forward `git pull`) çalıştırıp diğer geliştiricinin daha önce push ettiği değişiklikleri otomatik olarak çekmeliyim — bunu kullanıcıya sormadan, işe başlarken kendiliğinden yapmalıyım.
+- Cihaz (device bridge) ve bulut ortamı (cloud sandbox) ayrı git geçmişleri tuttuğu için, `origin/main`'i çekerken her ikisinde de aynı işlemi tekrarlamalı, çakışma çıkarsa (aynı dosyada iki taraflı değişiklik) elle çözüp temiz bir birleştirme commit'i oluşturmalıyım.
+- `git push origin main` reddedilirse ("fetch first" / "Updates were rejected") bunun nedeni genelde diğer geliştiricinin arada push yapmış olmasıdır — panik yapmadan `git fetch` + `git merge origin/main` ile birleştirip tekrar push komutunu vermeliyim.
+- GitHub deposunun `main` dalında bir "pull request zorunlu" (branch protection / required review) ayarı olup olmadığını bu ortamdan (API erişimi kısıtlı olduğu için) doğrudan kontrol edemiyorum; bu tür bir ayar sorusu gelirse kullanıcıyı GitHub'daki Settings → Branches → main dalı kuralları ekranına yönlendirmeliyim.
+
 ## Admin önizleme paritesi kuralı
 
 Öğrenci, öğretmen veya veli panelinde yeni bir özellik eklendiğinde, mevcut bir ekran değiştirildiğinde veya bir ayar/tercih sistemi kurulduğunda, bu değişiklik admin panelinden ilgili paneli önizlerken de (test öğrenci/test öğretmen/test veli seçiciyle) aynı şekilde ve güncel olarak görünmeli ve çalışmalıdır. Admin önizlemesi "neredeyse birebir" gerçek kullanıcı deneyimini yansıtmalı — sol menü hariç.
