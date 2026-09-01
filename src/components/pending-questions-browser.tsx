@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Badge, Card } from "@/components/ui";
 import { ApproveButton } from "@/components/approve-button";
 import { AiCheckButton } from "@/components/ai-check-button";
+import { DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
 
 export type PendingQuestion = {
   id: string;
@@ -12,7 +13,7 @@ export type PendingQuestion = {
   correct_option: string;
   explanation?: string | null;
   source: string;
-  difficulty: number | null;
+  difficulty: QuestionDifficulty | null;
   topic_id: string;
 };
 
@@ -231,7 +232,7 @@ export function PendingQuestionsBrowser({ topics, questions }: { topics: TopicRe
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Badge tone="amber">{q.source === "ai" ? "AI üretimi" : q.source}</Badge>
                   <Badge>{selectedTopic.name}</Badge>
-                  {q.difficulty != null && <Badge>Zorluk {q.difficulty}/5</Badge>}
+                  {q.difficulty != null && <Badge>Zorluk: {DIFFICULTY_LABELS[q.difficulty]}</Badge>}
                   <Badge tone="green">Doğru cevap: {q.correct_option}</Badge>
                 </div>
                 <p className="font-medium text-slate-900">{q.body}</p>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui";
+import { DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
 
 type Question = {
   id: string;
@@ -11,7 +12,7 @@ type Question = {
   explanation?: string | null;
   is_approved: boolean;
   source: string;
-  difficulty: number | null;
+  difficulty: QuestionDifficulty | null;
   topic_id: string;
 };
 
@@ -195,7 +196,7 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                   <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
                   <Badge>{q.source === "ai" ? "AI üretimi" : q.source}</Badge>
-                  {q.difficulty != null && <Badge>Zorluk {q.difficulty}/5</Badge>}
+                  {q.difficulty != null && <Badge>Zorluk: {DIFFICULTY_LABELS[q.difficulty]}</Badge>}
                   <Badge tone="green">Doğru cevap: {q.correct_option}</Badge>
                 </div>
                 <p className="font-medium text-slate-900">{i + 1}. {q.body}</p>

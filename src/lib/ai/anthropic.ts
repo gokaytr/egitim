@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
 
 export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -84,14 +85,32 @@ Aşağıdaki JSON formatında ve SADECE JSON döndür:
   }
 }
 
+// Her zorluk kademesinin AI'ya ne anlama geldigini somut olarak anlatan
+// tarif - sadece "zor" kelimesini kullanmak modelin ne kadar zor uretecegini
+// belirsiz birakiyordu, bu yuzden her kademe icin bilissel/yapisal bir tarif
+// veriyoruz (ÖSYM'nin sinav teknikleri kitapciklarindaki mantiga yakin).
+const DIFFICULTY_PROMPT_HINTS: Record<QuestionDifficulty, string> = {
+  kolay:
+    "doğrudan bir bilgiyi/tanımı hatırlama ya da tek adımlı, açık bir uygulama gerektirir - öğrenci soruyu okur okumaz çözüm yolunu görebilmeli",
+  orta:
+    "iki-üç adımlı bir uygulama ya da bir kuralı yeni bir örneğe uyarlama gerektirir - ilk bakışta çözüm yolu net değildir, biraz düşünmek gerekir",
+  zor:
+    "çok adımlı akıl yürütme, birden fazla kazanımı aynı anda kullanma ya da bilgiyi alışılmadık bir bağlamda/bir senaryo içinde uygulama gerektirir",
+  cok_zor:
+    "ÖSYM tarzı: uzun ve bağlamsal bir kök (gerekirse kısa bir senaryo/paragraf/veri seti ile başlar), birden fazla kazanımın sentezini ve dikkatli, çok adımlı bir çözümü gerektirir - deneyimli bir öğrenci bile en az bir kez kontrol etmeden emin olamaz",
+};
+
 /**
- * Öğretmenin isteği üzerine bir konuya, belirtilen zorluk seviyesinde
- * taslak sorular üretir. Üretilen sorular is_approved=false olarak kaydedilmelidir.
+ * Öğretmenin isteği üzerine bir konuya, belirtilen zorluk kademesinde
+ * yayınevi/ÖSYM kalitesinde taslak sorular üretir. Üretilen sorular
+ * is_approved=false olarak kaydedilir (öğrenciye hemen gösterilir, ama
+ * öğretmen/admin ayrıca "Soru Onayı" ekranından inceleyip onaylayana kadar
+ * "onaylı" rozetini almaz - bkz. api/ai/generate-questions/route.ts).
  */
 export async function generateQuestions(params: {
   topicName: string;
   gradeLevel: number | null;
-  difficulty: number;
+  difficulty: QuestionDifficulty;
   count: number;
   examTypes: string[];
 }) {
@@ -101,16 +120,22 @@ export async function generateQuestions(params: {
   try {
     message = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system:
-        "Sen Türkiye müfredatına uygun, çıkmış sınav sorularının tarzına yakın çoktan seçmeli soru hazırlayan bir eğitim içerik uzmanısın. " +
-        "Şekil/grafik gerektiren soru ÜRETME - sadece metinle çözülebilecek sorular yaz. Her soru için 4 şık (A-D) ve tek doğru cevap olmalı.",
+        "Sen Türkiye'de ÖSYM sınavları (LGS, TYT, AYT, YKS) ve saygın yayınevleri için soru yazan, o işi çok iyi bilen kıdemli bir soru yazarı/editörsün. " +
+        "Amacın 'ders kitabı basitliğinde' sorular değil, gerçek bir sınavda karşılaşılabilecek, özenle kurgulanmış özgün sorular üretmek. Kurallar:\n" +
+        "1) Soru kökü tek cümlelik ezber sorusu olmamalı; zorluk kademesi 'orta' ve üzerindeyse bağlamlı bir cümle/kısa senaryo/veri ile kurulmalı.\n" +
+        "2) Her yanlış şık RASTGELE olmamalı; her biri öğrencinin yapabileceği GERÇEKÇİ ve SPESİFİK bir hatayı (işlem hatası, kavram yanılgısı, eksik okuma, yanlış formül vb.) yansıtmalı - option_error_tags alanında bu hatayı adlandır.\n" +
+        "3) Sayısal/işlem içeren bir soru yazıyorsan çözümü kafanda iki kez kontrol et, doğru cevabın gerçekten doğru olduğundan ve diğer 3 şıkkın kesinlikle yanlış olduğundan emin ol - bir soruda asla birden fazla doğru şık olamaz.\n" +
+        "4) Aynı kalıbı/şablonu art arda tekrar etme; sayıları, bağlamları ve cümle yapılarını her soruda çeşitlendir.\n" +
+        "5) Türkçe dil bilgisi ve yazım kurallarına tam uy.\n" +
+        "6) Şekil/grafik gerektiren soru ÜRETME - sadece metinle (gerekiyorsa sayısal veri/tablo metin içinde verilerek) çözülebilecek sorular yaz. Her soru için 4 şık (A-D) ve tek doğru cevap olmalı.",
       messages: [
         {
           role: "user",
           content: `Konu: ${topicName} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"})
 Sınav türü: ${examTypes.join(", ") || "genel"}
-Zorluk seviyesi (1-5): ${difficulty}
+Zorluk kademesi: ${DIFFICULTY_LABELS[difficulty]} — ${DIFFICULTY_PROMPT_HINTS[difficulty]}
 Üretilecek soru sayısı: ${count}
 
 Aşağıdaki JSON formatında ve SADECE JSON dizisi döndür:
@@ -119,8 +144,8 @@ Aşağıdaki JSON formatında ve SADECE JSON dizisi döndür:
     "body": "soru metni",
     "options": {"A": "...", "B": "...", "C": "...", "D": "..."},
     "correct_option": "A",
-    "explanation": "çözüm açıklaması",
-    "option_error_tags": {"B": "işlem_hatası", "C": "kavram_yanilgisi", "D": "dikkatsizlik"}
+    "explanation": "doğru cevabın neden doğru olduğunu adım adım açıklayan çözüm - öğrenci bunu okuyunca mantığı tam anlamalı",
+    "option_error_tags": {"B": "hangi somut hatayı yaptığı için bu şıkkı işaretler", "C": "...", "D": "..."}
   }
 ]`,
         },
@@ -162,7 +187,7 @@ export async function checkQuestionQuality(params: {
   correctOption: string;
   topicName: string | null;
   gradeLevel: number | null;
-  difficulty: number | null;
+  difficulty: QuestionDifficulty | null;
 }) {
   const { body, options, correctOption, topicName, gradeLevel, difficulty } = params;
 
@@ -180,7 +205,7 @@ export async function checkQuestionQuality(params: {
           role: "user",
           content: `Aşağıdaki soruyu kontrol et:
 
-Konu: ${topicName ?? "belirtilmemiş"} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"}), Zorluk: ${difficulty ?? "belirtilmemiş"}/5
+Konu: ${topicName ?? "belirtilmemiş"} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"}), Zorluk kademesi: ${difficulty ? DIFFICULTY_LABELS[difficulty] : "belirtilmemiş"}
 
 Soru: ${body}
 ${Object.entries(options)

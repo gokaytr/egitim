@@ -14,9 +14,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Giriş gerekli" }, { status: 401 });
   }
 
-  // Onay bekleyen (is_approved=false) sorulari RLS'e gore sadece admin/
-  // ogretmen/moderator okuyabiliyor - bu sorgu zaten dogal bir yetki
-  // kontrolu gorevi goruyor, ayrica rol kontrolune gerek yok.
+  // Sorular artik is_approved=false iken de ogrenciye gosteriliyor (RLS
+  // butun giris yapmis kullanicilara SELECT izni veriyor), bu yuzden bu
+  // endpoint'e artik RLS'in kendisi degil, burada acikca yaptigimiz rol
+  // kontrolu erisim engelliyor.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userData.user.id)
+    .single();
+
+  if (!profile || !["admin", "teacher", "moderator"].includes(profile.role)) {
+    return NextResponse.json({ error: "Bu işlem için yetkin yok" }, { status: 403 });
+  }
+
   const { data: question, error } = await supabase
     .from("questions")
     .select("id, body, options, correct_option, difficulty, topics(name, grade_level)")

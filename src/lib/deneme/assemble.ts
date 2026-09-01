@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LEVEL_TO_DIFFICULTY, type LevelLabel } from "@/lib/deneme/level";
+import { DIFFICULTY_RANK, type QuestionDifficulty } from "@/lib/questions/difficulty";
 
 // "Deneme" (rastgele/onerilen) ve "Seviye Tespit Sinavi" ekranlarinin
 // arkasindaki ortak montaj mantigi: ogrencinin sinif seviyesine kadar olan
@@ -50,23 +51,25 @@ export async function assembleDeneme(admin: SupabaseClient, input: AssembleInput
     return { error: "Henüz müfredatında konu tanımlı değil, deneme oluşturulamadı." };
   }
 
+  // Soru gorunurlugu artik is_approved'a bagli degil (tum sorular yayinda,
+  // ogretmen onayi ayri/paralel bir kalite rozeti) - bkz. migration
+  // 0023_soru_zorluk_kademesi_ve_yayin_kurali.sql.
   const { data: questions } = await admin
     .from("questions")
     .select("id, topic_id, difficulty")
-    .in("topic_id", topicIds)
-    .eq("is_approved", true);
+    .in("topic_id", topicIds);
 
-  const pool = questions ?? [];
+  const pool = (questions ?? []) as { id: string; topic_id: string; difficulty: QuestionDifficulty | null }[];
   if (pool.length < MIN_POOL) {
-    return { error: "Şu anda seviyene uygun yeterli onaylı soru yok, yakında eklenecek." };
+    return { error: "Şu anda seviyene uygun yeterli soru yok, yakında eklenecek." };
   }
 
   let ordered: typeof pool;
   if (input.mode === "onerilen" && input.levelLabel) {
-    const target = LEVEL_TO_DIFFICULTY[input.levelLabel] ?? 3;
+    const targetRank = DIFFICULTY_RANK[LEVEL_TO_DIFFICULTY[input.levelLabel] ?? "orta"];
     ordered = [...pool].sort((a, b) => {
-      const da = Math.abs((a.difficulty ?? 3) - target);
-      const db = Math.abs((b.difficulty ?? 3) - target);
+      const da = Math.abs(DIFFICULTY_RANK[a.difficulty ?? "orta"] - targetRank);
+      const db = Math.abs(DIFFICULTY_RANK[b.difficulty ?? "orta"] - targetRank);
       return da - db || Math.random() - 0.5;
     });
   } else {

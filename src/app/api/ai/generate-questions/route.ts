@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateQuestions } from "@/lib/ai/anthropic";
+import { isQuestionDifficulty } from "@/lib/questions/difficulty";
 
 export async function POST(req: Request) {
-  const { topicId, difficulty = 3, count = 5 } = await req.json();
+  const { topicId, difficulty = "orta", count = 5 } = await req.json();
   if (!topicId) {
     return NextResponse.json({ error: "topicId gerekli" }, { status: 400 });
+  }
+  if (!isQuestionDifficulty(difficulty)) {
+    return NextResponse.json({ error: "Geçersiz zorluk kademesi" }, { status: 400 });
   }
 
   const supabase = await createClient();

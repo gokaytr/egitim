@@ -16,7 +16,6 @@ export default async function KonuCevaplarPage({ params }: { params: Promise<{ t
       .from("questions")
       .select("id, body, options, correct_option, explanation, image_url")
       .eq("topic_id", topicId)
-      .eq("is_approved", true)
       .order("created_at"),
   ]);
 
@@ -32,7 +31,7 @@ export default async function KonuCevaplarPage({ params }: { params: Promise<{ t
 
       {!questions?.length ? (
         <Card>
-          <p className="text-sm text-slate-600">Bu konuda henüz onaylanmış soru yok.</p>
+          <p className="text-sm text-slate-600">Bu konuda henüz soru yok.</p>
         </Card>
       ) : (
         <div className="flex flex-col gap-4">

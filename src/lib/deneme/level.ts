@@ -3,6 +3,8 @@
 // aynen bu sekilde saklanir (profiles.level_label), bu yuzden burasi ile
 // migration/route dosyalari her zaman ayni degerleri kullanmali.
 
+import type { QuestionDifficulty } from "@/lib/questions/difficulty";
+
 export type LevelLabel = "baslangic" | "orta" | "iyi" | "cok_iyi";
 
 export const LEVEL_TITLES: Record<LevelLabel, string> = {
@@ -12,11 +14,13 @@ export const LEVEL_TITLES: Record<LevelLabel, string> = {
   cok_iyi: "Çok İyi",
 };
 
-export const LEVEL_TO_DIFFICULTY: Record<LevelLabel, number> = {
-  baslangic: 2,
-  orta: 3,
-  iyi: 4,
-  cok_iyi: 5,
+// "Sana ozel" deneme montaji, ogrencinin seviye-tespit sonucuna (level_label)
+// en yakin zorluktaki sorulari secer - bkz. lib/deneme/assemble.ts.
+export const LEVEL_TO_DIFFICULTY: Record<LevelLabel, QuestionDifficulty> = {
+  baslangic: "kolay",
+  orta: "orta",
+  iyi: "zor",
+  cok_iyi: "cok_zor",
 };
 
 export function levelFromScore(pct: number): LevelLabel {

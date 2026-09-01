@@ -4,6 +4,7 @@ import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
 import { AllQuestionsBrowser } from "@/components/all-questions-browser";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
+import type { QuestionDifficulty } from "@/lib/questions/difficulty";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -34,7 +35,7 @@ export default async function OgretmenSorularPage({
     correct_option: string;
     explanation: string | null;
     source: string;
-    difficulty: number | null;
+    difficulty: QuestionDifficulty | null;
     topic_id: string;
   }[] = [];
   let allQuestions: {
@@ -45,7 +46,7 @@ export default async function OgretmenSorularPage({
     explanation: string | null;
     is_approved: boolean;
     source: string;
-    difficulty: number | null;
+    difficulty: QuestionDifficulty | null;
     topic_id: string;
   }[] = [];
 
@@ -109,8 +110,9 @@ export default async function OgretmenSorularPage({
   const soruOnayTab = (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-slate-500">
-        Yapay zekanın sizin branşınızda ürettiği sorular, öğrencilere gösterilmeden önce burada onaylanır. Onay
-        bekleyen soru bulunan sınıf, ders ve konularda turuncu bir ışık yanar.
+        Yapay zekanın sizin branşınızda ürettiği sorular öğrencilere hemen yayınlanır; burada yaptığınız onay,
+        sorunun görünürlüğünü değil kalite kontrolünü (öğretmen incelemesinden geçti mi) belirler. İncelenmemiş soru
+        bulunan sınıf, ders ve konularda turuncu bir ışık yanar.
       </p>
       {subjectIds.length === 0 ? (
         <p className="text-sm text-amber-700">

@@ -25,7 +25,6 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
       .from("questions")
       .select("id, body, options, correct_option, explanation, option_error_tags, image_url")
       .eq("topic_id", topicId)
-      .eq("is_approved", true)
       .limit(8),
     // Tam ekran geri sayim ekranindaki arka plan gorseli, onizlenen/gercek
     // ogrencinin sinif duzeyine gore secilsin diye (bkz. pre-quiz-countdown.tsx).
@@ -62,7 +61,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
       ) : !questions?.length ? (
         <Card>
           <p className="text-sm text-slate-600">
-            Bu konuda henüz onaylanmış soru yok. Öğretmenin soru eklemesini bekleyin veya başka bir konu seçin.
+            Bu konuda henüz soru yok. Öğretmenin soru eklemesini bekleyin veya başka bir konu seçin.
           </p>
         </Card>
       ) : (

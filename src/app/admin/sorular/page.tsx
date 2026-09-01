@@ -102,8 +102,9 @@ export default async function SorularPage() {
   const soruOnayTab = (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-slate-500">
-        Yapay zekanın ürettiği sorular, öğrencilere gösterilmeden önce burada onaylanır. Onay bekleyen soru bulunan
-        sınıf, ders ve konularda turuncu bir ışık yanar.
+        Yapay zekanın ürettiği sorular öğrencilere hemen yayınlanır; burada yapılan onay sorunun görünürlüğünü değil
+        kalite kontrolünü (öğretmen/admin incelemesinden geçti mi) belirler. İncelenmemiş soru bulunan sınıf, ders ve
+        konularda turuncu bir ışık yanar.
       </p>
       <PendingQuestionsBrowser topics={browserTopics} questions={pendingQuestions} />
     </div>

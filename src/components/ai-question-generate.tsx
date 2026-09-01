@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, Button, Input, Select, Badge } from "@/components/ui";
+import { DIFFICULTY_ORDER, DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
 
 type Draft = {
   body: string;
@@ -12,7 +13,7 @@ type Draft = {
 };
 
 export function AiQuestionGenerate({ topicId, onStatus }: { topicId: string; onStatus?: (msg: string) => void }) {
-  const [aiDifficulty, setAiDifficulty] = useState(3);
+  const [aiDifficulty, setAiDifficulty] = useState<QuestionDifficulty>("orta");
   const [aiCount, setAiCount] = useState(5);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDrafts, setAiDrafts] = useState<Draft[]>([]);
@@ -37,20 +38,21 @@ export function AiQuestionGenerate({ topicId, onStatus }: { topicId: string; onS
       return;
     }
     setAiDrafts(json.questions.map((q: Draft) => q));
-    onStatus?.(`${json.questions.length} soru üretildi. Onay için "Soru Onayı" ekranından yönetici veya öğretmen onayı bekleniyor.`);
+    onStatus?.(`${json.questions.length} soru üretildi ve öğrencilere yayınlandı. Kalite kontrolü için "Soru Onayı" ekranından öğretmen/admin incelemesi bekleniyor.`);
   }
 
   return (
     <Card>
       <h2 className="mb-3 font-semibold text-slate-900">Yapay Zeka ile Soru Üret</h2>
       <p className="mb-3 text-sm text-slate-500">
-        Üretilen sorular doğrudan öğrenciye gösterilmez, önce &quot;Soru Onayı&quot; ekranından onaylanır.
+        Üretilen sorular hemen öğrencilere yayınlanır; öğretmen/admin onayı ayrı bir kalite kontrolüdür, sorunun
+        görünürlüğünü etkilemez.
       </p>
       <div className="flex gap-3">
         <div className="flex-1">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Zorluk (1-5)</label>
-          <Select value={aiDifficulty} onChange={(e) => setAiDifficulty(Number(e.target.value))}>
-            {[1, 2, 3, 4, 5].map((d) => <option key={d} value={d}>{d}</option>)}
+          <label className="mb-1 block text-sm font-medium text-slate-700">Zorluk kademesi</label>
+          <Select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value as QuestionDifficulty)}>
+            {DIFFICULTY_ORDER.map((d) => <option key={d} value={d}>{DIFFICULTY_LABELS[d]}</option>)}
           </Select>
         </div>
         <div className="flex-1">
