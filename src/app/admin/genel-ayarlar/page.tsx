@@ -34,6 +34,46 @@ export default async function GenelAyarlarPage() {
   const sistemBilgisiTab = (
     <div className="flex flex-col gap-6">
       <Card>
+        <h2 className="mb-3 font-semibold text-slate-900">Geliştirme Süreci — Kullanılan AI Araçları</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Bu not, platformun canlı bir özelliğini değil, kod tabanının Claude ile geliştirilme sürecinde kullanılan
+          yardımcı araçları açıklar — öğrenci, öğretmen veya veli deneyimini doğrudan etkilemez.
+        </p>
+        <ul className="flex flex-col gap-3">
+          <li className="rounded-lg bg-slate-50 p-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Badge>PDF Analiz</Badge>
+              <span className="font-medium text-slate-800">Gerçek sınav kitapçıklarından referans alma</span>
+            </div>
+            <p className="mt-1 text-slate-600">
+              Yayınevi/ÖSYM tarzı gerçek sınav kitapçıkları PDF olarak paylaşıldığında, soru üretim standardını bu
+              örneklere göre kalibre etmek için kullanılır.
+            </p>
+          </li>
+          <li className="rounded-lg bg-slate-50 p-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Badge>Otomatik Web Testi</Badge>
+              <span className="font-medium text-slate-800">Yayın öncesi tarayıcı kontrolü</span>
+            </div>
+            <p className="mt-1 text-slate-600">
+              Büyük bir arayüz değişikliğinden sonra, siteyi gerçek bir tarayıcıda gezip mobil/masaüstü görünümdeki
+              hataları (ör. üst üste binen butonlar) fark etmek için kullanılır.
+            </p>
+          </li>
+          <li className="rounded-lg bg-slate-50 p-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Badge>Beceri Şablonu</Badge>
+              <span className="font-medium text-slate-800">Tutarlı soru yazım standardı</span>
+            </div>
+            <p className="mt-1 text-slate-600">
+              &quot;Yayınevi kalitesinde soru yazım standardı&quot; gibi tekrar eden talimatları kalıcı bir şablon haline
+              getirip, her seferinde yeniden anlatmaya gerek kalmadan tutarlı şekilde uygulamak için kullanılır.
+            </p>
+          </li>
+        </ul>
+      </Card>
+
+      <Card>
         <h2 className="mb-3 font-semibold text-slate-900">Demo Hesaplar</h2>
         <p className="mb-3 text-sm text-slate-500">
           Sistemi test etmek için aşağıdaki hazır hesapları kullanabilirsin.
