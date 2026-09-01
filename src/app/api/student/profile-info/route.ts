@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const VALID_EXAM_TARGETS = ["LGS", "TYT", "AYT", "YKS", "YDT", "KPSS", "ALES", "DIGER"];
+import { examTargetsForGrade } from "@/lib/exam-targets";
 
 // Ogrencinin "Genel Ayarlar > Profil Bilgileri" formundan sinif duzeyi ve
 // hedef sinavini kaydetmesini sagliyor. Ozellikle Google ile uye olan
@@ -25,7 +24,9 @@ export async function POST(req: NextRequest) {
   if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 12) {
     return NextResponse.json({ error: "Sınıf 1 ile 12 arasında olmalı." }, { status: 400 });
   }
-  if (!examTarget || !VALID_EXAM_TARGETS.includes(examTarget)) {
+  // Sinav secenegi, secilen sinif icin anlamli olan listeyle sinirli - ör.
+  // 5. sinif icin "LGS" ya da 9. sinif icin "KPSS" gonderilirse reddediyoruz.
+  if (!examTarget || !examTargetsForGrade(gradeLevel).includes(examTarget)) {
     return NextResponse.json({ error: "Geçerli bir hedef sınav seç." }, { status: 400 });
   }
 

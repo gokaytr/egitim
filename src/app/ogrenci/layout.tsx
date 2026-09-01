@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RoleShell } from "@/components/role-shell";
-import { CoachChat } from "@/components/coach-chat";
+import { CoachChatGate } from "@/components/coach-chat-gate";
 import { StudentPreviewSwitcher } from "@/components/student-preview-switcher";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
 
@@ -159,7 +159,7 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
         </div>
       )}
       {children}
-      {coachContext && <CoachChat context={coachContext} />}
+      {coachContext && <CoachChatGate context={coachContext} />}
     </RoleShell>
   );
 }

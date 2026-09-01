@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Button, Select } from "@/components/ui";
-
-const EXAM_TARGETS = ["LGS", "TYT", "AYT", "YKS", "YDT", "KPSS", "ALES", "DIGER"];
+import { examTargetsForGrade } from "@/lib/exam-targets";
 
 // Ozellikle Google ile uye olan ogrencilerde kayit sirasinda alinamayan
 // sinif/hedef sinav bilgisini tamamlamak icin kullaniliyor. Bilgi eksikken
@@ -28,6 +27,21 @@ export function ProfileInfoForm({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Her sinifta her sinav anlamli degil (ör. LGS sadece 8. sinifta,
+  // KPSS/ALES sadece 12. sinifta secilebilir) - sinif degistiginde secili
+  // hedef sinav artik listede yoksa (asagidaki handleGradeChange icinde)
+  // otomatik olarak o sinif icin en uygun ilk secenege geciyoruz, boylece
+  // kullanici gecersiz bir kombinasyonla kaydetmiş olmuyor.
+  const examOptions = examTargetsForGrade(Number(gradeLevel));
+
+  function handleGradeChange(value: string) {
+    setGradeLevel(value);
+    const nextOptions = examTargetsForGrade(Number(value));
+    if (!nextOptions.includes(examTarget)) {
+      setExamTarget(nextOptions[0]);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -73,7 +87,7 @@ export function ProfileInfoForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Sınıf</label>
-          <Select value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)}>
+          <Select value={gradeLevel} onChange={(e) => handleGradeChange(e.target.value)}>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
               <option key={g} value={g}>
                 {g}. sınıf
@@ -84,7 +98,7 @@ export function ProfileInfoForm({
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Hedef sınav</label>
           <Select value={examTarget} onChange={(e) => setExamTarget(e.target.value)}>
-            {EXAM_TARGETS.map((t) => (
+            {examOptions.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>

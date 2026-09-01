@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
 import { GoogleButton } from "@/components/google-button";
 import { AuthPageBackground, AuthPageHeader } from "@/components/auth-background";
+import { examTargetsForGrade } from "@/lib/exam-targets";
 
 type SignupRole = "student" | "parent" | "teacher_request";
 
@@ -25,6 +26,20 @@ export default function KayitPage() {
   const [error, setError] = useState<string | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Her sinifta her sinav anlamli degil (ör. LGS sadece 8. sinif, KPSS/ALES
+  // sadece 12. sinif icin gosteriliyor) - bkz. lib/exam-targets.ts. Sinif
+  // degistiginde (asagidaki handleGradeChange icinde) secili sinav artik
+  // listede yoksa ilk uygun secenege geciyoruz.
+  const examOptions = examTargetsForGrade(Number(gradeLevel));
+
+  function handleGradeChange(value: string) {
+    setGradeLevel(value);
+    const nextOptions = examTargetsForGrade(Number(value));
+    if (!nextOptions.includes(examTarget)) {
+      setExamTarget(nextOptions[0]);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,7 +150,7 @@ export default function KayitPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Sınıf</label>
-                <Select value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)}>
+                <Select value={gradeLevel} onChange={(e) => handleGradeChange(e.target.value)}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
                     <option key={g} value={g}>{g}. sınıf</option>
                   ))}
@@ -144,7 +159,7 @@ export default function KayitPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Hedef sınav</label>
                 <Select value={examTarget} onChange={(e) => setExamTarget(e.target.value)}>
-                  {["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES", "DIGER"].map((t) => (
+                  {examOptions.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </Select>
