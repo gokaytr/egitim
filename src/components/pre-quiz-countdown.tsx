@@ -102,12 +102,12 @@ export function PreQuizCountdown({
       <GradeBackground variant={variant} />
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950/45 via-indigo-950/35 to-slate-950/45" />
       <div className="relative z-10 flex flex-col items-center gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-300 drop-shadow">{topicLabel}</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-300 drop-shadow">{topicLabel}</p>
         {count === null ? (
           <>
-            <h2 className="text-3xl font-bold drop-shadow sm:text-4xl">Hazır mısın? 💪</h2>
-            {durationLabel && <p className="text-sm text-indigo-200 drop-shadow">{durationLabel}</p>}
-            <Button onClick={handleStart} className="mt-4 px-8 py-3 text-base">
+            <h2 className="text-4xl font-bold drop-shadow sm:text-5xl">Hazır mısın? 💪</h2>
+            {durationLabel && <p className="text-lg text-indigo-200 drop-shadow">{durationLabel}</p>}
+            <Button onClick={handleStart} className="mt-4 px-10 py-4 text-lg">
               🚀 Başla
             </Button>
           </>
@@ -116,7 +116,7 @@ export function PreQuizCountdown({
             <p key={count} className="animate-bounce text-8xl font-black drop-shadow sm:text-9xl">
               {count > 0 ? count : "Başla! 🎯"}
             </p>
-            {durationLabel && <p className="text-sm text-indigo-200 drop-shadow">{durationLabel}</p>}
+            {durationLabel && <p className="text-lg text-indigo-200 drop-shadow">{durationLabel}</p>}
           </>
         )}
       </div>

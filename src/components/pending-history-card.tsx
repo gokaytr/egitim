@@ -60,13 +60,13 @@ export function PendingHistoryCard({
           <p className="text-sm text-slate-600">Harika, sınıfına ait tüm konuları bitirmişsin! 🎉</p>
         ) : (
           <>
-            <p className="mb-3 text-xs text-slate-500">Sınıfına ait henüz hiç bitirmediğin konular.</p>
+            <p className="mb-3 text-sm text-slate-500">Sınıfına ait henüz hiç bitirmediğin konular.</p>
             <ul className="flex flex-col gap-2">
               {pendingTopics.map((t) => (
-                <li key={t.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <li key={t.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-base">
                   <div className="flex items-center gap-2">
                     <span className="text-slate-800">{t.name}</span>
-                    {t.subjectName && <span className="text-xs text-slate-400">{t.subjectName}</span>}
+                    {t.subjectName && <span className="text-sm text-slate-400">{t.subjectName}</span>}
                     {t.recommended && <Badge tone="amber">Seviye Tespit Önerisi</Badge>}
                   </div>
                   <Link href={`/ogrenci/konu/${t.id}`} className="font-medium text-indigo-600 underline">

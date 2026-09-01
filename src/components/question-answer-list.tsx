@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, Button } from "@/components/ui";
 import { DrawingCanvas } from "@/components/drawing-canvas";
+import { getAudioCtx, playOptionSelect, playQuestionAdvance } from "@/lib/sound/tension-audio";
 
 export type AnswerableQuestion = {
   id: string;
@@ -144,6 +145,23 @@ export function QuestionAnswerList({
   const totalSeconds = questions.length * settings.secondsPerQuestion;
   const [remaining, setRemaining] = useState(totalSeconds);
   const [pageIndex, setPageIndex] = useState(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Bir sik secildiginde kisa bir onay sesi, sayfa/soru ilerledikce
+  // (Sonraki Soru/Atla) farkli kisa bir gecis sesi caliyoruz - ikisi de
+  // Web Audio API ile aninda sentezleniyor (dosya yok), bkz.
+  // lib/sound/tension-audio.ts.
+  function handleAnswer(questionId: string, option: string) {
+    const ctx = getAudioCtx(audioCtxRef);
+    if (ctx) playOptionSelect(ctx);
+    onAnswer(questionId, option);
+  }
+
+  function handleAdvance() {
+    const ctx = getAudioCtx(audioCtxRef);
+    if (ctx) playQuestionAdvance(ctx);
+    setPageIndex((i) => Math.min(questions.length - 1, i + 1));
+  }
 
   useEffect(() => {
     setRemaining(totalSeconds);
@@ -154,6 +172,13 @@ export function QuestionAnswerList({
     const id = setInterval(() => setRemaining((r) => (r > 0 ? r - 1 : 0)), 1000);
     return () => clearInterval(id);
   }, [settings.timerEnabled, totalSeconds]);
+
+  useEffect(
+    () => () => {
+      audioCtxRef.current?.close().catch(() => {});
+    },
+    []
+  );
 
   const timeIsLow = settings.timerEnabled && remaining <= 30;
 
@@ -192,7 +217,7 @@ export function QuestionAnswerList({
           question={question}
           index={pageIndex}
           selected={answers[question.id]}
-          onSelect={(key) => onAnswer(question.id, key)}
+          onSelect={(key) => handleAnswer(question.id, key)}
           fontSize={settings.fontSize}
           fontFamily={settings.fontFamily}
         />
@@ -203,7 +228,7 @@ export function QuestionAnswerList({
           {isLast
             ? finishButton
             : (
-              <Button variant={hasAnswer ? "primary" : "secondary"} onClick={() => setPageIndex((i) => Math.min(questions.length - 1, i + 1))}>
+              <Button variant={hasAnswer ? "primary" : "secondary"} onClick={handleAdvance}>
                 {hasAnswer ? "Sonraki Soru →" : "Soruyu Atla →"}
               </Button>
             )}
@@ -221,7 +246,7 @@ export function QuestionAnswerList({
           question={q}
           index={i}
           selected={answers[q.id]}
-          onSelect={(key) => onAnswer(q.id, key)}
+          onSelect={(key) => handleAnswer(q.id, key)}
           fontSize={settings.fontSize}
           fontFamily={settings.fontFamily}
         />

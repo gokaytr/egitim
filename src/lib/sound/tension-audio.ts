@@ -75,6 +75,21 @@ export function playResultChime(ctx: AudioContext) {
   });
 }
 
+// Bir sik secildiginde caların, cok kisa ve hafif bir "tik" - dokunsal geri
+// bildirim gibi, rahatsiz etmeyen bir onay sesi. playTick'in kisa/hafif bir
+// varyanti (soru/deneme geri sayimindaki tik'ten daha yumusak).
+export function playOptionSelect(ctx: AudioContext) {
+  playTick(ctx, 660, 0.07);
+}
+
+// "Sonraki Soru" veya "Soruyu Atla" ile sayfa degistiginde caların, secim
+// sesinden farkli, kisa ve yukselen iki notalik bir "sayfa gecisi" sesi.
+export function playQuestionAdvance(ctx: AudioContext) {
+  const t0 = ctx.currentTime;
+  playChimeNote(ctx, t0, 440, 0.08, 0.18);
+  playChimeNote(ctx, t0 + 0.055, 660, 0.09, 0.16);
+}
+
 function playChimeNote(ctx: AudioContext, time: number, freq: number, duration: number, peakGain: number) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();

@@ -158,11 +158,17 @@ export default function KayitPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Hedef sınav</label>
-                <Select value={examTarget} onChange={(e) => setExamTarget(e.target.value)}>
-                  {examOptions.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </Select>
+                {examOptions.length > 1 ? (
+                  <Select value={examTarget} onChange={(e) => setExamTarget(e.target.value)}>
+                    {examOptions.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </Select>
+                ) : (
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                    Bu sınıf seviyesi için özel bir hedef sınav yok
+                  </p>
+                )}
               </div>
             </div>
           )}

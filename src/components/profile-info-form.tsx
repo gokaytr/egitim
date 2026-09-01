@@ -23,7 +23,18 @@ export function ProfileInfoForm({
   const router = useRouter();
   const missing = initialGradeLevel == null || !initialExamTarget;
   const [gradeLevel, setGradeLevel] = useState(String(initialGradeLevel ?? 9));
-  const [examTarget, setExamTarget] = useState(initialExamTarget ?? "TYT");
+  // Baslangic degeri "TYT" olarak sabitlenmisti - bu, 7. sinif ve altindaki
+  // (hedef sinav secenegi sadece "DIGER" olan) bir ogrenci icin, ekranda
+  // "DIGER" gorunse bile state'in gercekte gecersiz "TYT" degerinde kalmasina
+  // ve kaydet'e basinca sunucudan "Geçerli bir hedef sınav seç." hatasi
+  // almasina yol aciyordu (select DOM'da otomatik en yakin secenegi
+  // gosteriyor ama React state onChange tetiklenmedigi icin guncellenmiyordu).
+  // Artik baslangic degeri, gercek sinifa gore gecerli olan ilk secenege
+  // gore hesaplaniyor.
+  const initialOptions = examTargetsForGrade(initialGradeLevel);
+  const [examTarget, setExamTarget] = useState(
+    initialExamTarget && initialOptions.includes(initialExamTarget) ? initialExamTarget : initialOptions[0]
+  );
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,13 +108,23 @@ export function ProfileInfoForm({
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Hedef sınav</label>
-          <Select value={examTarget} onChange={(e) => setExamTarget(e.target.value)}>
-            {examOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </Select>
+          {examOptions.length > 1 ? (
+            <Select value={examTarget} onChange={(e) => setExamTarget(e.target.value)}>
+              {examOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            // Bu sinif seviyesinde (7. sinif ve alti) secilecek anlamli bir
+            // sinav yok - tek secenekli, kafa karistiran bir dropdown yerine
+            // durumu aciklayan sabit bir metin gosteriyoruz. examTarget zaten
+            // yukarida otomatik olarak "DIGER" olarak ayarlaniyor.
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+              Bu sınıf seviyesi için özel bir hedef sınav yok
+            </p>
+          )}
         </div>
       </div>
 

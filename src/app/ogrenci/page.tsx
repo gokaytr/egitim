@@ -138,8 +138,8 @@ export default async function OgrenciDashboard({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Merhaba {profile?.full_name?.split(" ")[0]} 👋</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-3xl font-semibold text-slate-900">Merhaba {profile?.full_name?.split(" ")[0]} 👋</h1>
+        <p className="text-base text-slate-500">
           {profile?.grade_level}. sınıf · Hedef: {profile?.exam_target}
         </p>
       </div>
@@ -161,7 +161,7 @@ export default async function OgrenciDashboard({
         <Card className="flex flex-col justify-between gap-2 bg-gradient-to-br from-indigo-50 to-white">
           <div>
             <span className="text-sm text-slate-500">Deneme Çöz</span>
-            <p className="mt-0.5 text-sm text-slate-600">{DENEME_INTRO[gradeBand]}</p>
+            <p className="mt-0.5 text-base text-slate-600">{DENEME_INTRO[gradeBand]}</p>
           </div>
           <DenemeActionButton mode="rastgele" label="🎲 Rastgele Deneme Çöz" />
         </Card>
