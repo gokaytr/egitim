@@ -60,7 +60,7 @@ export default async function SorularPage() {
     // sorulari degil, sadece konu basina onayli/bekleyen sayisini cekiyoruz
     // (tek tek sorular, o konuya tiklaninca client tarafinda ayrica cekilir
     // - bkz. question-bank-browser.tsx, on binlerce soruya olceklensin diye).
-    supabase.from("questions").select("topic_id, is_approved").eq("is_reference_only", false),
+    supabase.from("questions").select("topic_id, is_approved, follows_new_policy").eq("is_reference_only", false),
     supabase
       .from("exam_shares")
       .select("id, exam_type, token")
@@ -68,12 +68,18 @@ export default async function SorularPage() {
       .order("created_at", { ascending: false }),
   ]);
 
-  const bankCounts = new Map<string, { approved: number; pending: number }>();
+  const bankCounts = new Map<string, { approved: number; pending: number; approvedNew: number; pendingNew: number }>();
   (bankCountRows ?? []).forEach((q) => {
     if (!q.topic_id) return;
-    const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0 };
-    if (q.is_approved) entry.approved += 1;
-    else entry.pending += 1;
+    const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0, approvedNew: 0, pendingNew: 0 };
+    const isNew = q.follows_new_policy ?? false;
+    if (q.is_approved) {
+      entry.approved += 1;
+      if (isNew) entry.approvedNew += 1;
+    } else {
+      entry.pending += 1;
+      if (isNew) entry.pendingNew += 1;
+    }
     bankCounts.set(q.topic_id, entry);
   });
 

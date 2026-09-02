@@ -47,7 +47,7 @@ export default async function OgretmenSorularPage({
     topic_id: string;
     follows_new_policy: boolean;
   }[] = [];
-  const bankCounts = new Map<string, { approved: number; pending: number }>();
+  const bankCounts = new Map<string, { approved: number; pending: number; approvedNew: number; pendingNew: number }>();
 
   if (subjectIds.length > 0) {
     const [{ data: rawTopics }, { data: pending }, { data: bankRows }] = await Promise.all([
@@ -67,7 +67,7 @@ export default async function OgretmenSorularPage({
       // sadece konu basina onayli/bekleyen sayisi (bkz. admin/sorular/page.tsx).
       supabase
         .from("questions")
-        .select("topic_id, is_approved, topics!inner(subject_id)")
+        .select("topic_id, is_approved, follows_new_policy, topics!inner(subject_id)")
         .eq("is_reference_only", false)
         .in("topics.subject_id", subjectIds),
     ]);
@@ -95,9 +95,15 @@ export default async function OgretmenSorularPage({
 
     (bankRows ?? []).forEach((q) => {
       if (!q.topic_id) return;
-      const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0 };
-      if (q.is_approved) entry.approved += 1;
-      else entry.pending += 1;
+      const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0, approvedNew: 0, pendingNew: 0 };
+      const isNew = q.follows_new_policy ?? false;
+      if (q.is_approved) {
+        entry.approved += 1;
+        if (isNew) entry.approvedNew += 1;
+      } else {
+        entry.pending += 1;
+        if (isNew) entry.pendingNew += 1;
+      }
       bankCounts.set(q.topic_id, entry);
     });
   }
