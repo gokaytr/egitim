@@ -113,15 +113,27 @@ export type ReferenceExample = {
   correct_option: string;
 };
 
+// ÖSYM'nin sayısal derslerdeki (Matematik, Geometri, Fizik, Kimya, Fen
+// Bilimleri...) sorulari neredeyse hep kisa bir "gercek hayat senaryosu/
+// paragraf" ile baslar (ör. "Bir çiftçi tarlasını..."), SOYUT bir islem
+// sorusu ("2x+5=17 ise x kactir?" gibi) NADIREN cikar - kullanicinin
+// bildirdigi "sizin urettiginiz matematik sorulari OSYM gibi degil, cok
+// kisa/soyut kaliyor" sikayetinin kok nedeni, bu bagimsal/paragraf tarzinin
+// sadece EN ust zorluk kademesinde istenmesiydi. Artik sayisal derslerde bu
+// tarz TUM zorluk kademelerinde (kolay dahil, orantili sekilde) varsayilan.
+const NUMERIC_SUBJECTS = ["matematik", "geometri", "fizik", "kimya", "fen bilimleri", "fen bilgisi", "istatistik"];
+
 export async function generateQuestions(params: {
   topicName: string;
   gradeLevel: number | null;
   difficulty: QuestionDifficulty;
   count: number;
   examTypes: string[];
+  subjectName?: string | null;
   referenceExamples?: ReferenceExample[];
 }) {
-  const { topicName, gradeLevel, difficulty, count, examTypes, referenceExamples = [] } = params;
+  const { topicName, gradeLevel, difficulty, count, examTypes, subjectName, referenceExamples = [] } = params;
+  const isNumericSubject = !!subjectName && NUMERIC_SUBJECTS.some((s) => subjectName.toLocaleLowerCase("tr-TR").includes(s));
 
   // Soru Havuzu'na (is_reference_only=true, ör. ÖSYM'nin gerçek sınav
   // sorulari) eklenmis, AYNI konuya ait ornekler varsa, bunlari AI'ya
@@ -156,11 +168,15 @@ export async function generateQuestions(params: {
         "3) Sayısal/işlem içeren bir soru yazıyorsan çözümü kafanda iki kez kontrol et, doğru cevabın gerçekten doğru olduğundan ve diğer 3 şıkkın kesinlikle yanlış olduğundan emin ol - bir soruda asla birden fazla doğru şık olamaz.\n" +
         "4) Aynı kalıbı/şablonu art arda tekrar etme; sayıları, bağlamları ve cümle yapılarını her soruda çeşitlendir.\n" +
         "5) Türkçe dil bilgisi ve yazım kurallarına tam uy.\n" +
-        "6) Şekil/grafik gerektiren soru ÜRETME - sadece metinle (gerekiyorsa sayısal veri/tablo metin içinde verilerek) çözülebilecek sorular yaz. Her soru için 4 şık (A-D) ve tek doğru cevap olmalı.",
+        "6) Şekil/grafik gerektiren soru ÜRETME - sadece metinle (gerekiyorsa sayısal veri/tablo metin içinde verilerek) çözülebilecek sorular yaz. Her soru için 4 şık (A-D) ve tek doğru cevap olmalı.\n" +
+        (isNumericSubject
+          ? "7) Bu ders SAYISAL (Matematik/Geometri/Fizik/Kimya/Fen Bilimleri gibi) - ÖSYM'nin gerçek sınavlarındaki gibi soruyu SOYUT bir işlem/formül sorusu olarak sorma ('2x+5=17 ise x kaçtır?' gibi kuru sorulardan KAÇIN), bunun yerine kısa bir GÜNLÜK HAYAT/GERÇEK DÜNYA SENARYOSU içinde sun (bir çiftçi, fabrika, market, yolculuk, yüzde/oran, para problemi gibi somut bir bağlam kur, sonra sayısal veriyi bu bağlam içinde ver). Bu, 'kolay' zorlukta bile (tek adımlı olsa da) KISA bir bağlam cümlesiyle başlamalı; zorluk arttıkça bağlam/senaryo da uzayıp karmaşıklaşmalı - tamamen bağlamsız, sadece bir denklem/işlem yazan bir soru kökü YAZMA.\n"
+          : ""),
       messages: [
         {
           role: "user",
-          content: `Konu: ${topicName} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"})
+          content: `Ders: ${subjectName ?? "belirtilmedi"}
+Konu: ${topicName} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"})
 Sınav türü: ${examTypes.join(", ") || "genel"}
 Zorluk kademesi: ${DIFFICULTY_LABELS[difficulty]} — ${DIFFICULTY_PROMPT_HINTS[difficulty]}
 Üretilecek soru sayısı: ${count}${referenceBlock}

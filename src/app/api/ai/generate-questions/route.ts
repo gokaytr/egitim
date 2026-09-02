@@ -21,13 +21,16 @@ export async function POST(req: Request) {
 
   const { data: topic, error: topicError } = await supabase
     .from("topics")
-    .select("id, name, grade_level, exam_types")
+    .select("id, name, grade_level, exam_types, subjects(name)")
     .eq("id", topicId)
     .single();
 
   if (topicError || !topic) {
     return NextResponse.json({ error: "Konu bulunamadı" }, { status: 404 });
   }
+
+  const topicSubject = topic.subjects as { name: string } | { name: string }[] | null;
+  const subjectName = Array.isArray(topicSubject) ? topicSubject[0]?.name ?? null : topicSubject?.name ?? null;
 
   // Soru Havuzu'nda (is_reference_only=true) bu konuya ait gercek sinav
   // sorulari varsa, birkacini AI'ya tarz/zorluk referansi olarak veriyoruz -
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
     difficulty,
     count,
     examTypes: topic.exam_types ?? [],
+    subjectName,
     referenceExamples: (referenceRows ?? []) as { body: string; options: Record<string, string>; correct_option: string }[],
   });
 
