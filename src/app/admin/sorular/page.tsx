@@ -126,18 +126,18 @@ export default async function SorularPage() {
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
         <p className="text-sm text-slate-500">Soru ekleme, onaylama ve tüm soruları görüntüleme tek ekranda.</p>
         <p className="mt-2 text-sm font-medium text-slate-600">
-          🔒 Not: &quot;Tüm Sorular&quot; sekmesindeki <span className="font-semibold">Referans Havuzu</span> pilinde
+          🔒 Not: &quot;Soru Havuzu&quot; sekmesindeki <span className="font-semibold">Referans Havuzu</span> pilinde
           tutulan sorular öğrenciye ASLA gösterilmez/yayınlanmaz — sadece yapay zekânın örnek alması için saklanır.
         </p>
       </div>
 
       <SimpleTabs
-        defaultKey="liste"
+        defaultKey="ekle"
         syncQueryParam="tab"
         tabs={[
-          { key: "liste", label: "Tüm Sorular", content: sorularListesiTab },
           { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
-          { key: "onay", label: "Soru Onayı", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
+          { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
+          { key: "havuz", label: "Soru Havuzu", content: sorularListesiTab },
         ]}
       />
     </div>

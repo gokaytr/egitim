@@ -1,4 +1,6 @@
-import { Card, Badge, DashboardActionCard } from "@/components/ui";
+import { Badge, DashboardActionCard } from "@/components/ui";
+import { RecentQuestionsCard } from "@/components/recent-questions-card";
+import { getRecentQuestions } from "@/lib/questions/recent";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import { createClient } from "@/lib/supabase/server";
 
@@ -7,12 +9,7 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
   const { teacherId } = await resolveEffectiveTeacher(requestedTeacherId);
   const supabase = await createClient();
 
-  const [{ data: referrals }, { data: mySubjects }, { data: subjectRows }] = await Promise.all([
-    supabase
-      .from("tutor_referrals")
-      .select("id, status, topics(name), profiles!tutor_referrals_student_id_fkey(full_name)")
-      .in("status", ["pending", "matched"])
-      .limit(5),
+  const [{ data: mySubjects }, { data: subjectRows }] = await Promise.all([
     supabase.from("teacher_subjects").select("subjects(name)").eq("teacher_id", teacherId),
     supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", teacherId ?? ""),
   ]);
@@ -27,6 +24,8 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
       .in("topics.subject_id", subjectIds);
     pendingQuestionCount = count ?? 0;
   }
+
+  const recentQuestions = await getRecentQuestions(supabase, subjectIds.length > 0 ? subjectIds : ["__none__"]);
 
   type SubjectRow = { subjects: { name: string } | { name: string }[] | null };
   const branchNames = ((mySubjects ?? []) as SubjectRow[])
@@ -69,22 +68,7 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
         />
       </div>
 
-      <Card>
-        <h2 className="mb-3 font-semibold text-slate-900">Özel Ders Talepleri</h2>
-        {!referrals?.length && <p className="text-sm text-slate-500">Şu anda bekleyen talep yok.</p>}
-        <ul className="divide-y divide-slate-100">
-          {referrals?.map((r) => {
-            const student = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-            const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
-            return (
-              <li key={r.id} className="flex items-center justify-between py-3 text-sm">
-                <span>{student?.full_name} — {topic?.name}</span>
-                <Badge tone={r.status === "pending" ? "amber" : "green"}>{r.status}</Badge>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+      <RecentQuestionsCard questions={recentQuestions} isAdmin={false} currentUserId={teacherId} />
     </div>
   );
 }
