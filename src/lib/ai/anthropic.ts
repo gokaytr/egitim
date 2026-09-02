@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
 
@@ -6,6 +8,27 @@ export const anthropic = new Anthropic({
 });
 
 export const AI_MODEL = "claude-sonnet-4-5";
+
+// Repo kokundeki question-generation.md (pedagojik/teknik uretim algoritmasi)
+// ve question-quality.md (100 puanlik otomatik kalite rubrigi, 80 puan kabul
+// esigi) dosyalarini okuyup soru uretim/ayristirma sistem prompt'larina
+// ekliyoruz - bkz. CLAUDE.md "Soru üretimi/kalitesi kuralı". Bu dosyalar
+// sadece insan icin okunan dokumantasyon degil, fiilen uygulanan bir
+// sozlesme; bir kere okuyup process boyunca onbellekliyoruz (her istekte
+// diskten okumaya gerek yok, icerik dagitim sirasinda degismiyor).
+let cachedPolicyDocs: string | null = null;
+function loadQuestionPolicyDocs(): string {
+  if (cachedPolicyDocs !== null) return cachedPolicyDocs;
+  try {
+    const generation = fs.readFileSync(path.join(process.cwd(), "question-generation.md"), "utf-8");
+    const quality = fs.readFileSync(path.join(process.cwd(), "question-quality.md"), "utf-8");
+    cachedPolicyDocs = `${generation}\n\n${quality}`;
+  } catch (err) {
+    console.error("loadQuestionPolicyDocs: politika dosyaları okunamadı, varsayılan kurallarla devam ediliyor", err);
+    cachedPolicyDocs = "";
+  }
+  return cachedPolicyDocs;
+}
 
 type WrongAnswer = {
   questionBody: string;
@@ -159,7 +182,11 @@ export async function generateQuestions(params: {
   try {
     message = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: 8192,
+      // Soru basina eklenen yeni alanlar (quality_score, cognitive_level,
+      // question_type) ve uzun bir politika dokumani sistem prompt'una
+      // eklendigi icin sinir yukseltildi - buyuk bir toplu istekte (ör. 30+
+      // soru) cikti kesilmesin diye (bkz. parseExamText'teki ayni gerekce).
+      max_tokens: 16000,
       system:
         "Sen Türkiye'de ÖSYM sınavları (LGS, TYT, AYT, YKS) ve saygın yayınevleri için soru yazan, o işi çok iyi bilen kıdemli bir soru yazarı/editörsün. " +
         "Amacın 'ders kitabı basitliğinde' sorular değil, gerçek bir sınavda karşılaşılabilecek, özenle kurgulanmış özgün sorular üretmek. Kurallar:\n" +
@@ -171,7 +198,10 @@ export async function generateQuestions(params: {
         "6) Şekil/grafik gerektiren soru ÜRETME - sadece metinle (gerekiyorsa sayısal veri/tablo metin içinde verilerek) çözülebilecek sorular yaz. Her soru için 4 şık (A-D) ve tek doğru cevap olmalı.\n" +
         (isNumericSubject
           ? "7) Bu ders SAYISAL (Matematik/Geometri/Fizik/Kimya/Fen Bilimleri gibi) - ÖSYM'nin gerçek sınavlarındaki gibi soruyu SOYUT bir işlem/formül sorusu olarak sorma ('2x+5=17 ise x kaçtır?' gibi kuru sorulardan KAÇIN), bunun yerine kısa bir GÜNLÜK HAYAT/GERÇEK DÜNYA SENARYOSU içinde sun (bir çiftçi, fabrika, market, yolculuk, yüzde/oran, para problemi gibi somut bir bağlam kur, sonra sayısal veriyi bu bağlam içinde ver). Bu, 'kolay' zorlukta bile (tek adımlı olsa da) KISA bir bağlam cümlesiyle başlamalı; zorluk arttıkça bağlam/senaryo da uzayıp karmaşıklaşmalı - tamamen bağlamsız, sadece bir denklem/işlem yazan bir soru kökü YAZMA.\n"
-          : ""),
+          : "") +
+        "8) Her soruyu döndürmeden önce, aşağıda verilen kalite kuralları dosyalarındaki (question-generation.md, question-quality.md) 100 puanlık rubriğe göre kendi içinde puanla ve sonucu 'quality_score' alanında ver; 80'in altında puanladığın bir soruyu iyileştirip yeniden dene, olmuyorsa hiç döndürme (setten eksik geçmesi, kötü bir soru döndürmekten iyidir).\n\n" +
+        "=== SORU HAZIRLAMA VE KALİTE KURALLARI (proje politikası) ===\n" +
+        loadQuestionPolicyDocs(),
       messages: [
         {
           role: "user",
@@ -188,7 +218,10 @@ Aşağıdaki JSON formatında ve SADECE JSON dizisi döndür:
     "options": {"A": "...", "B": "...", "C": "...", "D": "..."},
     "correct_option": "A",
     "explanation": "doğru cevabın neden doğru olduğunu adım adım açıklayan çözüm - öğrenci bunu okuyunca mantığı tam anlamalı",
-    "option_error_tags": {"B": "hangi somut hatayı yaptığı için bu şıkkı işaretler", "C": "...", "D": "..."}
+    "option_error_tags": {"B": "hangi somut hatayı yaptığı için bu şıkkı işaretler", "C": "...", "D": "..."},
+    "quality_score": 0,
+    "cognitive_level": "Hatırlama" | "Anlama" | "Uygulama" | "Analiz" | "Değerlendirme" | "Üst düzey düşünme",
+    "question_type": "soru tipi (ör. paragraf, problem çözme, tablo yorumlama, çıkarım, günlük yaşam...)"
   }
 ]`,
         },

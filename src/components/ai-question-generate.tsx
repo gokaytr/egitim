@@ -38,7 +38,13 @@ export function AiQuestionGenerate({ topicId, onStatus }: { topicId: string; onS
       return;
     }
     setAiDrafts(json.questions.map((q: Draft) => q));
-    onStatus?.(`${json.questions.length} soru üretildi ve öğrencilere yayınlandı. Kalite kontrolü için "Soru Onayı" ekranından öğretmen/admin incelemesi bekleniyor.`);
+    const qualityNote =
+      json.rejected_for_quality > 0
+        ? ` (${json.rejected_for_quality} taslak kalite kontrolünden geçemediği için otomatik elendi.)`
+        : "";
+    onStatus?.(
+      `${json.questions.length} soru üretildi ve öğrencilere yayınlandı. Kalite kontrolü için "Soru Onayı" ekranından öğretmen/admin incelemesi bekleniyor.${qualityNote}`
+    );
   }
 
   return (

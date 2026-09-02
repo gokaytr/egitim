@@ -61,10 +61,23 @@ export async function POST(req: Request) {
   // Her sorunun bir cozum aciklamasi olmasi zorunlu (bkz. CLAUDE.md "Soru
   // cevap aciklamasi kurali") - aciklamasiz gelen taslaklar (nadiren AI
   // atlarsa) ogretmene onay icin bile gitmesin diye elenir.
-  const validDrafts = drafts.filter((d) => typeof d.explanation === "string" && d.explanation.trim());
+  const withExplanation = drafts.filter((d) => typeof d.explanation === "string" && d.explanation.trim());
+
+  // question-quality.md'deki 80 puan kabul esigi: AI kendi puanladigi
+  // (quality_score) taslaklardan 80'in altinda olanlari veritabanina hic
+  // yazmadan eliyoruz - bu, AI'nin kendi puanlamasina ek bir sunucu-taraflı
+  // guvenlik agidir. quality_score alani gelmemisse (eski/beklenmedik
+  // yanit) reddetmek yerine gecirmeye devam ediyoruz - eksik alan yuzunden
+  // hicbir sorunun uretilememesi daha kotu bir sonuc olur.
+  const QUALITY_THRESHOLD = 80;
+  const validDrafts = withExplanation.filter(
+    (d) => typeof d.quality_score !== "number" || d.quality_score >= QUALITY_THRESHOLD
+  );
+  const rejectedForQuality = withExplanation.length - validDrafts.length;
+
   if (!validDrafts.length) {
     return NextResponse.json(
-      { error: "AI'nin ürettiği sorularda çözüm açıklaması eksik, tekrar deneyin." },
+      { error: "AI'nin ürettiği sorular kalite kontrolünden geçemedi (açıklama eksik ya da kalite puanı düşük), tekrar deneyin." },
       { status: 502 }
     );
   }
@@ -78,6 +91,9 @@ export async function POST(req: Request) {
     correct_option: d.correct_option,
     explanation: d.explanation,
     option_error_tags: d.option_error_tags ?? {},
+    quality_score: typeof d.quality_score === "number" ? d.quality_score : null,
+    cognitive_level: typeof d.cognitive_level === "string" ? d.cognitive_level : null,
+    question_type: typeof d.question_type === "string" ? d.question_type : null,
     source: "ai" as const,
     is_approved: false, // öğretmen onayından geçmeden öğrenciye gösterilmez
   }));
@@ -91,5 +107,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ questions: inserted });
+  return NextResponse.json({ questions: inserted, rejected_for_quality: rejectedForQuality });
 }

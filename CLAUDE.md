@@ -53,6 +53,10 @@ Pratikte bu şu anlama gelir:
 - Yeni bir sekme/form/gösterge eklerken, "bu sadece gerçek kullanıcı girişinde mi görünüyor, yoksa admin önizlemesinde de mi?" sorusu her seferinde kontrol edilmeli — varsayılan olarak admin önizlemesinde de görünmesi ve işlevsel olması beklenir.
 - Bir özellik gerçekten sadece gerçek hesapta anlamlıysa (ör. şifre değiştirme), bu bir istisna olarak kabul edilebilir, ama varsayılan davranış "admin önizlemede de aynısını gör" olmalı.
 
+## Soru üretimi/kalitesi kuralı
+
+Soru üretimi, soru ayrıştırma (AI ile sınav metninden içe aktarma) veya soru kalite kontrolüyle ilgili bir kod değişikliği yapılıyorsa (ör. `src/lib/ai/anthropic.ts`'deki `generateQuestions`/`parseExamText`, `src/app/api/ai/generate-questions/route.ts`, `src/app/api/ai/parse-exam-text/route.ts`), o değişikliğe başlamadan önce ayrıca `question-generation.md` (teknik/pedagojik üretim algoritması, derse/seviyeye özel kurallar, telif sınırı) ve `question-quality.md` (100 puanlık otomatik kalite rubriği, 80 puan kabul eşiği, mutlak ret kuralları) okunmalı ve uygulanan mantık bu iki dosyayla tutarlı olmalı. Bu iki dosya salt dokümantasyon değil, uygulamanın kendi AI sistem prompt'larına yansıtılması gereken bir sözleşmedir — biri değişirse ilgili sistem prompt'u da güncellenmeli. Soru sistemiyle ilgisi olmayan işlerde (ör. genel UI, veli/öğretmen paneli, git senkronu) bu iki dosyaya bakmaya gerek yok.
+
 ## Soru cevap açıklaması kuralı
 
 Sistemdeki HER soru, sadece doğru şıkkın harfini (`correct_option`) değil, doğru cevabın NEDEN doğru olduğunu açıklayan ayrı bir metni (`questions.explanation`) de içermek zorundadır. Bu, projenin ana kurallarından biridir ve şu şekilde uygulanır:
