@@ -93,7 +93,7 @@ export default async function Home() {
           secerse) bir videonun uzerine bindirilmis kalin baslik - kurumsal
           referans tasarimdaki (DJI Agriculture) hero bolumune benzer
           sade/net yapi. */}
-      <section className="relative overflow-hidden bg-slate-950">
+      <section className="relative flex min-h-screen items-center overflow-hidden bg-slate-950">
         {heroType === "video" && heroUrl ? (
           <video
             src={heroUrl}
