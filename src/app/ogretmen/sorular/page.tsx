@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
-import { QuestionBankBrowser } from "@/components/question-bank-browser";
+import { QuestionBankBrowser, type BankQuestion } from "@/components/question-bank-browser";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import type { QuestionDifficulty } from "@/lib/questions/difficulty";
 
@@ -47,10 +47,10 @@ export default async function OgretmenSorularPage({
     topic_id: string;
     follows_new_policy: boolean;
   }[] = [];
-  const bankCounts = new Map<string, { approved: number; pending: number; approvedNew: number; pendingNew: number }>();
+  let newQuestions: BankQuestion[] = [];
 
   if (subjectIds.length > 0) {
-    const [{ data: rawTopics }, { data: pending }, { data: bankRows }] = await Promise.all([
+    const [{ data: rawTopics }, { data: pending }, { data: newRows }] = await Promise.all([
       supabase
         .from("topics")
         .select("id, name, grade_level, subject_id, exam_types, subjects(name)")
@@ -64,12 +64,19 @@ export default async function OgretmenSorularPage({
         .in("topics.subject_id", subjectIds)
         .order("created_at", { ascending: false }),
       // Ogretmenin "Sorulara girince" gordugu Genel Bakis sekmesi icin -
-      // sadece konu basina onayli/bekleyen sayisi (bkz. admin/sorular/page.tsx).
+      // kullanicinin "ilk acilista mumkunse bir sey gosterme, sadece test
+      // sorulari ve cevaplari gelsin" talebiyle artik sinif/ders/konu piller
+      // yerine dogrudan yeni kurala gore eklenen sorular cekiliyor (bkz.
+      // admin/sorular/page.tsx'teki ayni degisiklik).
       supabase
         .from("questions")
-        .select("topic_id, is_approved, follows_new_policy, topics!inner(subject_id)")
+        .select(
+          "id, body, options, correct_option, explanation, difficulty, topic_id, is_approved, follows_new_policy, created_at, topics!inner(subject_id)"
+        )
         .eq("is_reference_only", false)
-        .in("topics.subject_id", subjectIds),
+        .eq("follows_new_policy", true)
+        .in("topics.subject_id", subjectIds)
+        .order("created_at", { ascending: false }),
     ]);
 
     topics = (rawTopics ?? []).map((t) => ({
@@ -93,19 +100,18 @@ export default async function OgretmenSorularPage({
       follows_new_policy: q.follows_new_policy ?? false,
     }));
 
-    (bankRows ?? []).forEach((q) => {
-      if (!q.topic_id) return;
-      const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0, approvedNew: 0, pendingNew: 0 };
-      const isNew = q.follows_new_policy ?? false;
-      if (q.is_approved) {
-        entry.approved += 1;
-        if (isNew) entry.approvedNew += 1;
-      } else {
-        entry.pending += 1;
-        if (isNew) entry.pendingNew += 1;
-      }
-      bankCounts.set(q.topic_id, entry);
-    });
+    newQuestions = (newRows ?? []).map((q) => ({
+      id: q.id,
+      body: q.body,
+      options: (q.options ?? {}) as Record<string, string>,
+      correct_option: q.correct_option,
+      explanation: q.explanation,
+      difficulty: q.difficulty,
+      topic_id: q.topic_id,
+      is_approved: q.is_approved,
+      follows_new_policy: q.follows_new_policy ?? false,
+      created_at: q.created_at,
+    }));
   }
 
   const genelBakisTab =
@@ -114,7 +120,7 @@ export default async function OgretmenSorularPage({
         Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
       </p>
     ) : (
-      <QuestionBankBrowser topics={topics} counts={bankCounts} canShare={false} />
+      <QuestionBankBrowser topics={topics} newQuestions={newQuestions} canShare={false} />
     );
 
   const soruEkleTab = (
