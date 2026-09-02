@@ -192,18 +192,6 @@ export function BulkQuestionImport({
         </p>
       )}
 
-      <div className="mb-3">
-        <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
-        <input
-          type="file"
-          accept=".docx,.pdf,.txt"
-          onChange={handleFileChange}
-          disabled={fileLoading}
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-        />
-        {fileLoading && <p className="mt-1 text-xs text-slate-500">Dosyadan metin çıkarılıyor...</p>}
-      </div>
-
       <details className="mb-3 text-xs text-slate-500">
         <summary className="cursor-pointer font-medium text-indigo-600">Yapıştırma formatı nasıl olmalı?</summary>
         <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-slate-600">{FORMAT_EXAMPLE}</pre>
@@ -215,10 +203,22 @@ export function BulkQuestionImport({
 
       <Textarea
         rows={12}
-        placeholder="Soruları buraya yapıştır ya da yukarıdan dosya yükle..."
+        placeholder="Soruları buraya yapıştır ya da aşağıdan dosya yükle..."
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
+
+      <div className="mb-3 mt-3">
+        <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
+        <input
+          type="file"
+          accept=".docx,.pdf,.txt"
+          onChange={handleFileChange}
+          disabled={fileLoading}
+          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+        />
+        {fileLoading && <p className="mt-1 text-xs text-slate-500">Dosyadan metin çıkarılıyor...</p>}
+      </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="secondary" onClick={handleParse} disabled={!text.trim()}>

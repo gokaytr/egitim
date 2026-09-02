@@ -248,27 +248,9 @@ export function ReferencePoolAiImport() {
 
   return (
     <Card>
-      <h2 className="mb-1 font-semibold text-slate-900">Yapay Zeka ile Sınav Metninden İçe Aktar</h2>
-      <p className="mb-3 text-sm text-slate-500">
-        PDF&apos;den kopyaladığın ham sınav metnini (bozuk boşluklar, satır kırılmaları olsa bile) aşağıya olduğu
-        gibi yapıştır — <strong>aşağıdaki kutuda bozuk/karışık görünmesi normal</strong>, yapay zeka bunu okurken
-        düzeltip temiz Türkçeye çevirecek. Soruları tek tek ayırır, mümkünse cevap anahtarından doğru cevabı alır,
-        kısa bir çözüm açıklaması yazar ve her soruyu en uygun konuya otomatik dağıtır — sen sadece kaydetmeden önce
-        aşağıda çıkan (temizlenmiş) taslakları gözden geçirirsin.
-      </p>
+      <h2 className="mb-3 font-semibold text-slate-900">Yapay Zeka ile Sınav Metninden İçe Aktar</h2>
 
       <div className="flex flex-col gap-3">
-        <div className="rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-4">
-          <label className="mb-1 block text-sm font-semibold text-slate-800">📎 Dosya Yükle (.docx, .pdf, .txt) — önerilen yöntem</label>
-          <input
-            type="file"
-            accept=".docx,.pdf,.txt"
-            onChange={handleFileChange}
-            disabled={fileLoading}
-            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-700"
-          />
-          {fileLoading && <p className="mt-1 text-xs text-slate-500">Dosyadan metin çıkarılıyor...</p>}
-        </div>
         <details className="group">
           <summary className="cursor-pointer touch-manipulation list-none text-xs font-medium text-slate-500 hover:text-slate-700">
             <span className="group-open:hidden">▸ Ham metni elle görmek/düzenlemek istersen aç</span>
@@ -295,6 +277,17 @@ export function ReferencePoolAiImport() {
             value={answerKeyText}
             onChange={(e) => setAnswerKeyText(e.target.value)}
           />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
+          <input
+            type="file"
+            accept=".docx,.pdf,.txt"
+            onChange={handleFileChange}
+            disabled={fileLoading}
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+          />
+          {fileLoading && <p className="mt-1 text-xs text-slate-500">Dosyadan metin çıkarılıyor...</p>}
         </div>
         <div>
           <Button onClick={handleParse} disabled={loading || !rawText.trim()}>

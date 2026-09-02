@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
+import { QuestionBankBrowser } from "@/components/question-bank-browser";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import type { QuestionDifficulty } from "@/lib/questions/difficulty";
 
@@ -27,7 +28,14 @@ export default async function OgretmenSorularPage({
     .eq("teacher_id", effectiveTeacherId ?? "");
   const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
 
-  let topics: { id: string; name: string; grade_level: number | null; subject_id: string; subject_name: string }[] = [];
+  let topics: {
+    id: string;
+    name: string;
+    grade_level: number | null;
+    subject_id: string;
+    subject_name: string;
+    exam_types: string[] | null;
+  }[] = [];
   let questions: {
     id: string;
     body: string;
@@ -39,20 +47,30 @@ export default async function OgretmenSorularPage({
     topic_id: string;
     follows_new_policy: boolean;
   }[] = [];
+  const bankCounts = new Map<string, { approved: number; pending: number }>();
 
   if (subjectIds.length > 0) {
-    const { data: rawTopics } = await supabase
-      .from("topics")
-      .select("id, name, grade_level, subject_id, subjects(name)")
-      .in("subject_id", subjectIds);
-    const { data: pending } = await supabase
-      .from("questions")
-      .select(
-        "id, body, options, correct_option, explanation, source, difficulty, topic_id, follows_new_policy, topics!inner(subject_id)"
-      )
-      .eq("is_approved", false)
-      .in("topics.subject_id", subjectIds)
-      .order("created_at", { ascending: false });
+    const [{ data: rawTopics }, { data: pending }, { data: bankRows }] = await Promise.all([
+      supabase
+        .from("topics")
+        .select("id, name, grade_level, subject_id, exam_types, subjects(name)")
+        .in("subject_id", subjectIds),
+      supabase
+        .from("questions")
+        .select(
+          "id, body, options, correct_option, explanation, source, difficulty, topic_id, follows_new_policy, topics!inner(subject_id)"
+        )
+        .eq("is_approved", false)
+        .in("topics.subject_id", subjectIds)
+        .order("created_at", { ascending: false }),
+      // Ogretmenin "Sorulara girince" gordugu Genel Bakis sekmesi icin -
+      // sadece konu basina onayli/bekleyen sayisi (bkz. admin/sorular/page.tsx).
+      supabase
+        .from("questions")
+        .select("topic_id, is_approved, topics!inner(subject_id)")
+        .eq("is_reference_only", false)
+        .in("topics.subject_id", subjectIds),
+    ]);
 
     topics = (rawTopics ?? []).map((t) => ({
       id: t.id,
@@ -60,6 +78,7 @@ export default async function OgretmenSorularPage({
       grade_level: t.grade_level,
       subject_id: t.subject_id,
       subject_name: firstOf(t.subjects)?.name ?? "Diğer",
+      exam_types: t.exam_types,
     }));
 
     questions = (pending ?? []).map((q) => ({
@@ -73,7 +92,24 @@ export default async function OgretmenSorularPage({
       topic_id: q.topic_id,
       follows_new_policy: q.follows_new_policy ?? false,
     }));
+
+    (bankRows ?? []).forEach((q) => {
+      if (!q.topic_id) return;
+      const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0 };
+      if (q.is_approved) entry.approved += 1;
+      else entry.pending += 1;
+      bankCounts.set(q.topic_id, entry);
+    });
   }
+
+  const genelBakisTab =
+    subjectIds.length === 0 ? (
+      <p className="text-sm text-amber-700">
+        Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
+      </p>
+    ) : (
+      <QuestionBankBrowser topics={topics} counts={bankCounts} canShare={false} />
+    );
 
   const soruEkleTab = (
     <div className="flex flex-col gap-6">
@@ -109,10 +145,11 @@ export default async function OgretmenSorularPage({
       </div>
 
       <SimpleTabs
-        defaultKey="ekle"
+        defaultKey="genel"
         syncQueryParam="tab"
         tabs={[
-          { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
+          { key: "genel", label: "Genel Bakış", content: genelBakisTab, tone: "indigo" },
+          { key: "ekle", label: "Soru Ekle", content: soruEkleTab },
           { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: questions.length > 0, tone: "amber" },
         ]}
       />

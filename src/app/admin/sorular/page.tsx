@@ -9,6 +9,7 @@ import { PendingQuestionsBrowser } from "@/components/pending-questions-browser"
 import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
 import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 import { ReferencePoolFiles } from "@/components/reference-pool-files";
+import { QuestionBankBrowser, type BankShare } from "@/components/question-bank-browser";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -32,6 +33,8 @@ export default async function SorularPage() {
     { data: pending },
     { data: referenceQuestions },
     { data: referenceFiles },
+    { data: bankCountRows },
+    { data: rawShares },
   ] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
@@ -53,7 +56,33 @@ export default async function SorularPage() {
       .from("reference_pool_files")
       .select("id, file_name, storage_path, mime_type, created_at")
       .order("created_at", { ascending: false }),
+    // Sorulara girer girmez gorulen "Genel Bakis" sekmesi icin - butun
+    // sorulari degil, sadece konu basina onayli/bekleyen sayisini cekiyoruz
+    // (tek tek sorular, o konuya tiklaninca client tarafinda ayrica cekilir
+    // - bkz. question-bank-browser.tsx, on binlerce soruya olceklensin diye).
+    supabase.from("questions").select("topic_id, is_approved").eq("is_reference_only", false),
+    supabase
+      .from("exam_shares")
+      .select("id, exam_type, token")
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
   ]);
+
+  const bankCounts = new Map<string, { approved: number; pending: number }>();
+  (bankCountRows ?? []).forEach((q) => {
+    if (!q.topic_id) return;
+    const entry = bankCounts.get(q.topic_id) ?? { approved: 0, pending: 0 };
+    if (q.is_approved) entry.approved += 1;
+    else entry.pending += 1;
+    bankCounts.set(q.topic_id, entry);
+  });
+
+  const shares = new Map<string, BankShare[]>();
+  (rawShares ?? []).forEach((s) => {
+    const list = shares.get(s.exam_type) ?? [];
+    list.push(s);
+    shares.set(s.exam_type, list);
+  });
 
   const curriculumTopics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({
     id: t.id,
@@ -94,6 +123,8 @@ export default async function SorularPage() {
     difficulty: q.difficulty,
     topic_id: q.topic_id,
   }));
+
+  const genelBakisTab = <QuestionBankBrowser topics={browserTopics} counts={bankCounts} shares={shares} canShare />;
 
   const curriculumTab = (
     <div className="flex flex-col gap-6">
@@ -193,12 +224,13 @@ export default async function SorularPage() {
       </div>
 
       <SimpleTabs
-        defaultKey="havuz"
+        defaultKey="genel"
         syncQueryParam="tab"
         tabs={[
-          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab, tone: "indigo" },
+          { key: "genel", label: "Genel Bakış", content: genelBakisTab, tone: "indigo" },
           { key: "ekle", label: "Soru Ekle", content: soruEkleTab },
           { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
+          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab },
         ]}
       />
     </div>
