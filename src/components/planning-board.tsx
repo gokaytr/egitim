@@ -20,6 +20,7 @@ export type PlanningTopic = {
 // lib/homepage-content.ts EXAM_COURSES, reference-pool-browser.tsx).
 const EXAM_ORDER = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 const NO_EXAM_BUCKET = "Diğer";
+const NO_GRADE_BUCKET = "Genel";
 
 // Admin henuz bir konuya ozel hedef girmediyse (target_question_count NULL)
 // kullanilan varsayilan - kullanicinin "sen belirle" tercihine gore secildi:
@@ -48,16 +49,19 @@ function examTagsOf(t: PlanningTopic): string[] {
   return t.exam_types && t.exam_types.length > 0 ? t.exam_types : [NO_EXAM_BUCKET];
 }
 
-function gradeLabel(g: number | null): string {
-  if (g == null) return "Genel";
-  return `${g}. Sınıf`;
+function gradeKeyOf(t: PlanningTopic): string {
+  return t.grade_level == null ? NO_GRADE_BUCKET : String(t.grade_level);
 }
 
-function ProgressBar({ done, target }: { done: number; target: number }) {
+function gradeLabel(key: string): string {
+  return key === NO_GRADE_BUCKET ? NO_GRADE_BUCKET : `${key}. Sınıf`;
+}
+
+function ProgressBar({ done, target, thick = false }: { done: number; target: number; thick?: boolean }) {
   const pct = target > 0 ? Math.min(100, Math.round((done / target) * 100)) : 0;
   const tone = pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-indigo-500" : pct > 0 ? "bg-amber-500" : "bg-slate-300";
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+    <div className={`w-full overflow-hidden rounded-full bg-slate-100 ${thick ? "h-3" : "h-2"}`}>
       <div className={`h-full rounded-full ${tone} transition-all`} style={{ width: `${pct}%` }} />
     </div>
   );
@@ -67,11 +71,11 @@ function ProgressBar({ done, target }: { done: number; target: number }) {
 // planlamasi" talebi uzerine kuruldu. Her konu icin bir hedef soru sayisi
 // var (target_question_count, admin duzenleyebilir); "eklenen" ise
 // questions tablosundaki gercek satirlardan (referans havuzu haric) canli
-// hesaplaniyor. Kullanicinin "dengeli ilerleyelim, 1 ayda tum sinav/sinif/
-// konulara elimizi degdirmis olalim" hedefine yardimci olmak icin her sinav
-// ve ders altinda en geride kalan (en dusuk yuzdeli) konular basa siralaniyor
-// - boylece "bugun 1-2 ders anca bitirebiliyorum" temposunda nereden devam
-// edecegini hemen goruyor.
+// hesaplaniyor. Hiyerarsi kullanicinin talebiyle sinav -> sinif -> ders ->
+// konu seklinde (KPSS/ALES gibi sinifa bagli olmayan sinavlarda "Genel" tek
+// kova olarak calisir). Kullanicinin "dengeli ilerleyelim, 1 ayda tum sinav/
+// sinif/konulara elimizi degdirmis olalim" hedefine yardimci olmak icin her
+// kademede en geride kalan (en dusuk yuzdeli) secenekler basa siralaniyor.
 export function PlanningBoard({
   topics,
   questionCounts,
@@ -83,6 +87,7 @@ export function PlanningBoard({
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
 
   function targetOf(t: PlanningTopic): number {
@@ -107,17 +112,25 @@ export function PlanningBoard({
   }
 
   const examCounts = useMemo(() => {
-    const map = new Map<string, { target: number; done: number; topicCount: number }>();
+    const map = new Map<string, { target: number; done: number; topicCount: number; gradeCount: number }>();
     topics.forEach((t) => {
       const target = targetOf(t);
       const done = doneOf(t);
       examTagsOf(t).forEach((exam) => {
-        const entry = map.get(exam) ?? { target: 0, done: 0, topicCount: 0 };
+        const entry = map.get(exam) ?? { target: 0, done: 0, topicCount: 0, gradeCount: 0 };
         entry.target += target;
         entry.done += Math.min(done, target);
         entry.topicCount += 1;
         map.set(exam, entry);
       });
+    });
+    // her sinav icin kac farkli sinif kademesi var (buyuk kartta gostermek icin)
+    map.forEach((entry, exam) => {
+      const grades = new Set<string>();
+      topics.forEach((t) => {
+        if (examTagsOf(t).includes(exam)) grades.add(gradeKeyOf(t));
+      });
+      entry.gradeCount = grades.size;
     });
     return map;
     // overrides degistiginde de yeniden hesaplanmali
@@ -134,11 +147,36 @@ export function PlanningBoard({
 
   const activeExam = selectedExam ?? examOptions[0] ?? null;
 
-  const subjectsForExam = useMemo(() => {
+  const gradesForExam = useMemo(() => {
     if (!activeExam) return [];
-    const bySubject = new Map<string, { id: string; name: string; target: number; done: number }>();
+    const byGrade = new Map<string, { key: string; target: number; done: number; topicCount: number }>();
     topics
       .filter((t) => examTagsOf(t).includes(activeExam))
+      .forEach((t) => {
+        const key = gradeKeyOf(t);
+        const target = targetOf(t);
+        const done = doneOf(t);
+        const entry = byGrade.get(key) ?? { key, target: 0, done: 0, topicCount: 0 };
+        entry.target += target;
+        entry.done += Math.min(done, target);
+        entry.topicCount += 1;
+        byGrade.set(key, entry);
+      });
+    return Array.from(byGrade.values()).sort((a, b) => {
+      if (a.key === NO_GRADE_BUCKET) return 1;
+      if (b.key === NO_GRADE_BUCKET) return -1;
+      return Number(a.key) - Number(b.key);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topics, activeExam, questionCounts, overrides]);
+
+  const activeGrade = selectedGrade ?? gradesForExam[0]?.key ?? null;
+
+  const subjectsForExamGrade = useMemo(() => {
+    if (!activeExam || !activeGrade) return [];
+    const bySubject = new Map<string, { id: string; name: string; target: number; done: number }>();
+    topics
+      .filter((t) => examTagsOf(t).includes(activeExam) && gradeKeyOf(t) === activeGrade)
       .forEach((t) => {
         const target = targetOf(t);
         const done = doneOf(t);
@@ -153,22 +191,23 @@ export function PlanningBoard({
       return pctA - pctB || a.name.localeCompare(b.name, "tr");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topics, activeExam, questionCounts, overrides]);
+  }, [topics, activeExam, activeGrade, questionCounts, overrides]);
 
-  const activeSubjectId = selectedSubjectId ?? subjectsForExam[0]?.id ?? null;
+  const activeSubjectId = selectedSubjectId ?? subjectsForExamGrade[0]?.id ?? null;
 
-  const topicsForExamSubject = useMemo(() => {
-    if (!activeExam || !activeSubjectId) return [];
+  const topicsForSelection = useMemo(() => {
+    if (!activeExam || !activeGrade || !activeSubjectId) return [];
     return topics
-      .filter((t) => examTagsOf(t).includes(activeExam) && t.subject_id === activeSubjectId)
+      .filter(
+        (t) => examTagsOf(t).includes(activeExam) && gradeKeyOf(t) === activeGrade && t.subject_id === activeSubjectId
+      )
       .sort((a, b) => {
         const pctA = targetOf(a) > 0 ? doneOf(a) / targetOf(a) : 1;
         const pctB = targetOf(b) > 0 ? doneOf(b) / targetOf(b) : 1;
-        if (a.grade_level !== b.grade_level) return (a.grade_level ?? 99) - (b.grade_level ?? 99);
         return pctA - pctB;
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topics, activeExam, activeSubjectId, questionCounts, overrides]);
+  }, [topics, activeExam, activeGrade, activeSubjectId, questionCounts, overrides]);
 
   const grandTotal = useMemo(() => {
     let target = 0;
@@ -183,6 +222,12 @@ export function PlanningBoard({
 
   function pickExam(exam: string) {
     setSelectedExam(exam);
+    setSelectedGrade(null);
+    setSelectedSubjectId(null);
+  }
+
+  function pickGrade(key: string) {
+    setSelectedGrade(key);
     setSelectedSubjectId(null);
   }
 
@@ -218,7 +263,7 @@ export function PlanningBoard({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {examOptions.map((exam) => {
           const c = examCounts.get(exam)!;
           const pct = c.target > 0 ? Math.round((c.done / c.target) * 100) : 0;
@@ -228,18 +273,20 @@ export function PlanningBoard({
               key={exam}
               type="button"
               onClick={() => pickExam(exam)}
-              className={`touch-manipulation rounded-xl border px-3 py-2 text-left text-xs transition ${
-                active ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:bg-slate-50"
+              className={`touch-manipulation rounded-2xl border p-5 text-left transition ${
+                active ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-900">{exam}</span>
-                <span className="text-slate-500">
-                  %{pct} · {c.topicCount} konu
-                </span>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xl font-bold text-slate-900">{exam}</span>
+                <span className="text-2xl font-bold text-slate-900">%{pct}</span>
               </div>
-              <div className="mt-1 w-40">
-                <ProgressBar done={c.done} target={c.target} />
+              <p className="mt-1 text-sm text-slate-500">
+                {c.done} / {c.target} soru · {c.topicCount} konu
+                {c.gradeCount > 1 ? ` · ${c.gradeCount} sınıf` : ""}
+              </p>
+              <div className="mt-3">
+                <ProgressBar done={c.done} target={c.target} thick />
               </div>
             </button>
           );
@@ -247,24 +294,52 @@ export function PlanningBoard({
       </div>
 
       {activeExam && (
-        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex flex-wrap gap-2">
-            {subjectsForExam.map((s) => {
-              const pct = s.target > 0 ? Math.round((s.done / s.target) * 100) : 0;
-              const active = s.id === activeSubjectId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSelectedSubjectId(s.id)}
-                  className={`touch-manipulation rounded-full border px-3 py-1 text-xs font-medium transition ${
-                    active ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {s.name} · %{pct}
-                </button>
-              );
-            })}
+        <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4">
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf</p>
+            <div className="flex flex-wrap gap-2">
+              {gradesForExam.map((g) => {
+                const pct = g.target > 0 ? Math.round((g.done / g.target) * 100) : 0;
+                const active = g.key === activeGrade;
+                return (
+                  <button
+                    key={g.key}
+                    type="button"
+                    onClick={() => pickGrade(g.key)}
+                    className={`touch-manipulation rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      active ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {gradeLabel(g.key)} · %{pct} · {g.topicCount} konu
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Ders</p>
+            <div className="flex flex-wrap gap-2">
+              {subjectsForExamGrade.map((s) => {
+                const pct = s.target > 0 ? Math.round((s.done / s.target) * 100) : 0;
+                const active = s.id === activeSubjectId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSelectedSubjectId(s.id)}
+                    className={`touch-manipulation rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      active ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {s.name} · %{pct}
+                  </button>
+                );
+              })}
+              {subjectsForExamGrade.length === 0 && (
+                <p className="text-xs text-slate-400">Bu sınıfta henüz bu sınava atanmış ders/konu yok.</p>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-slate-500">
@@ -272,7 +347,7 @@ export function PlanningBoard({
           </p>
 
           <div className="flex flex-col divide-y divide-slate-100">
-            {topicsForExamSubject.map((t) => {
+            {topicsForSelection.map((t) => {
               const target = targetOf(t);
               const done = doneOf(t);
               const remaining = Math.max(0, target - done);
@@ -282,7 +357,6 @@ export function PlanningBoard({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-slate-900">{t.name}</span>
-                      <Badge tone="default">{gradeLabel(t.grade_level)}</Badge>
                       {remaining === 0 && target > 0 && <Badge tone="green">Hedef tamam</Badge>}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500">
@@ -329,6 +403,9 @@ export function PlanningBoard({
                 </div>
               );
             })}
+            {topicsForSelection.length === 0 && (
+              <p className="py-2 text-xs text-slate-400">Bu ders/sınıf için henüz konu yok.</p>
+            )}
           </div>
         </div>
       )}
