@@ -8,6 +8,7 @@ import { CurriculumBrowser, type CurriculumTopicRow } from "@/components/curricu
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
 import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
 import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
+import { ReferencePoolFiles } from "@/components/reference-pool-files";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -24,25 +25,35 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 export default async function SorularPage() {
   const supabase = await createClient();
 
-  const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: pending }, { data: referenceQuestions }] =
-    await Promise.all([
-      supabase.from("subjects").select("id, name").order("name"),
-      supabase.from("courses").select("id, name").order("name"),
-      supabase
-        .from("topics")
-        .select("id, name, kazanim, grade_level, exam_types, subject_id, subjects(name)")
-        .order("grade_level"),
-      supabase
-        .from("questions")
-        .select("id, body, options, correct_option, explanation, source, difficulty, topic_id")
-        .eq("is_approved", false)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("questions")
-        .select("id, body, options, correct_option, explanation, difficulty, topic_id")
-        .eq("is_reference_only", true)
-        .order("created_at", { ascending: false }),
-    ]);
+  const [
+    { data: subjects },
+    { data: courses },
+    { data: rawTopics },
+    { data: pending },
+    { data: referenceQuestions },
+    { data: referenceFiles },
+  ] = await Promise.all([
+    supabase.from("subjects").select("id, name").order("name"),
+    supabase.from("courses").select("id, name").order("name"),
+    supabase
+      .from("topics")
+      .select("id, name, kazanim, grade_level, exam_types, subject_id, subjects(name)")
+      .order("grade_level"),
+    supabase
+      .from("questions")
+      .select("id, body, options, correct_option, explanation, source, difficulty, topic_id")
+      .eq("is_approved", false)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("questions")
+      .select("id, body, options, correct_option, explanation, difficulty, topic_id")
+      .eq("is_reference_only", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("reference_pool_files")
+      .select("id, file_name, storage_path, mime_type, created_at")
+      .order("created_at", { ascending: false }),
+  ]);
 
   const curriculumTopics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({
     id: t.id,
@@ -114,6 +125,32 @@ export default async function SorularPage() {
     </div>
   );
 
+  const referencePoolFiles = (referenceFiles ?? []).map((f) => ({
+    id: f.id,
+    file_name: f.file_name,
+    storage_path: f.storage_path,
+    mime_type: f.mime_type,
+    created_at: f.created_at,
+  }));
+
+  const havuzEkleTab = (
+    <div className="flex flex-col gap-6">
+      <ReferencePoolAddPanel />
+    </div>
+  );
+
+  const havuzBirikenTab = <ReferencePoolBrowser topics={browserTopics} questions={referencePoolQuestions} />;
+
+  const havuzPdfTab = (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-slate-500">
+        Soru Havuzu&apos;na yüklediğin PDF/Word/metin dosyaları — kaynak olarak burada saklanır, istediğinde
+        görüntüleyip silebilirsin.
+      </p>
+      <ReferencePoolFiles files={referencePoolFiles} />
+    </div>
+  );
+
   const soruHavuzuTab = (
     <div className="flex flex-col gap-6">
       <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
@@ -125,8 +162,14 @@ export default async function SorularPage() {
           sorular üretir. Bu sekme sadece admin panelinde var.
         </p>
       </div>
-      <ReferencePoolAddPanel />
-      <ReferencePoolBrowser topics={browserTopics} questions={referencePoolQuestions} />
+      <SimpleTabs
+        defaultKey="havuz-ekle"
+        tabs={[
+          { key: "havuz-ekle", label: "Şu An Eklenenler", content: havuzEkleTab, tone: "indigo" },
+          { key: "havuz-biriken", label: "Biriken Sorular", content: havuzBirikenTab, tone: "emerald" },
+          { key: "havuz-pdf", label: "PDF'ler", content: havuzPdfTab },
+        ]}
+      />
     </div>
   );
 

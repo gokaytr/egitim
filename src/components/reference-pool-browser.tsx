@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Badge, Button } from "@/components/ui";
 import { DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
 import { ReferencePoolToggleButton } from "@/components/reference-pool-toggle-button";
 import { QuestionEditForm, type EditableQuestion } from "@/components/question-edit-form";
@@ -50,10 +52,37 @@ function TabButton({
 // olsun" talebi) o filtreye gerek kalmadi, dogrudan referans havuzu
 // icerigini listeler. Admin her soruyu duzenleyebilir.
 export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; questions: Question[] }) {
+  const router = useRouter();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
+
+  async function deleteQuestion(id: string) {
+    if (!window.confirm("Bu soruyu Soru Havuzu'ndan kalıcı olarak silmek istediğine emin misin?")) return;
+    setDeletingId(id);
+    const supabase = createClient();
+    await supabase.from("questions").delete().eq("id", id);
+    setDeletingId(null);
+    router.refresh();
+  }
+
+  async function deleteAll() {
+    if (
+      !window.confirm(
+        `Soru Havuzu'ndaki TÜM ${questions.length} soruyu kalıcı olarak silmek istediğine emin misin? Bu işlem geri alınamaz.`
+      )
+    )
+      return;
+    setDeletingAll(true);
+    const supabase = createClient();
+    await supabase.from("questions").delete().eq("is_reference_only", true);
+    setDeletingAll(false);
+    setSelectedTopicId(null);
+    router.refresh();
+  }
 
   const questionCountByTopic = useMemo(() => {
     const map = new Map<string, number>();
@@ -106,7 +135,14 @@ export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; q
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm font-medium text-slate-700">Havuzda toplam {questions.length} soru var.</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-slate-700">Havuzda toplam {questions.length} soru var.</p>
+        {questions.length > 0 && (
+          <Button variant="danger" className="text-xs" disabled={deletingAll} onClick={deleteAll}>
+            {deletingAll ? "Siliniyor..." : "Tümünü Sil"}
+          </Button>
+        )}
+      </div>
 
       <div>
         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf</p>
@@ -190,6 +226,14 @@ export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; q
                       Düzenle
                     </button>
                   )}
+                  <button
+                    type="button"
+                    disabled={deletingId === q.id}
+                    onClick={() => deleteQuestion(q.id)}
+                    className="touch-manipulation text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === q.id ? "Siliniyor..." : "Sil"}
+                  </button>
                 </div>
                 {editingId === q.id && <QuestionEditForm question={q} onDone={() => setEditingId(null)} />}
               </div>

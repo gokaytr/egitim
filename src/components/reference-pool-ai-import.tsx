@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Button, Card, Textarea } from "@/components/ui";
 
@@ -37,6 +38,7 @@ const CONFIDENCE_TONE: Record<Draft["confidence"], "green" | "amber" | "red"> = 
 // Sadece admin'in Soru Havuzu ekraninda kullanilir; kaydedilen her soru
 // is_reference_only=true olur.
 export function ReferencePoolAiImport() {
+  const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [rawText, setRawText] = useState("");
   const [answerKeyText, setAnswerKeyText] = useState("");
@@ -80,6 +82,25 @@ export function ReferencePoolAiImport() {
     if (!file) return;
     setFileLoading(true);
     setStatus(null);
+
+    // Dosyanin kendisini de (metin cikarimindan bagimsiz olarak) ozel bir
+    // storage bucket'ina yukleyip reference_pool_files'a kaydediyoruz - "PDF'ler"
+    // sekmesinde gorulup silinebilsin diye. Bu adim basarisiz olsa bile metin
+    // cikarimini engellemez (kullaniciyi bos elle birakmayalim).
+    const supabase = createClient();
+    const storagePath = `${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("reference-pool-files").upload(storagePath, file);
+    if (!uploadError) {
+      const { data: userData } = await supabase.auth.getUser();
+      await supabase.from("reference_pool_files").insert({
+        file_name: file.name,
+        storage_path: storagePath,
+        mime_type: file.type || null,
+        uploaded_by: userData.user?.id ?? null,
+      });
+      router.refresh();
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch("/api/questions/extract-text", { method: "POST", body: formData });
