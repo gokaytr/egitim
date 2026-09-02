@@ -23,6 +23,41 @@ async function extractFromDocx(buffer: Buffer): Promise<string> {
 // ayirip sonra HER SUTUNU KENDI ICINDE yukaridan asagiya birlestirerek
 // doğru okuma sirasini yeniden kuruyoruz - kullanicinin bildirdigi "kötü
 // ekleme" sorununun kok nedeni buydu.
+// pdf.js-extract, ayni kelimeyi bile bazen birden fazla ayri "item"a
+// bolebiliyor (ozellikle Turkce'ye ozgu ı/ş/ğ/ö/ü/ç harflerinde font/glif
+// gecisleri nedeniyle) - onceki kod HER item arasina kosulsuz bosluk
+// koyuyordu, bu da "sırasıyla" gibi tek bir kelimeyi "s ırası yla" seklinde
+// parcaliyordu (kullanicinin bildirdigi asil sorun buydu). Dogru cozum,
+// gercek bir bosluk olup olmadigina items arasindaki YATAY BOSLUGA (x
+// koordinati farkina) bakarak karar vermek: iki item birbirine bitisikse
+// (aralarinda anlamli bir bosluk yoksa) dogrudan birlestir, gercekten
+// ayrikse aralarina bosluk koy - tipki bir PDF okuyucunun goz ile yaptigi
+// gibi.
+type PdfLineItem = { str: string; x: number; width: number };
+function joinLineItems(items: PdfLineItem[]): string {
+  let text = "";
+  let prevEndX: number | null = null;
+  let prevAvgCharWidth = 0;
+  for (const item of items) {
+    const str = item.str;
+    if (!str) continue;
+    if (prevEndX !== null) {
+      const gap = item.x - prevEndX;
+      // Esik: onceki kelimenin ortalama karakter genisliginin bir kismi -
+      // gercek kelime araligi genelde bir karakter genisligine yakindir,
+      // kelime ICI harf araligi (kerning) ise cok daha kucuktur.
+      const threshold = Math.max(prevAvgCharWidth * 0.35, 1);
+      if (gap > threshold) {
+        text += " ";
+      }
+    }
+    text += str;
+    prevEndX = item.x + item.width;
+    prevAvgCharWidth = str.length > 0 ? item.width / str.length : prevAvgCharWidth;
+  }
+  return text.replace(/\s+/g, " ").trim();
+}
+
 async function extractFromPdf(buffer: Buffer): Promise<string> {
   const { PDFExtract } = await import("pdf.js-extract");
   const pdfExtract = new PDFExtract();
@@ -38,7 +73,7 @@ async function extractFromPdf(buffer: Buffer): Promise<string> {
     type Line = { y: number; text: string; isLeftColumn: boolean };
     const builtLines: Line[] = lines.map((line) => {
       const sorted = [...line].sort((a, b) => a.x - b.x);
-      const text = sorted.map((item) => item.str).join(" ").replace(/\s+/g, " ").trim();
+      const text = joinLineItems(sorted);
       const avgX = sorted.reduce((sum, item) => sum + item.x, 0) / sorted.length;
       const y = Math.min(...sorted.map((item) => item.y));
       return { y, text, isLeftColumn: avgX < columnBoundary };
