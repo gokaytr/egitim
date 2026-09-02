@@ -239,6 +239,11 @@ export function ReferencePoolAiImport() {
     setSkipped([]);
     setRawText("");
     setAnswerKeyText("");
+    // "Biriken Sorular" sekmesindeki liste, sayfa ilk yuklendiginde sunucudan
+    // gelen bir prop - kaydettikten sonra router.refresh() cagirmazsak yeni
+    // eklenen sorular orada gorunmez (kullanicinin bildirdigi "pdf ekledim
+    // ama biriken sorularda gorunmedi" sorununun asil nedeni buydu).
+    router.refresh();
   }
 
   return (

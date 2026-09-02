@@ -84,7 +84,20 @@ export function SimpleTabs({
           </button>
         ))}
       </div>
-      {tabs.find((t) => t.key === active)?.content}
+      {/* Onceden sadece aktif sekmenin icerigi render ediliyordu - bu,
+          sekme degistirildiginde diger sekmelerdeki client bilesenlerin
+          (orn. Soru Havuzu'ndaki "Su An Eklenenler" formunda yazilan/
+          yuklenen ham metin, ayristirilmis taslaklar) TAMAMEN kaybolmasina
+          yol aciyordu, cunku React o alt agaci DOM'dan sokup atiyor ve geri
+          donulunce bilesen SIFIRDAN kuruluyordu. Artik TUM sekmeler ayni
+          anda mount edilip sadece aktif olmayanlar CSS ile gizleniyor -
+          boylece sekmeler arasi gecis, doldurulmus formlari/taslaklari
+          korur. */}
+      {tabs.map((t) => (
+        <div key={t.key} className={t.key === active ? undefined : "hidden"}>
+          {t.content}
+        </div>
+      ))}
     </div>
   );
 }
