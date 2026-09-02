@@ -320,7 +320,16 @@ export async function parseExamText(params: {
   try {
     message = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: 16000,
+      // Bir sinav kagidi 40 soruya kadar cikabiliyor - her soru icin govde +
+      // 4 sik + aciklama + siniflandirma alanlari yazdirmak kolayca 16.000
+      // token'i asiyordu, cikti kesiliyordu, JSON bozuk geliyordu ve
+      // (hicbir soru kurtarilamadigi icin) kullaniciya "hic soru
+      // cikarilamadi" olarak donuyordu - "pdf yukleniyor ama sorular
+      // gelmiyor" sikayetinin asil nedeni buydu. Sinirin (Sonnet 4.5'in
+      // destekledigi ust sinira yakin) yukseltilmesi buyuk sinavlarin da
+      // tek seferde sigmasini saglar; asagidaki 8. kural da aciklamalari
+      // kisa tutturarak soru basina token tuketimini azaltir.
+      max_tokens: 64000,
       system:
         "Sen Türkiye'deki ÖSYM ve benzeri sınav kağıtlarını dijitalleştiren, çok titiz bir veri işleme editörüsün. " +
         "Sana PDF'den kopyalanmış, bozuk boşluklu/satır kırılmalı HAM sınav metni verilecek. Görevin bunu tek tek " +
@@ -331,7 +340,8 @@ export async function parseExamText(params: {
         "4) Cevap anahtarı verildiyse doğru cevabı SADECE oradan al ve confidence='high' ver. Verilmediyse kendi bilgi/akıl yürütmenle en olası cevabı işaretle ve confidence='low' ver (admin kaydetmeden önce gözden geçirecek).\n" +
         "5) Her soru için doğru cevabın neden doğru olduğunu kısaca açıklayan bir 'explanation' yaz (boş bırakma).\n" +
         "6) Aşağıdaki konu kataloğundan (id | ders | sınıf | konu adı) İÇERİĞE EN UYGUN OLAN TEK konunun id'sini topic_id olarak ver; hiçbiri gerçekten uymuyorsa topic_id=null bırak ve topic_guess_label'a tahmini konu adını yaz.\n" +
-        "7) Metindeki telif/kurum başlıkları (ör. 'T.C. Ölçme, Seçme ve Yerleştirme Merkezi', sınav adı, tarih) SORU DEĞİLDİR, atla.",
+        "7) Metindeki telif/kurum başlıkları (ör. 'T.C. Ölçme, Seçme ve Yerleştirme Merkezi', sınav adı, tarih) SORU DEĞİLDİR, atla.\n" +
+        "8) Metinde çok sayıda soru varsa (ör. tam bir sınav kitapçığı) 'explanation' alanını KISA tut (1-3 cümle, doğru cevabın mantığını versin yeterli) - amaç çıktının tamamının kesilmeden sığması, uzun uzun anlatma.",
       messages: [
         {
           role: "user",
@@ -364,6 +374,10 @@ Aşağıdaki JSON formatında ve SADECE JSON döndür:
     return FALLBACK_EXAM_PARSE;
   }
 
+  if (message.stop_reason === "max_tokens") {
+    console.warn("parseExamText: yanit max_tokens sinirinda kesildi, kismi kurtarma denenecek");
+  }
+
   const textBlock = message.content.find((b) => b.type === "text");
   const raw = textBlock && "text" in textBlock ? textBlock.text : "{}";
 
@@ -375,7 +389,73 @@ Aşağıdaki JSON formatında ve SADECE JSON döndür:
       skipped: Array.isArray(parsed.skipped) ? parsed.skipped : [],
     };
   } catch (err) {
-    console.error("parseExamText: JSON ayrıştırılamadı", err);
+    // Cikti (uzun bir sinav yuzunden max_tokens'a takilip) yarim kesilmis
+    // olabilir - JSON.parse tum govdeyi tek parca istedigi icin boyle bir
+    // durumda HER SEYI atip kullaniciya "hic soru cikarilamadi" demek
+    // israf: bunun yerine "questions" dizisindeki TAMAMLANMIS (kapanan
+    // suslu parantezli) soru nesnelerini teker teker kurtarmaya calisiyoruz,
+    // son (yarim kalmis) soruyu sessizce atlariz.
+    console.error("parseExamText: JSON tam ayrıştırılamadı, kısmi kurtarma deneniyor", err);
+    const salvaged = salvageCompleteObjectsFromArray(raw, "questions");
+    if (salvaged.length > 0) {
+      return {
+        questions: salvaged as ExamParsedQuestion[],
+        skipped: ["Yanıt kesildiği için son bir kısım soru kurtarılamadı - kalanları ayrı bir seferde tekrar dene."],
+      };
+    }
     return FALLBACK_EXAM_PARSE;
   }
+}
+
+// Verilen JSON metninde `"<arrayKey>": [ {...}, {...}, ... ]` seklindeki bir
+// dizinin icindeki TAMAMLANMIS (acilan/kapanan suslu parantezleri esit
+// sayida olan) nesneleri sirayla parse edip dondurur; dizi kesilmisse (son
+// nesne yarim kalmissa) o son nesneyi sessizce atlar. String icindeki
+// suslu parantezleri/kacis karakterlerini dogru sayabilmek icin basit bir
+// durum makinesi kullanir.
+function salvageCompleteObjectsFromArray(raw: string, arrayKey: string): unknown[] {
+  const keyIndex = raw.indexOf(`"${arrayKey}"`);
+  if (keyIndex === -1) return [];
+  const bracketStart = raw.indexOf("[", keyIndex);
+  if (bracketStart === -1) return [];
+
+  const results: unknown[] = [];
+  let i = bracketStart + 1;
+  while (i < raw.length) {
+    while (i < raw.length && /[\s,]/.test(raw[i])) i++;
+    if (i >= raw.length || raw[i] === "]") break;
+    if (raw[i] !== "{") break;
+
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let j = i;
+    for (; j < raw.length; j++) {
+      const c = raw[j];
+      if (inString) {
+        if (escape) escape = false;
+        else if (c === "\\") escape = true;
+        else if (c === '"') inString = false;
+      } else if (c === '"') {
+        inString = true;
+      } else if (c === "{") {
+        depth++;
+      } else if (c === "}") {
+        depth--;
+        if (depth === 0) {
+          j++;
+          break;
+        }
+      }
+    }
+    if (depth !== 0) break; // nesne yarim kalmis (kesilmis) - burada dur
+
+    try {
+      results.push(JSON.parse(raw.slice(i, j)));
+    } catch {
+      // tekil nesne bile bozuksa atla, digerlerini kurtarmaya devam et
+    }
+    i = j;
+  }
+  return results;
 }

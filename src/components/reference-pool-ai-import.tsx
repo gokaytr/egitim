@@ -258,28 +258,33 @@ export function ReferencePoolAiImport() {
       </p>
 
       <div className="flex flex-col gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
+        <div className="rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-4">
+          <label className="mb-1 block text-sm font-semibold text-slate-800">📎 Dosya Yükle (.docx, .pdf, .txt) — önerilen yöntem</label>
           <input
             type="file"
             accept=".docx,.pdf,.txt"
             onChange={handleFileChange}
             disabled={fileLoading}
-            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-700"
           />
           {fileLoading && <p className="mt-1 text-xs text-slate-500">Dosyadan metin çıkarılıyor...</p>}
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Ham sınav metni <span className="font-normal text-slate-400">(dosya yükleyince otomatik dolar, elle de yapıştırabilirsin)</span>
-          </label>
-          <Textarea
-            rows={12}
-            placeholder="Sınav PDF'inden kopyaladığın metni buraya yapıştır..."
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-          />
-        </div>
+        <details className="group">
+          <summary className="cursor-pointer touch-manipulation list-none text-xs font-medium text-slate-500 hover:text-slate-700">
+            <span className="group-open:hidden">▸ Ham metni elle görmek/düzenlemek istersen aç</span>
+            <span className="hidden group-open:inline">▾ Ham sınav metni</span>
+          </summary>
+          <div className="mt-1.5">
+            <Textarea
+              rows={5}
+              className="text-xs leading-snug"
+              placeholder="Sınav PDF'inden kopyaladığın metni buraya yapıştır..."
+              value={rawText}
+              onChange={(e) => setRawText(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-slate-400">Dosya yükleyince otomatik dolar, elle de yapıştırabilirsin.</p>
+          </div>
+        </details>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Cevap anahtarı <span className="font-normal text-slate-400">(varsa ekle — doğruluğu artırır)</span>

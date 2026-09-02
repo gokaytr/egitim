@@ -154,15 +154,6 @@ export default async function SorularPage() {
 
   const soruHavuzuTab = (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
-        <p className="font-semibold text-slate-900">🔒 Bu havuzdaki sorular öğrenciye ASLA gösterilmez.</p>
-        <p className="mt-1">
-          Soru Havuzu, normal soru ekleme/onaylama akışından tamamen bağımsız, sadece yapay zekânın örnek alıp
-          eğitilmesi için bir kaynak. Buraya örneğin ÖSYM&apos;nin geçmiş sınav sorularını cevaplarıyla birlikte
-          ekleyebilirsin — sistem bunları öğrenir ama ürettiği sorular birebir aynısı olmaz, benzer nitelikte yeni
-          sorular üretir. Bu sekme sadece admin panelinde var.
-        </p>
-      </div>
       <SimpleTabs
         defaultKey="havuz-ekle"
         tabs={[
@@ -171,6 +162,25 @@ export default async function SorularPage() {
           { key: "havuz-pdf", label: "PDF'ler", content: havuzPdfTab },
         ]}
       />
+      {/* Aciklama kutusu eskiden en ustteydi, kullanicinin "aşağıdaki kısmı
+          kapat, sayfa en altında yaz" talebiyle sayfanin en altina, varsayilan
+          olarak kapali (kucuk bir <details>) bir nota tasindi - boylece asil
+          is akisi (dosya yukle/ayristir) ekrani actiginda hemen karsina cikan
+          ilk sey oluyor. */}
+      <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+        <summary className="cursor-pointer touch-manipulation font-medium text-slate-500">
+          🔒 Soru Havuzu ne işe yarar?
+        </summary>
+        <div className="mt-2 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">Bu havuzdaki sorular öğrenciye ASLA gösterilmez.</p>
+          <p className="mt-1">
+            Soru Havuzu, normal soru ekleme/onaylama akışından tamamen bağımsız, sadece yapay zekânın örnek alıp
+            eğitilmesi için bir kaynak. Buraya örneğin ÖSYM&apos;nin geçmiş sınav sorularını cevaplarıyla birlikte
+            ekleyebilirsin — sistem bunları öğrenir ama ürettiği sorular birebir aynısı olmaz, benzer nitelikte yeni
+            sorular üretir. Bu sekme sadece admin panelinde var.
+          </p>
+        </div>
+      </details>
     </div>
   );
 
@@ -182,12 +192,12 @@ export default async function SorularPage() {
       </div>
 
       <SimpleTabs
-        defaultKey="ekle"
+        defaultKey="havuz"
         syncQueryParam="tab"
         tabs={[
-          { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
+          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab, tone: "indigo" },
+          { key: "ekle", label: "Soru Ekle", content: soruEkleTab },
           { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
-          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab },
         ]}
       />
     </div>
