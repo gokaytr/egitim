@@ -1,6 +1,6 @@
 import { Badge, DashboardActionCard } from "@/components/ui";
 import { RecentQuestionsCard } from "@/components/recent-questions-card";
-import { getRecentQuestions } from "@/lib/questions/recent";
+import { getRecentQuestionActivity } from "@/lib/questions/recent";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,7 +25,7 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
     pendingQuestionCount = count ?? 0;
   }
 
-  const recentQuestions = await getRecentQuestions(supabase, subjectIds.length > 0 ? subjectIds : ["__none__"]);
+  const recentActivity = await getRecentQuestionActivity(supabase, subjectIds.length > 0 ? subjectIds : ["__none__"]);
 
   type SubjectRow = { subjects: { name: string } | { name: string }[] | null };
   const branchNames = ((mySubjects ?? []) as SubjectRow[])
@@ -68,7 +68,12 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
         />
       </div>
 
-      <RecentQuestionsCard questions={recentQuestions} isAdmin={false} currentUserId={teacherId} />
+      <RecentQuestionsCard
+        added={recentActivity.added}
+        approved={recentActivity.approved}
+        isAdmin={false}
+        currentUserId={teacherId}
+      />
     </div>
   );
 }

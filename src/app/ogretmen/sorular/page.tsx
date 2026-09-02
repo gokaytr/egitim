@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
-import { AllQuestionsBrowser } from "@/components/all-questions-browser";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import type { QuestionDifficulty } from "@/lib/questions/difficulty";
 
@@ -10,9 +9,10 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-// Soru Ekle ve Soru Onayi, ogretmen menusunde de tek bir "Sorular" sayfasi
-// altinda iki sekme olarak birlestirildi (admin panelindeki ayni birlestirme
-// ile tutarli).
+// Soru Ekle ve Soru Onayi, ogretmen menusunde tek bir "Sorular" sayfasi
+// altinda iki sekme olarak birlestirildi. "Soru Havuzu" (yapay zeka egitim
+// referans havuzu) SADECE admin panelinde var - ogretmen bu havuza
+// erisemez/ekleyemez, bkz. admin/sorular/page.tsx.
 export default async function OgretmenSorularPage({
   searchParams,
 }: {
@@ -38,36 +38,18 @@ export default async function OgretmenSorularPage({
     difficulty: QuestionDifficulty | null;
     topic_id: string;
   }[] = [];
-  let allQuestions: {
-    id: string;
-    body: string;
-    options: Record<string, string>;
-    correct_option: string;
-    explanation: string | null;
-    is_approved: boolean;
-    source: string;
-    difficulty: QuestionDifficulty | null;
-    topic_id: string;
-    is_reference_only: boolean;
-  }[] = [];
 
   if (subjectIds.length > 0) {
-    const [{ data: rawTopics }, { data: pending }, { data: all }] = await Promise.all([
-      supabase.from("topics").select("id, name, grade_level, subject_id, subjects(name)").in("subject_id", subjectIds),
-      supabase
-        .from("questions")
-        .select("id, body, options, correct_option, explanation, source, difficulty, topic_id, topics!inner(subject_id)")
-        .eq("is_approved", false)
-        .in("topics.subject_id", subjectIds)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("questions")
-        .select(
-          "id, body, options, correct_option, explanation, is_approved, source, difficulty, topic_id, is_reference_only, topics!inner(subject_id)"
-        )
-        .in("topics.subject_id", subjectIds)
-        .order("created_at", { ascending: false }),
-    ]);
+    const { data: rawTopics } = await supabase
+      .from("topics")
+      .select("id, name, grade_level, subject_id, subjects(name)")
+      .in("subject_id", subjectIds);
+    const { data: pending } = await supabase
+      .from("questions")
+      .select("id, body, options, correct_option, explanation, source, difficulty, topic_id, topics!inner(subject_id)")
+      .eq("is_approved", false)
+      .in("topics.subject_id", subjectIds)
+      .order("created_at", { ascending: false });
 
     topics = (rawTopics ?? []).map((t) => ({
       id: t.id,
@@ -86,19 +68,6 @@ export default async function OgretmenSorularPage({
       source: q.source,
       difficulty: q.difficulty,
       topic_id: q.topic_id,
-    }));
-
-    allQuestions = (all ?? []).map((q) => ({
-      id: q.id,
-      body: q.body,
-      options: (q.options ?? {}) as Record<string, string>,
-      correct_option: q.correct_option,
-      explanation: q.explanation,
-      is_approved: q.is_approved,
-      source: q.source,
-      difficulty: q.difficulty,
-      topic_id: q.topic_id,
-      is_reference_only: q.is_reference_only,
     }));
   }
 
@@ -128,30 +97,11 @@ export default async function OgretmenSorularPage({
     </div>
   );
 
-  const sorularListesiTab = (
-    <div className="flex flex-col gap-6">
-      <p className="text-sm text-slate-500">
-        Branşınızdaki tüm sorular — onaylı ve onay bekleyenler dahil — sınıf, ders ve konuya göre gruplu.
-      </p>
-      {subjectIds.length === 0 ? (
-        <p className="text-sm text-amber-700">
-          Size henüz bir branş atanmamış. Soru görebilmeniz için admin panelinden bir branş atanması gerekiyor.
-        </p>
-      ) : (
-        <AllQuestionsBrowser topics={topics} questions={allQuestions} />
-      )}
-    </div>
-  );
-
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
-        <p className="text-sm text-slate-500">Soru ekleme, onaylama ve tüm soruları görüntüleme tek ekranda.</p>
-        <p className="mt-2 text-sm font-medium text-slate-600">
-          🔒 Not: &quot;Soru Havuzu&quot; sekmesindeki <span className="font-semibold">Referans Havuzu</span> pilinde
-          tutulan sorular öğrenciye ASLA gösterilmez/yayınlanmaz — sadece yapay zekânın örnek alması için saklanır.
-        </p>
+        <p className="text-sm text-slate-500">Soru ekleme ve onaylama tek ekranda.</p>
       </div>
 
       <SimpleTabs
@@ -160,7 +110,6 @@ export default async function OgretmenSorularPage({
         tabs={[
           { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
           { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: questions.length > 0, tone: "amber" },
-          { key: "havuz", label: "Soru Havuzu", content: sorularListesiTab },
         ]}
       />
     </div>

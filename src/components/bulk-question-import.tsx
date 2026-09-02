@@ -33,11 +33,14 @@ type ResolvedQuestion = ParsedQuestion & {
 export function BulkQuestionImport({
   topicId,
   subjectIds,
+  isReferenceOnly = false,
 }: {
   /** Ekranda o an secili konu - metinde "Konu:" basligi olmayan sorular icin varsayilan olarak kullanilir. */
   topicId: string;
   /** Verilirse, "Konu:" baslıklarını eslestirirken sadece bu derslere ait konulara bakilir. */
   subjectIds?: string[];
+  /** true ise (sadece admin'in Soru Havuzu ekranindan kullanilir), eklenen tum sorular dogrudan is_reference_only=true olarak kaydedilir - ogrenciye hicbir zaman gosterilmez, sadece yapay zekanin egitilmesi icin saklanir. */
+  isReferenceOnly?: boolean;
 }) {
   const [text, setText] = useState("");
   const [topics, setTopics] = useState<TopicOption[]>([]);
@@ -139,6 +142,7 @@ export function BulkQuestionImport({
       explanation: q.explanation,
       source: "teacher" as const,
       is_approved: true,
+      is_reference_only: isReferenceOnly,
     }));
 
     const { error } = await supabase.from("questions").insert(rows);
@@ -148,7 +152,9 @@ export function BulkQuestionImport({
       return;
     }
     const skipped = resolved.length - savable.length;
-    setStatus(`${rows.length} soru eklendi.${skipped > 0 ? ` (${skipped} soru konu bulunamadığı için eklenmedi.)` : ""}`);
+    setStatus(
+      `${rows.length} soru ${isReferenceOnly ? "soru havuzuna" : ""} eklendi.${skipped > 0 ? ` (${skipped} soru konu bulunamadığı için eklenmedi.)` : ""}`
+    );
     setResolved([]);
     setText("");
   }
@@ -160,7 +166,9 @@ export function BulkQuestionImport({
 
   return (
     <Card>
-      <h2 className="mb-1 font-semibold text-slate-900">Kopyala-Yapıştır / Dosyadan Toplu Soru Ekle</h2>
+      <h2 className="mb-1 font-semibold text-slate-900">
+        {isReferenceOnly ? "Kopyala-Yapıştır / Dosyadan Toplu Soru Havuzuna Ekle" : "Kopyala-Yapıştır / Dosyadan Toplu Soru Ekle"}
+      </h2>
       <p className="mb-3 text-sm text-slate-500">
         Word (.docx), PDF (.pdf) veya .txt dosyası yükle, ya da sınavdan/Word&apos;den kopyaladığın soruları
         aşağıya yapıştır. Birden fazla konuyu tek seferde eklemek için her konudan önce ayrı bir satıra
@@ -170,11 +178,19 @@ export function BulkQuestionImport({
         <strong>Açıklama:</strong> satırı zorunludur — öğrenci yanlış yaptığında doğru cevabın nedenini
         görebilmeli, açıklaması olmayan sorular kaydedilmez.
       </p>
-      <p className="mb-3 text-xs text-amber-700">
-        Not: Sadece kullanma hakkına sahip olduğun içerikleri yükle. ÖSYM gibi kurumların telif korumalı sınav
-        sorularını (kağıt üzerinde &quot;yazılı izin alınmadan kullanılamaz&quot; ibaresi taşıyanlar dahil) izinsiz
-        eklemek yasal risk taşır.
-      </p>
+      {isReferenceOnly ? (
+        <p className="mb-3 text-xs text-slate-600">
+          🔒 Bu ekrandan eklenen sorular <strong>öğrenciye ASLA gösterilmez</strong> — sadece yapay zekânın örnek
+          alıp eğitilmesi için saklanır (örn. ÖSYM&apos;nin geçmiş sınav soruları). Sistem burayı öğrenerek
+          birebir aynısı olmayan, benzer nitelikte yeni sorular üretir.
+        </p>
+      ) : (
+        <p className="mb-3 text-xs text-amber-700">
+          Not: Sadece kullanma hakkına sahip olduğun içerikleri yükle. ÖSYM gibi kurumların telif korumalı sınav
+          sorularını (kağıt üzerinde &quot;yazılı izin alınmadan kullanılamaz&quot; ibaresi taşıyanlar dahil) izinsiz
+          eklemek yasal risk taşır.
+        </p>
+      )}
 
       <div className="mb-3">
         <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>

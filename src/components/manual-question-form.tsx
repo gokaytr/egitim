@@ -4,7 +4,11 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Input, Textarea, Select } from "@/components/ui";
 
-export function ManualQuestionForm({ topicId }: { topicId: string }) {
+// isReferenceOnly=true verilirse (sadece admin'in Soru Havuzu ekranindan
+// kullanilir), eklenen soru dogrudan is_reference_only=true olarak
+// kaydedilir - yani ogrenciye hicbir zaman gosterilmez, sadece yapay
+// zekanin ornek alip egitilmesi icin saklanir (bkz. CLAUDE.md).
+export function ManualQuestionForm({ topicId, isReferenceOnly = false }: { topicId: string; isReferenceOnly?: boolean }) {
   const [manual, setManual] = useState({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,19 +33,20 @@ export function ManualQuestionForm({ topicId }: { topicId: string }) {
       explanation: manual.explanation,
       source: "teacher",
       is_approved: true,
+      is_reference_only: isReferenceOnly,
     });
 
     setLoading(false);
     if (error) setStatus(`Hata: ${error.message}`);
     else {
-      setStatus("Soru eklendi.");
+      setStatus(isReferenceOnly ? "Soru havuzuna eklendi." : "Soru eklendi.");
       setManual({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
     }
   }
 
   return (
     <Card>
-      <h2 className="mb-3 font-semibold text-slate-900">Elle Soru Ekle</h2>
+      <h2 className="mb-3 font-semibold text-slate-900">{isReferenceOnly ? "Elle Soru Havuzuna Ekle" : "Elle Soru Ekle"}</h2>
       <form onSubmit={handleManualSubmit} className="flex flex-col gap-3">
         <Textarea required rows={3} placeholder="Soru metni" value={manual.body} onChange={(e) => setManual({ ...manual, body: e.target.value })} />
         <Input placeholder="Görsel URL (opsiyonel - şekil, grafik vb.)" value={manual.imageUrl} onChange={(e) => setManual({ ...manual, imageUrl: e.target.value })} />

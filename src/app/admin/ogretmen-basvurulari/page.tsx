@@ -21,10 +21,15 @@ export default async function OgretmenBasvurulariPage() {
   const totalCompletedReferrals = rows.reduce((s, r) => s + r.referralsCompleted, 0);
   const totalTutorSessionHours = Math.round(rows.reduce((s, r) => s + r.tutorSessionHours, 0) * 10) / 10;
 
-  const [{ data: teacherProfiles }, { data: subjects }, { data: assignments }] = await Promise.all([
+  const [{ data: teacherProfiles }, { data: subjects }, { data: assignments }, { data: referrals }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, is_demo").eq("role", "teacher").order("full_name"),
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("teacher_subjects").select("teacher_id, subject_id"),
+    supabase
+      .from("tutor_referrals")
+      .select("id, status, requested_at, profiles!tutor_referrals_student_id_fkey(full_name), topics(name)")
+      .in("status", ["pending", "matched"])
+      .order("requested_at", { ascending: false }),
   ]);
 
   const testTeachers = (teacherProfiles ?? []).filter((t) => t.is_demo);
@@ -165,6 +170,34 @@ export default async function OgretmenBasvurulariPage() {
     </div>
   );
 
+  const ozelDersTab = (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-slate-500">Öğrencilerin talep ettiği, henüz tamamlanmamış özel ders istekleri.</p>
+      {!referrals?.length && <p className="text-sm text-slate-500">Bekleyen veya devam eden özel ders talebi yok.</p>}
+      <Card className="overflow-hidden p-0">
+        <ul className="divide-y divide-slate-100">
+          {referrals?.map((r) => {
+            const student = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+            const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
+            return (
+              <li key={r.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                <span>
+                  {student?.full_name ?? "Öğrenci"} — {topic?.name ?? "Konu"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge tone={r.status === "pending" ? "red" : "amber"}>
+                    {r.status === "pending" ? "bekliyor" : "devam ediyor"}
+                  </Badge>
+                  <span className="text-xs text-slate-400">{new Date(r.requested_at).toLocaleDateString("tr-TR")}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -178,6 +211,13 @@ export default async function OgretmenBasvurulariPage() {
           { key: "aktivite", label: "Öğretmen Aktivitesi", content: aktiviteTab },
           { key: "basvurular", label: "Öğretmen Başvuruları", content: basvurularTab },
           { key: "brans", label: "Branş Atamaları", content: bransTab },
+          {
+            key: "ozel-ders",
+            label: "Özel Ders İstekleri",
+            content: ozelDersTab,
+            dot: (referrals ?? []).some((r) => r.status === "pending"),
+            tone: "amber",
+          },
           { key: "test-ogretmenler", label: "Test Öğretmenler", content: testOgretmenlerTab },
         ]}
       />

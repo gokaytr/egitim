@@ -44,12 +44,13 @@ export function DashboardActionCard({
   emoji: string;
   title: string;
   subtitle: string;
-  tone?: "indigo" | "amber";
+  tone?: "indigo" | "amber" | "slate";
   badge?: number;
 }) {
   const toneClasses = {
     indigo: "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
     amber: "border-amber-200 bg-amber-50 hover:bg-amber-100",
+    slate: "border-slate-300 bg-slate-100 hover:bg-slate-200",
   };
   return (
     <Link

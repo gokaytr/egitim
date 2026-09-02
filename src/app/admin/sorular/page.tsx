@@ -6,7 +6,8 @@ import { CourseManager } from "@/components/course-manager";
 import { TopicAddForm } from "@/components/topic-add-form";
 import { CurriculumBrowser, type CurriculumTopicRow } from "@/components/curriculum-browser";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
-import { AllQuestionsBrowser } from "@/components/all-questions-browser";
+import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
+import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -15,11 +16,15 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 // Eskiden "Soru Ekle", "Soru Onayı" ve "Sorular" (tum liste) admin menusunde
 // ayri ayri sayfalardi - artik tek bir "Sorular" sayfasi altinda uc sekme
 // olarak birlestirildi, boylece soru is akisinin tamami (ekle -> onayla ->
-// goz at) tek yerden yonetiliyor.
+// havuz) tek yerden yonetiliyor. "Soru Havuzu" sekmesi SADECE admin
+// panelinde var (ogretmen panelinde yok) ve normal soru akisindan tamamen
+// bagimsiz: buraya eklenen sorular (orn. ÖSYM'nin gecmis sinav sorulari)
+// hicbir zaman ogrenciye gosterilmez, sadece yapay zekanin ornek alip
+// egitilmesi icin saklanir - bkz. CLAUDE.md.
 export default async function SorularPage() {
   const supabase = await createClient();
 
-  const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: pending }, { data: allQuestions }] =
+  const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: pending }, { data: referenceQuestions }] =
     await Promise.all([
       supabase.from("subjects").select("id, name").order("name"),
       supabase.from("courses").select("id, name").order("name"),
@@ -34,7 +39,8 @@ export default async function SorularPage() {
         .order("created_at", { ascending: false }),
       supabase
         .from("questions")
-        .select("id, body, options, correct_option, explanation, is_approved, source, difficulty, topic_id, is_reference_only")
+        .select("id, body, options, correct_option, explanation, difficulty, topic_id")
+        .eq("is_reference_only", true)
         .order("created_at", { ascending: false }),
     ]);
 
@@ -66,17 +72,14 @@ export default async function SorularPage() {
     topic_id: q.topic_id,
   }));
 
-  const allQuestionsMapped = (allQuestions ?? []).map((q) => ({
+  const referencePoolQuestions = (referenceQuestions ?? []).map((q) => ({
     id: q.id,
     body: q.body,
     options: (q.options ?? {}) as Record<string, string>,
     correct_option: q.correct_option,
     explanation: q.explanation,
-    is_approved: q.is_approved,
-    source: q.source,
     difficulty: q.difficulty,
     topic_id: q.topic_id,
-    is_reference_only: q.is_reference_only,
   }));
 
   const curriculumTab = (
@@ -111,12 +114,19 @@ export default async function SorularPage() {
     </div>
   );
 
-  const sorularListesiTab = (
+  const soruHavuzuTab = (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-slate-500">
-        Sistemdeki tüm sorular — onaylı ve onay bekleyenler dahil — sınıf, ders ve konuya göre gruplu.
-      </p>
-      <AllQuestionsBrowser topics={browserTopics} questions={allQuestionsMapped} />
+      <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
+        <p className="font-semibold text-slate-900">🔒 Bu havuzdaki sorular öğrenciye ASLA gösterilmez.</p>
+        <p className="mt-1">
+          Soru Havuzu, normal soru ekleme/onaylama akışından tamamen bağımsız, sadece yapay zekânın örnek alıp
+          eğitilmesi için bir kaynak. Buraya örneğin ÖSYM&apos;nin geçmiş sınav sorularını cevaplarıyla birlikte
+          ekleyebilirsin — sistem bunları öğrenir ama ürettiği sorular birebir aynısı olmaz, benzer nitelikte yeni
+          sorular üretir. Bu sekme sadece admin panelinde var.
+        </p>
+      </div>
+      <ReferencePoolAddPanel />
+      <ReferencePoolBrowser topics={browserTopics} questions={referencePoolQuestions} />
     </div>
   );
 
@@ -124,11 +134,7 @@ export default async function SorularPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
-        <p className="text-sm text-slate-500">Soru ekleme, onaylama ve tüm soruları görüntüleme tek ekranda.</p>
-        <p className="mt-2 text-sm font-medium text-slate-600">
-          🔒 Not: &quot;Soru Havuzu&quot; sekmesindeki <span className="font-semibold">Referans Havuzu</span> pilinde
-          tutulan sorular öğrenciye ASLA gösterilmez/yayınlanmaz — sadece yapay zekânın örnek alması için saklanır.
-        </p>
+        <p className="text-sm text-slate-500">Soru ekleme, onaylama ve yapay zeka için soru havuzu tek ekranda.</p>
       </div>
 
       <SimpleTabs
@@ -137,7 +143,7 @@ export default async function SorularPage() {
         tabs={[
           { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },
           { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
-          { key: "havuz", label: "Soru Havuzu", content: sorularListesiTab },
+          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab },
         ]}
       />
     </div>

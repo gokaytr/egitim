@@ -24,7 +24,7 @@ type RawRow = {
     | null;
 };
 
-function mapRow(q: RawRow): RecentQuestion {
+function mapRow(q: RawRow, sortDate: string): RecentQuestion {
   const topic = firstOf(q.topics);
   const subject = topic ? firstOf(topic.subjects) : undefined;
   return {
@@ -37,27 +37,33 @@ function mapRow(q: RawRow): RecentQuestion {
     is_approved: q.is_approved,
     approved_by: q.approved_by,
     created_by: q.created_by,
-    sort_date: q.approved_at && q.approved_at > q.created_at ? q.approved_at : q.created_at,
+    sort_date: sortDate,
     subject_name: subject?.name ?? "Diğer",
     topic_name: topic?.name ?? "Konu",
   };
 }
 
-const SELECT_ALL = "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, topics(name, subjects(name))";
-const SELECT_SCOPED = "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, topics!inner(name, subject_id, subjects(name))";
+const SELECT_ALL =
+  "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, topics(name, subjects(name))";
+const SELECT_SCOPED =
+  "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, topics!inner(name, subject_id, subjects(name))";
 
-// Genel Bakis'taki "Son Eklenen/Onaylanan Sorular" karti icin en son islem
-// gormus (eklenmis VEYA onaylanmis, hangisi daha yeniyse) 10 soruyu getirir.
-// created_at'e gore ve ayrica approved_at'e gore ayri ayri sorgulayip
-// birlestiriyoruz - cunku tek bir SQL ORDER BY ile "iki sutundan hangisi
-// daha yeniyse" siralamasi Supabase js istemcisinden dogrudan yapilamiyor.
-// subjectIds verilirse (ogretmen paneli) sadece o branslardaki sorular
-// gelir; null verilirse (admin paneli) tum sorular gelir.
-export async function getRecentQuestions(
+export type RecentQuestionActivity = {
+  added: RecentQuestion[];
+  approved: RecentQuestion[];
+};
+
+// Genel Bakis'taki "Son Eklenen/Onaylanan Sorular" karti icin, "eklenenler"
+// (created_at'e gore) ve "onaylananlar" (approved_at'e gore) AYRI iki liste
+// dondurur - kullanicinin talebiyle bu ikisi artik tek bir karma liste
+// yerine iki ayri sekmede gosteriliyor. subjectIds verilirse (ogretmen
+// paneli) sadece o branslardaki sorular gelir; null verilirse (admin
+// paneli) tum sorular gelir.
+export async function getRecentQuestionActivity(
   supabase: SupabaseClient,
   subjectIds: string[] | null,
   limit = 10
-): Promise<RecentQuestion[]> {
+): Promise<RecentQuestionActivity> {
   let createdRes;
   let approvedRes;
 
@@ -79,12 +85,8 @@ export async function getRecentQuestions(
     ]);
   }
 
-  const merged = new Map<string, RecentQuestion>();
-  for (const raw of [...((createdRes.data ?? []) as unknown as RawRow[]), ...((approvedRes.data ?? []) as unknown as RawRow[])]) {
-    merged.set(raw.id, mapRow(raw));
-  }
+  const added = ((createdRes.data ?? []) as unknown as RawRow[]).map((raw) => mapRow(raw, raw.created_at));
+  const approved = ((approvedRes.data ?? []) as unknown as RawRow[]).map((raw) => mapRow(raw, raw.approved_at ?? raw.created_at));
 
-  return Array.from(merged.values())
-    .sort((a, b) => (a.sort_date < b.sort_date ? 1 : -1))
-    .slice(0, limit);
+  return { added, approved };
 }

@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { DashboardActionCard } from "@/components/ui";
 import { RecentQuestionsCard } from "@/components/recent-questions-card";
-import { getRecentQuestions } from "@/lib/questions/recent";
+import { getRecentQuestionActivity } from "@/lib/questions/recent";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [{ count: pendingCount }, recentQuestions] = await Promise.all([
+  const [{ count: pendingCount }, recentActivity] = await Promise.all([
     supabase.from("questions").select("*", { count: "exact", head: true }).eq("is_approved", false),
-    getRecentQuestions(supabase, null),
+    getRecentQuestionActivity(supabase, null),
   ]);
 
   return (
@@ -20,7 +20,7 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <DashboardActionCard
           href="/admin/sorular?tab=ekle"
           emoji="➕"
@@ -36,9 +36,16 @@ export default async function AdminDashboard() {
           tone="amber"
           badge={pendingCount ?? 0}
         />
+        <DashboardActionCard
+          href="/admin/sorular?tab=havuz"
+          emoji="🔒"
+          title="Soru Havuzu"
+          subtitle="Yapay zekâyı eğitmek için referans sorular (ör. ÖSYM) ekle — öğrenciye hiç gösterilmez."
+          tone="slate"
+        />
       </div>
 
-      <RecentQuestionsCard questions={recentQuestions} isAdmin />
+      <RecentQuestionsCard added={recentActivity.added} approved={recentActivity.approved} isAdmin />
     </div>
   );
 }
