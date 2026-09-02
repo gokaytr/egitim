@@ -13,11 +13,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .select("id", { count: "exact", head: true })
     .eq("teacher_pending", true);
 
-  // "Sorular" sol menuden kaldirildi - Genel Bakis'taki buyuk "Soru Ekle"/
-  // "Soru Onayla" kartlari zaten oraya dogrudan goturuyor (bkz. admin/page.tsx),
-  // ayrica bir menu girdisine gerek yok.
+  // Admin panelinin ilk giris ekrani artik "Planlama" (sinav/sinif/ders/konu
+  // bazinda hedef-ilerleme takvimi, bkz. admin/page.tsx + planning-board.tsx)
+  // - kullanicinin "admin panelinde ilk giris planlama olacak" talebi.
+  // "Sorular" (Soru Ekle/Onayla/Havuzu uc sekmesi, /admin/sorular) eskiden
+  // sadece Planlama'daki kartlardan erisilebiliyordu, artik ayrica sol
+  // menude de kendi girdisi var.
+  const { count: pendingQuestionCount } = await supabase
+    .from("questions")
+    .select("id", { count: "exact", head: true })
+    .eq("is_approved", false);
+
   const NAV = [
-    { href: "/admin", label: "Genel Bakış" },
+    { href: "/admin", label: "Planlama" },
+    { href: "/admin/sorular", label: "Sorular", dot: (pendingQuestionCount ?? 0) > 0 },
     { href: "/admin/kullanicilar", label: "Kullanıcılar" },
     { href: "/admin/ogrenci-raporlari", label: "Öğrenci Raporları" },
     { href: "/admin/ogretmen-basvurulari", label: "Öğretmenler", dot: (pendingTeacherCount ?? 0) > 0 },
