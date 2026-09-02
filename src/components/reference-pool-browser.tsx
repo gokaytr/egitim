@@ -18,9 +18,17 @@ type Topic = {
   grade_level: number | null;
   subject_id: string;
   subject_name: string;
+  exam_types: string[] | null;
 };
 
-const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
+// Anasayfadaki "LGS, TYT, AYT, YKS, KPSS ve ALES" sirasiyla ayni kanonik
+// sinav listesi (bkz. lib/homepage-content.ts EXAM_COURSES) - Soru
+// Havuzu'ndaki sekmeler de bu sirada gosterilsin diye ayni liste burada da
+// kullaniliyor.
+const EXAM_ORDER = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+// Bir konuya hicbir sinav turu (exam_types) atanmamissa (ör. sadece ilkokul
+// mufredati) bu sinifta toplanir - havuzda "kaybolmasin" diye.
+const NO_EXAM_BUCKET = "Diğer";
 
 function TabButton({
   active,
@@ -53,7 +61,7 @@ function TabButton({
 // icerigini listeler. Admin her soruyu duzenleyebilir.
 export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; questions: Question[] }) {
   const router = useRouter();
-  const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
+  const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,6 +88,8 @@ export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; q
     const supabase = createClient();
     await supabase.from("questions").delete().eq("is_reference_only", true);
     setDeletingAll(false);
+    setSelectedExam(null);
+    setSelectedSubjectId(null);
     setSelectedTopicId(null);
     router.refresh();
   }
@@ -90,40 +100,62 @@ export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; q
     return map;
   }, [questions]);
 
-  const gradeCounts = useMemo(() => {
-    const map = new Map<number, number>();
+  // Bir konunun sinav etiketleri (exam_types) yoksa "Diger" kovasina duser -
+  // boylece hicbir soru sinav sekmelerinde kaybolmaz.
+  function examTagsOf(t: Topic): string[] {
+    return t.exam_types && t.exam_types.length > 0 ? t.exam_types : [NO_EXAM_BUCKET];
+  }
+
+  const examCounts = useMemo(() => {
+    const map = new Map<string, number>();
     topics.forEach((t) => {
-      if (t.grade_level == null) return;
-      map.set(t.grade_level, (map.get(t.grade_level) ?? 0) + (questionCountByTopic.get(t.id) ?? 0));
+      const count = questionCountByTopic.get(t.id) ?? 0;
+      if (count === 0) return;
+      examTagsOf(t).forEach((exam) => map.set(exam, (map.get(exam) ?? 0) + count));
     });
     return map;
   }, [topics, questionCountByTopic]);
 
-  const subjectsForGrade = useMemo(() => {
-    if (selectedGrade == null) return [];
+  // Sekmeler once kanonik sirada (LGS, TYT, AYT, YKS, KPSS, ALES), sonra
+  // veride olup listede olmayan baska bir sinav turu varsa (ileride
+  // eklenebilir) onlar, en sonda da "Diger" gosterilir.
+  const examOptions = useMemo(() => {
+    const present = Array.from(examCounts.keys());
+    const known = EXAM_ORDER.filter((e) => present.includes(e));
+    const extra = present.filter((e) => e !== NO_EXAM_BUCKET && !EXAM_ORDER.includes(e)).sort((a, b) => a.localeCompare(b, "tr"));
+    const other = present.includes(NO_EXAM_BUCKET) ? [NO_EXAM_BUCKET] : [];
+    return [...known, ...extra, ...other];
+  }, [examCounts]);
+
+  const subjectsForExam = useMemo(() => {
+    if (!selectedExam) return [];
     const bySubject = new Map<string, { id: string; name: string; count: number }>();
     topics
-      .filter((t) => t.grade_level === selectedGrade)
+      .filter((t) => examTagsOf(t).includes(selectedExam))
       .forEach((t) => {
+        const count = questionCountByTopic.get(t.id) ?? 0;
+        if (count === 0) return;
         const entry = bySubject.get(t.subject_id) ?? { id: t.subject_id, name: t.subject_name, count: 0 };
-        entry.count += questionCountByTopic.get(t.id) ?? 0;
+        entry.count += count;
         bySubject.set(t.subject_id, entry);
       });
     return Array.from(bySubject.values()).sort((a, b) => a.name.localeCompare(b.name, "tr"));
-  }, [topics, selectedGrade, questionCountByTopic]);
+  }, [topics, selectedExam, questionCountByTopic]);
 
-  const topicsForGradeSubject = useMemo(() => {
-    if (selectedGrade == null || !selectedSubjectId) return [];
-    return topics.filter((t) => t.grade_level === selectedGrade && t.subject_id === selectedSubjectId);
-  }, [topics, selectedGrade, selectedSubjectId]);
+  const topicsForExamSubject = useMemo(() => {
+    if (!selectedExam || !selectedSubjectId) return [];
+    return topics.filter(
+      (t) => examTagsOf(t).includes(selectedExam) && t.subject_id === selectedSubjectId && (questionCountByTopic.get(t.id) ?? 0) > 0
+    );
+  }, [topics, selectedExam, selectedSubjectId, questionCountByTopic]);
 
   const questionsForTopic = useMemo(() => {
     if (!selectedTopicId) return [];
     return questions.filter((q) => q.topic_id === selectedTopicId);
   }, [questions, selectedTopicId]);
 
-  function pickGrade(g: number) {
-    setSelectedGrade(g);
+  function pickExam(exam: string) {
+    setSelectedExam(exam);
     setSelectedSubjectId(null);
     setSelectedTopicId(null);
   }
@@ -145,24 +177,28 @@ export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; q
       </div>
 
       <div>
-        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf</p>
-        <div className="flex flex-wrap gap-1.5">
-          {GRADES.map((g) => (
-            <TabButton key={g} active={selectedGrade === g} onClick={() => pickGrade(g)}>
-              {g}. sınıf ({gradeCounts.get(g) ?? 0})
-            </TabButton>
-          ))}
-        </div>
+        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınav</p>
+        {examOptions.length === 0 ? (
+          <p className="text-xs text-slate-500">Havuzda henüz soru yok.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {examOptions.map((exam) => (
+              <TabButton key={exam} active={selectedExam === exam} onClick={() => pickExam(exam)}>
+                {exam} ({examCounts.get(exam) ?? 0})
+              </TabButton>
+            ))}
+          </div>
+        )}
       </div>
 
-      {selectedGrade != null && (
+      {selectedExam != null && (
         <div>
           <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Ders</p>
-          {subjectsForGrade.length === 0 ? (
-            <p className="text-xs text-slate-500">Bu sınıfta havuzda soru yok.</p>
+          {subjectsForExam.length === 0 ? (
+            <p className="text-xs text-slate-500">Bu sınavda havuzda soru yok.</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {subjectsForGrade.map((s) => (
+              {subjectsForExam.map((s) => (
                 <TabButton key={s.id} active={selectedSubjectId === s.id} onClick={() => pickSubject(s.id)}>
                   {s.name} ({s.count})
                 </TabButton>
@@ -172,13 +208,14 @@ export function ReferencePoolBrowser({ topics, questions }: { topics: Topic[]; q
         </div>
       )}
 
-      {selectedGrade != null && selectedSubjectId && (
+      {selectedExam != null && selectedSubjectId && (
         <div>
           <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Konu</p>
           <div className="flex flex-wrap gap-1.5">
-            {topicsForGradeSubject.map((t) => (
+            {topicsForExamSubject.map((t) => (
               <TabButton key={t.id} active={selectedTopicId === t.id} onClick={() => setSelectedTopicId(t.id)}>
-                {t.name} ({questionCountByTopic.get(t.id) ?? 0})
+                {t.name}
+                {t.grade_level ? ` (${t.grade_level}. sınıf)` : ""} ({questionCountByTopic.get(t.id) ?? 0})
               </TabButton>
             ))}
           </div>

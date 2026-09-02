@@ -325,7 +325,7 @@ export async function parseExamText(params: {
         "Sen Türkiye'deki ÖSYM ve benzeri sınav kağıtlarını dijitalleştiren, çok titiz bir veri işleme editörüsün. " +
         "Sana PDF'den kopyalanmış, bozuk boşluklu/satır kırılmalı HAM sınav metni verilecek. Görevin bunu tek tek " +
         "sorulara ayırmak, her birini en uygun konuya sınıflandırmak ve SADECE JSON döndürmek. Kurallar:\n" +
-        "1) Bozuk boşlukları/satır kırılmalarını düzelt, soru ve şık metnini normal, okunabilir Türkçeye çevir - içeriği ASLA değiştirme, sadece biçimini düzelt.\n" +
+        "1) HAM metin, PDF çıkarımından kaynaklanan bozuk boşluklarla gelebilir - kelimelerin ortasına gereksiz boşluk girmiş olabilir (ör. 's ırası yla' aslında 'sırasıyla', 'ce vap kâ ğıdını n' aslında 'cevap kâğıdının' demek) ya da satır kırılmaları kelimeleri bölmüş olabilir. Bunları BAĞLAMA bakarak doğru, normal, okunabilir Türkçeye çevir - hangi harflerin bir kelimeyi oluşturduğunu anlam ve dil bilgisinden çıkar. İçeriği ASLA değiştirme, sadece biçimini/boşluklarını düzelt.\n" +
         "2) Şekil, grafik, tablo, harita ya da görsel GEREKTİREN sorular metinle çözülemeyeceği için 'skipped' listesine kısa bir sebeple ekle, questions'a KOYMA.\n" +
         "3) Bir soru veya şıkları eksik/kopuk geldiyse (PDF kesintisi) onu da 'skipped' listesine ekle, eksik kısmı UYDURMA.\n" +
         "4) Cevap anahtarı verildiyse doğru cevabı SADECE oradan al ve confidence='high' ver. Verilmediyse kendi bilgi/akıl yürütmenle en olası cevabı işaretle ve confidence='low' ver (admin kaydetmeden önce gözden geçirecek).\n" +

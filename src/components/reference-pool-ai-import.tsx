@@ -251,9 +251,10 @@ export function ReferencePoolAiImport() {
       <h2 className="mb-1 font-semibold text-slate-900">Yapay Zeka ile Sınav Metninden İçe Aktar</h2>
       <p className="mb-3 text-sm text-slate-500">
         PDF&apos;den kopyaladığın ham sınav metnini (bozuk boşluklar, satır kırılmaları olsa bile) aşağıya olduğu
-        gibi yapıştır. Yapay zeka soruları tek tek ayırır, mümkünse cevap anahtarından doğru cevabı alır, kısa bir
-        çözüm açıklaması yazar ve her soruyu en uygun konuya otomatik dağıtır — sen sadece kaydetmeden önce gözden
-        geçirirsin.
+        gibi yapıştır — <strong>aşağıdaki kutuda bozuk/karışık görünmesi normal</strong>, yapay zeka bunu okurken
+        düzeltip temiz Türkçeye çevirecek. Soruları tek tek ayırır, mümkünse cevap anahtarından doğru cevabı alır,
+        kısa bir çözüm açıklaması yazar ve her soruyu en uygun konuya otomatik dağıtır — sen sadece kaydetmeden önce
+        aşağıda çıkan (temizlenmiş) taslakları gözden geçirirsin.
       </p>
 
       <div className="flex flex-col gap-3">

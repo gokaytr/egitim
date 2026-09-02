@@ -70,6 +70,7 @@ export default async function SorularPage() {
     grade_level: t.grade_level,
     subject_id: t.subject_id,
     subject_name: firstOf(t.subjects)?.name ?? "Diğer",
+    exam_types: t.exam_types,
   }));
 
   const pendingQuestions = (pending ?? []).map((q) => ({
