@@ -40,6 +40,7 @@ export function ReferencePoolAiImport() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [rawText, setRawText] = useState("");
   const [answerKeyText, setAnswerKeyText] = useState("");
+  const [fileLoading, setFileLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -65,6 +66,25 @@ export function ReferencePoolAiImport() {
   }, []);
 
   const topicLabel = (t: Topic) => `${t.subject_name} — ${t.grade_level ? t.grade_level + ". sınıf" : "genel"} — ${t.name}`;
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileLoading(true);
+    setStatus(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/questions/extract-text", { method: "POST", body: formData });
+    const json = await res.json().catch(() => ({}));
+    setFileLoading(false);
+    if (!res.ok) {
+      setStatus(`Hata: ${json?.error ?? "Dosya okunamadı"}`);
+      return;
+    }
+    setRawText(json.text ?? "");
+    setStatus('Dosyadan metin çıkarıldı, aşağıda kontrol edip "Yapay Zeka ile Ayrıştır ve Sınıflandır"a basabilirsin.');
+    e.target.value = "";
+  }
 
   async function handleParse() {
     if (!rawText.trim()) return;
@@ -155,7 +175,20 @@ export function ReferencePoolAiImport() {
 
       <div className="flex flex-col gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Ham sınav metni</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
+          <input
+            type="file"
+            accept=".docx,.pdf,.txt"
+            onChange={handleFileChange}
+            disabled={fileLoading}
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+          />
+          {fileLoading && <p className="mt-1 text-xs text-slate-500">Dosyadan metin çıkarılıyor...</p>}
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Ham sınav metni <span className="font-normal text-slate-400">(dosya yükleyince otomatik dolar, elle de yapıştırabilirsin)</span>
+          </label>
           <Textarea
             rows={12}
             placeholder="Sınav PDF'inden kopyaladığın metni buraya yapıştır..."
