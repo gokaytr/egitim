@@ -1,0 +1,255 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Badge, Button, Card, Textarea } from "@/components/ui";
+
+type Topic = { id: string; name: string; grade_level: number | null; subject_name: string };
+
+type Draft = {
+  body: string;
+  options: { A: string; B: string; C: string; D: string };
+  correct_option: "A" | "B" | "C" | "D";
+  explanation: string;
+  topic_id: string | null;
+  topic_guess_label: string;
+  confidence: "high" | "medium" | "low";
+  include: boolean;
+};
+
+const CONFIDENCE_LABEL: Record<Draft["confidence"], string> = {
+  high: "Cevap anahtarından — yüksek güven",
+  medium: "Orta güven",
+  low: "AI tahmini — mutlaka kontrol et",
+};
+const CONFIDENCE_TONE: Record<Draft["confidence"], "green" | "amber" | "red"> = {
+  high: "green",
+  medium: "amber",
+  low: "red",
+};
+
+// Gercek sinav PDF'lerinden kopyalanan HAM metin (bozuk bosluklu, "Soru:"/
+// "A)" gibi sabit bir format TAKIP ETMEYEN) icin - asagidaki duz formatli
+// BulkQuestionImport bu tur metinleri ayristiramiyor (kullanicinin AYT
+// sinavi eklerken yasadigi sorun). Bu bilesen HAM metni oldugu gibi yapay
+// zekaya gonderip soru/cevap/konu olarak yapilandirilmasini ister - "konu
+// konu dagitmayi da sistem otomatik yapmali" talebi burada karsilaniyor.
+// Sadece admin'in Soru Havuzu ekraninda kullanilir; kaydedilen her soru
+// is_reference_only=true olur.
+export function ReferencePoolAiImport() {
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [rawText, setRawText] = useState("");
+  const [answerKeyText, setAnswerKeyText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [skipped, setSkipped] = useState<string[]>([]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("topics")
+      .select("id, name, grade_level, subjects(name)")
+      .then(({ data }) => {
+        const rows = (data ?? []) as { id: string; name: string; grade_level: number | null; subjects: { name: string } | { name: string }[] | null }[];
+        setTopics(
+          rows.map((t) => ({
+            id: t.id,
+            name: t.name,
+            grade_level: t.grade_level,
+            subject_name: Array.isArray(t.subjects) ? t.subjects[0]?.name ?? "Diğer" : t.subjects?.name ?? "Diğer",
+          }))
+        );
+      });
+  }, []);
+
+  const topicLabel = (t: Topic) => `${t.subject_name} — ${t.grade_level ? t.grade_level + ". sınıf" : "genel"} — ${t.name}`;
+
+  async function handleParse() {
+    if (!rawText.trim()) return;
+    setLoading(true);
+    setStatus(null);
+    setDrafts([]);
+    setSkipped([]);
+    try {
+      const res = await fetch("/api/ai/parse-exam-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawText,
+          answerKeyText: answerKeyText.trim() || undefined,
+          candidateTopics: topics.map((t) => ({ id: t.id, name: t.name, grade_level: t.grade_level, subject_name: t.subject_name })),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setStatus(`Hata: ${json?.error ?? "ayrıştırma başarısız"}`);
+        return;
+      }
+      setDrafts(
+        (json.questions ?? []).map((q: Omit<Draft, "include">) => ({ ...q, include: !!q.topic_id }))
+      );
+      setSkipped(json.skipped ?? []);
+      if (!json.questions?.length) {
+        setStatus("Hiç soru çıkarılamadı — metni kontrol edip tekrar dene.");
+      }
+    } catch (err) {
+      setStatus(`Hata: ${err instanceof Error ? err.message : "beklenmeyen hata"}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateDraft(index: number, patch: Partial<Draft>) {
+    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+  }
+
+  const includedCount = useMemo(() => drafts.filter((d) => d.include && d.topic_id).length, [drafts]);
+
+  async function handleSaveAll() {
+    const savable = drafts.filter((d) => d.include && d.topic_id);
+    if (!savable.length) {
+      setStatus("Kaydedilecek soru yok — her sorunun bir konusu seçili ve dahil edilmiş olmalı.");
+      return;
+    }
+    setSaving(true);
+    setStatus(null);
+    const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+
+    const rows = savable.map((d) => ({
+      topic_id: d.topic_id,
+      created_by: userData.user?.id,
+      body: d.body,
+      options: d.options,
+      correct_option: d.correct_option,
+      explanation: d.explanation,
+      source: "past_exam" as const,
+      is_approved: true,
+      is_reference_only: true,
+    }));
+
+    const { error } = await supabase.from("questions").insert(rows);
+    setSaving(false);
+    if (error) {
+      setStatus(`Hata: ${error.message}`);
+      return;
+    }
+    setStatus(`${rows.length} soru havuzuna eklendi.`);
+    setDrafts([]);
+    setSkipped([]);
+    setRawText("");
+    setAnswerKeyText("");
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-1 font-semibold text-slate-900">Yapay Zeka ile Sınav Metninden İçe Aktar</h2>
+      <p className="mb-3 text-sm text-slate-500">
+        PDF&apos;den kopyaladığın ham sınav metnini (bozuk boşluklar, satır kırılmaları olsa bile) aşağıya olduğu
+        gibi yapıştır. Yapay zeka soruları tek tek ayırır, mümkünse cevap anahtarından doğru cevabı alır, kısa bir
+        çözüm açıklaması yazar ve her soruyu en uygun konuya otomatik dağıtır — sen sadece kaydetmeden önce gözden
+        geçirirsin.
+      </p>
+
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Ham sınav metni</label>
+          <Textarea
+            rows={12}
+            placeholder="Sınav PDF'inden kopyaladığın metni buraya yapıştır..."
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Cevap anahtarı <span className="font-normal text-slate-400">(varsa ekle — doğruluğu artırır)</span>
+          </label>
+          <Textarea
+            rows={3}
+            placeholder="Örn: 1.B 2.D 3.A 4.C ..."
+            value={answerKeyText}
+            onChange={(e) => setAnswerKeyText(e.target.value)}
+          />
+        </div>
+        <div>
+          <Button onClick={handleParse} disabled={loading || !rawText.trim()}>
+            {loading ? "Yapay zeka ayrıştırıyor..." : "Yapay Zeka ile Ayrıştır ve Sınıflandır"}
+          </Button>
+        </div>
+      </div>
+
+      {status && <p className="mt-3 text-sm text-slate-600">{status}</p>}
+
+      {skipped.length > 0 && (
+        <div className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+          <p className="mb-1 font-semibold">Atlanan sorular/parçalar:</p>
+          {skipped.map((s, i) => (
+            <p key={i}>• {s}</p>
+          ))}
+        </div>
+      )}
+
+      {drafts.length > 0 && (
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-700">{drafts.length} soru ayrıştırıldı</p>
+            <Button onClick={handleSaveAll} disabled={saving || includedCount === 0}>
+              {saving ? "Ekleniyor..." : `${includedCount} Soruyu Soru Havuzuna Ekle`}
+            </Button>
+          </div>
+
+          {drafts.map((d, i) => (
+            <div key={i} className="rounded-lg border border-slate-200 p-3 text-sm">
+              <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <input type="checkbox" checked={d.include} onChange={(e) => updateDraft(i, { include: e.target.checked })} />
+                  Dahil et
+                </label>
+                <Badge tone={CONFIDENCE_TONE[d.confidence]}>{CONFIDENCE_LABEL[d.confidence]}</Badge>
+                <select
+                  value={d.topic_id ?? ""}
+                  onChange={(e) => updateDraft(i, { topic_id: e.target.value || null })}
+                  className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs"
+                >
+                  <option value="">— Konu seç ({d.topic_guess_label || "eşleşme yok"}) —</option>
+                  {topics.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {topicLabel(t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="font-medium text-slate-900">{i + 1}. {d.body}</p>
+              <ul className="mt-1.5 grid grid-cols-1 gap-1 text-slate-600 sm:grid-cols-2">
+                {(["A", "B", "C", "D"] as const).map((key) => (
+                  <li key={key}>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name={`correct-${i}`}
+                        checked={d.correct_option === key}
+                        onChange={() => updateDraft(i, { correct_option: key })}
+                      />
+                      <span className={d.correct_option === key ? "font-semibold text-emerald-700" : ""}>
+                        {key}) {d.options[key]}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              {d.explanation && (
+                <div className="mt-2 rounded-lg bg-indigo-50 p-2.5 text-xs text-indigo-900">
+                  <p className="mb-0.5 font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
+                  <p>{d.explanation}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}

@@ -244,3 +244,111 @@ Aşağıdaki JSON formatında ve SADECE JSON döndür:
     return FALLBACK_QUALITY_CHECK;
   }
 }
+
+export type ExamParseCandidateTopic = { id: string; name: string; grade_level: number | null; subject_name: string };
+
+export type ExamParsedQuestion = {
+  body: string;
+  options: { A: string; B: string; C: string; D: string };
+  correct_option: "A" | "B" | "C" | "D";
+  explanation: string;
+  topic_id: string | null;
+  topic_guess_label: string;
+  confidence: "high" | "medium" | "low";
+};
+
+export type ExamParseResult = {
+  questions: ExamParsedQuestion[];
+  skipped: string[];
+};
+
+const FALLBACK_EXAM_PARSE: ExamParseResult = { questions: [], skipped: [] };
+
+/**
+ * Admin'in Soru Havuzu ekranina PDF'den kopyala-yapistirdigi HAM sinav
+ * metnini (ÖSYM tarzi, PDF cikarma kaynakli bozuk bosluklar/satir
+ * kirilmalari icerebilir, "Soru:"/"A)"/"Cevap:" gibi sabit bir format
+ * TAKIP ETMEZ) tek tek sorulara ayirir, her soruyu verilen konu
+ * katalogundaki EN UYGUN konuya siniflandirir (bkz. kullanicinin "konu
+ * konu dagitmayi da sistem otomatik yapmali" talebi) ve bir cozum
+ * aciklamasi yazar. answerKeyText verilirse (ÖSYM cevap anahtari, orn.
+ * "1. B 2. D 3. A ...") dogru cevaplar ORADAN alinir - verilmezse AI
+ * kendi bilgisiyle en olasi cevabi isaretler ve confidence="low" doner,
+ * boylece admin kaydetmeden once gozden gecirebilir. Sekil/grafik/tablo
+ * GEREKTIREN ya da govdesi eksik kalan sorular "skipped" listesine
+ * aciklamayla dusurulur, uydurulmaz.
+ */
+export async function parseExamText(params: {
+  rawText: string;
+  answerKeyText?: string;
+  candidateTopics: ExamParseCandidateTopic[];
+}): Promise<ExamParseResult> {
+  const { rawText, answerKeyText, candidateTopics } = params;
+
+  const topicCatalog = candidateTopics
+    .map((t) => `${t.id} | ${t.subject_name} | ${t.grade_level ? t.grade_level + ". sınıf" : "genel"} | ${t.name}`)
+    .join("\n");
+
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 16000,
+      system:
+        "Sen Türkiye'deki ÖSYM ve benzeri sınav kağıtlarını dijitalleştiren, çok titiz bir veri işleme editörüsün. " +
+        "Sana PDF'den kopyalanmış, bozuk boşluklu/satır kırılmalı HAM sınav metni verilecek. Görevin bunu tek tek " +
+        "sorulara ayırmak, her birini en uygun konuya sınıflandırmak ve SADECE JSON döndürmek. Kurallar:\n" +
+        "1) Bozuk boşlukları/satır kırılmalarını düzelt, soru ve şık metnini normal, okunabilir Türkçeye çevir - içeriği ASLA değiştirme, sadece biçimini düzelt.\n" +
+        "2) Şekil, grafik, tablo, harita ya da görsel GEREKTİREN sorular metinle çözülemeyeceği için 'skipped' listesine kısa bir sebeple ekle, questions'a KOYMA.\n" +
+        "3) Bir soru veya şıkları eksik/kopuk geldiyse (PDF kesintisi) onu da 'skipped' listesine ekle, eksik kısmı UYDURMA.\n" +
+        "4) Cevap anahtarı verildiyse doğru cevabı SADECE oradan al ve confidence='high' ver. Verilmediyse kendi bilgi/akıl yürütmenle en olası cevabı işaretle ve confidence='low' ver (admin kaydetmeden önce gözden geçirecek).\n" +
+        "5) Her soru için doğru cevabın neden doğru olduğunu kısaca açıklayan bir 'explanation' yaz (boş bırakma).\n" +
+        "6) Aşağıdaki konu kataloğundan (id | ders | sınıf | konu adı) İÇERİĞE EN UYGUN OLAN TEK konunun id'sini topic_id olarak ver; hiçbiri gerçekten uymuyorsa topic_id=null bırak ve topic_guess_label'a tahmini konu adını yaz.\n" +
+        "7) Metindeki telif/kurum başlıkları (ör. 'T.C. Ölçme, Seçme ve Yerleştirme Merkezi', sınav adı, tarih) SORU DEĞİLDİR, atla.",
+      messages: [
+        {
+          role: "user",
+          content: `KONU KATALOĞU (id | ders | sınıf | konu adı):
+${topicCatalog || "(katalog boş)"}
+
+${answerKeyText?.trim() ? `CEVAP ANAHTARI:\n${answerKeyText.trim()}\n\n` : ""}HAM SINAV METNİ:
+${rawText}
+
+Aşağıdaki JSON formatında ve SADECE JSON döndür:
+{
+  "questions": [
+    {
+      "body": "düzeltilmiş soru metni",
+      "options": {"A": "...", "B": "...", "C": "...", "D": "..."},
+      "correct_option": "A",
+      "explanation": "doğru cevabın neden doğru olduğu",
+      "topic_id": "katalogdaki id ya da null",
+      "topic_guess_label": "topic_id null ise tahmini konu adı, değilse katalogdaki konu adı",
+      "confidence": "high" | "medium" | "low"
+    }
+  ],
+  "skipped": ["atlanan soru/parça ve kısa sebebi"]
+}`,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("parseExamText: anthropic isteği başarısız", err);
+    return FALLBACK_EXAM_PARSE;
+  }
+
+  const textBlock = message.content.find((b) => b.type === "text");
+  const raw = textBlock && "text" in textBlock ? textBlock.text : "{}";
+
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    return {
+      questions: Array.isArray(parsed.questions) ? parsed.questions : [],
+      skipped: Array.isArray(parsed.skipped) ? parsed.skipped : [],
+    };
+  } catch (err) {
+    console.error("parseExamText: JSON ayrıştırılamadı", err);
+    return FALLBACK_EXAM_PARSE;
+  }
+}
