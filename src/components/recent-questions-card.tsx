@@ -40,14 +40,17 @@ function QuestionRow({
   const canEdit = isAdmin || (!!currentUserId && q.approved_by === currentUserId);
   const isEditing = editingId === q.id;
   const zebra = index % 2 === 0 ? "bg-sky-50/70" : "bg-slate-50";
+  const sortDate = new Date(q.sort_date);
 
   return (
     <li className={zebra}>
       <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-        <span className="w-24 shrink-0 text-xs text-slate-400">{new Date(q.sort_date).toLocaleDateString("tr-TR")}</span>
+        <span className="w-36 shrink-0 text-xs text-slate-400">
+          {sortDate.toLocaleDateString("tr-TR")} {sortDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+        </span>
         <Badge>{q.subject_name}</Badge>
         <Badge>{q.topic_name}</Badge>
-        <span className="min-w-0 flex-1 truncate text-slate-800">{q.body}</span>
+        <span className="flex-1" />
         {canEdit && (
           <button
             type="button"

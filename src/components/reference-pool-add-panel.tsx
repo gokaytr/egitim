@@ -9,20 +9,21 @@ import { BulkQuestionImport } from "@/components/bulk-question-import";
 // eklenen her soru dogrudan is_reference_only=true olarak kaydedilir, yani
 // normal Soru Ekle/Onayla akisina hic girmez ve ogrenciye hicbir zaman
 // gosterilmez. Amac: yapay zekanin ornek alip egitilmesi icin (orn. ÖSYM
-// gecmis sinav sorulari) kaliteli bir kaynak biriktirmek.
+// gecmis sinav sorulari) kaliteli bir kaynak biriktirmek. Buraya cogunlukla
+// TOPLU (bir sinavin tum sorulari birden) yukleme yapilacagi icin toplu
+// ice aktarma 1. sirada, elle tek tek soru ekleme 2. sirada, alt alta
+// (yan yana degil) gosteriliyor.
 export function ReferencePoolAddPanel() {
   const [topicId, setTopicId] = useState("");
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
         <TopicPickerTabs value={topicId} onChange={setTopicId} />
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ManualQuestionForm topicId={topicId} isReferenceOnly />
-        <BulkQuestionImport topicId={topicId} isReferenceOnly />
-      </div>
+      <BulkQuestionImport topicId={topicId} isReferenceOnly />
+      <ManualQuestionForm topicId={topicId} isReferenceOnly />
     </div>
   );
 }
