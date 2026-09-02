@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Button, Card, Textarea } from "@/components/ui";
 
-type Topic = { id: string; name: string; grade_level: number | null; subject_name: string };
+type Topic = { id: string; name: string; grade_level: number | null; subject_name: string; kazanim: string | null };
 
 type Draft = {
   body: string;
@@ -46,19 +46,27 @@ export function ReferencePoolAiImport() {
   const [status, setStatus] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [skipped, setSkipped] = useState<string[]>([]);
+  const [classifying, setClassifying] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     supabase
       .from("topics")
-      .select("id, name, grade_level, subjects(name)")
+      .select("id, name, grade_level, kazanim, subjects(name)")
       .then(({ data }) => {
-        const rows = (data ?? []) as { id: string; name: string; grade_level: number | null; subjects: { name: string } | { name: string }[] | null }[];
+        const rows = (data ?? []) as {
+          id: string;
+          name: string;
+          grade_level: number | null;
+          kazanim: string | null;
+          subjects: { name: string } | { name: string }[] | null;
+        }[];
         setTopics(
           rows.map((t) => ({
             id: t.id,
             name: t.name,
             grade_level: t.grade_level,
+            kazanim: t.kazanim,
             subject_name: Array.isArray(t.subjects) ? t.subjects[0]?.name ?? "Diğer" : t.subjects?.name ?? "Diğer",
           }))
         );
@@ -123,6 +131,55 @@ export function ReferencePoolAiImport() {
 
   function updateDraft(index: number, patch: Partial<Draft>) {
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+  }
+
+  // Yapay zekadan bagimsiz (yerel TF-IDF, API anahtari gerektirmeyen) konu
+  // siniflandirma - "tasnifini sistem kendi içinde yapay zekadan bağımsız
+  // yapabilmeli" talebinin karsiligi. Tek bir taslak icin kullanilir.
+  async function classifyOne(index: number) {
+    const draft = drafts[index];
+    if (!draft) return;
+    const res = await fetch("/api/questions/classify-topic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        questionBody: draft.body,
+        candidateTopics: topics.map((t) => ({ id: t.id, name: t.name, kazanim: t.kazanim, grade_level: t.grade_level, subject_name: t.subject_name })),
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (res.ok && json?.best) {
+      updateDraft(index, { topic_id: json.best.topic_id, topic_guess_label: `${json.best.label} (AI'sız eşleşme)` });
+    }
+  }
+
+  // Tum taslaklari tek seferde, tek bir istekle siniflandirir - buyuk bir
+  // sinav yuklendiginde her soru icin ayri ayri "Ata" tuşuna basmak yerine
+  // "Tümünü Sınıflandır (AI'sız)" ile hepsini bir kerede tasnif eder.
+  async function classifyAll() {
+    if (!drafts.length) return;
+    setClassifying(true);
+    try {
+      const res = await fetch("/api/questions/classify-topic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questions: drafts.map((d, i) => ({ index: i, body: d.body })),
+          candidateTopics: topics.map((t) => ({ id: t.id, name: t.name, kazanim: t.kazanim, grade_level: t.grade_level, subject_name: t.subject_name })),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.results) return;
+      setDrafts((prev) =>
+        prev.map((d, i) => {
+          const match = json.results.find((r: { index: number; best: { topic_id: string; label: string } | null }) => r.index === i);
+          if (!match?.best) return d;
+          return { ...d, topic_id: match.best.topic_id, topic_guess_label: `${match.best.label} (AI'sız eşleşme)` };
+        })
+      );
+    } finally {
+      setClassifying(false);
+    }
   }
 
   const includedCount = useMemo(() => drafts.filter((d) => d.include && d.topic_id).length, [drafts]);
@@ -227,11 +284,16 @@ export function ReferencePoolAiImport() {
 
       {drafts.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-slate-700">{drafts.length} soru ayrıştırıldı</p>
-            <Button onClick={handleSaveAll} disabled={saving || includedCount === 0}>
-              {saving ? "Ekleniyor..." : `${includedCount} Soruyu Soru Havuzuna Ekle`}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={classifyAll} disabled={classifying}>
+                {classifying ? "Sınıflandırılıyor..." : "Tümünü Sınıflandır (AI'sız)"}
+              </Button>
+              <Button onClick={handleSaveAll} disabled={saving || includedCount === 0}>
+                {saving ? "Ekleniyor..." : `${includedCount} Soruyu Soru Havuzuna Ekle`}
+              </Button>
+            </div>
           </div>
 
           {drafts.map((d, i) => (
@@ -254,6 +316,14 @@ export function ReferencePoolAiImport() {
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  onClick={() => classifyOne(i)}
+                  className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                  title="Yapay zeka kullanmadan, sadece metin benzerliğine göre konu ata"
+                >
+                  Ata (AI&apos;sız)
+                </button>
               </div>
               <p className="font-medium text-slate-900">{i + 1}. {d.body}</p>
               <ul className="mt-1.5 grid grid-cols-1 gap-1 text-slate-600 sm:grid-cols-2">

@@ -107,14 +107,41 @@ const DIFFICULTY_PROMPT_HINTS: Record<QuestionDifficulty, string> = {
  * öğretmen/admin ayrıca "Soru Onayı" ekranından inceleyip onaylayana kadar
  * "onaylı" rozetini almaz - bkz. api/ai/generate-questions/route.ts).
  */
+export type ReferenceExample = {
+  body: string;
+  options: Record<string, string>;
+  correct_option: string;
+};
+
 export async function generateQuestions(params: {
   topicName: string;
   gradeLevel: number | null;
   difficulty: QuestionDifficulty;
   count: number;
   examTypes: string[];
+  referenceExamples?: ReferenceExample[];
 }) {
-  const { topicName, gradeLevel, difficulty, count, examTypes } = params;
+  const { topicName, gradeLevel, difficulty, count, examTypes, referenceExamples = [] } = params;
+
+  // Soru Havuzu'na (is_reference_only=true, ör. ÖSYM'nin gerçek sınav
+  // sorulari) eklenmis, AYNI konuya ait ornekler varsa, bunlari AI'ya
+  // "tarz/uslup/zorluk referansi" olarak veriyoruz - "soru üretirken
+  // buradaki bilgiyi inceleyip ona göre soru üretebilmeli" talebi. Basit ve
+  // deterministik: embedding/benzerlik siralamasi yok, sadece ayni topic_id
+  // ile dogrudan eslesen birkac ornek (kullanicinin sectigi "yeni API
+  // anahtari istemeden basit alternatif" yaklasimiyla tutarli). AI'ya bu
+  // sorulari BİREBİR KOPYALAMAMASI, sadece tarz/zorluk/format referansi
+  // olarak kullanmasi acikca soyleniyor - telif nedeniyle.
+  const referenceBlock = referenceExamples.length
+    ? `\n\nAşağıda bu konuyla ilgili GERÇEK SINAV sorularından örnekler var (Soru Havuzu'ndan). Bunları ASLA birebir kopyalama veya küçük değişikliklerle tekrar üretme - sadece soru tarzını, dil düzeyini, zorluk seviyesini ve soru kurgusu biçimini anlamak için referans al, tamamen özgün yeni sorular yaz:\n${referenceExamples
+        .map(
+          (ex, i) =>
+            `${i + 1}) ${ex.body}\n${Object.entries(ex.options)
+              .map(([k, v]) => `${k}) ${v}`)
+              .join(" ")}\nDoğru cevap: ${ex.correct_option}`
+        )
+        .join("\n\n")}`
+    : "";
 
   let message;
   try {
@@ -136,7 +163,7 @@ export async function generateQuestions(params: {
           content: `Konu: ${topicName} (${gradeLevel ? gradeLevel + ". sınıf" : "genel"})
 Sınav türü: ${examTypes.join(", ") || "genel"}
 Zorluk kademesi: ${DIFFICULTY_LABELS[difficulty]} — ${DIFFICULTY_PROMPT_HINTS[difficulty]}
-Üretilecek soru sayısı: ${count}
+Üretilecek soru sayısı: ${count}${referenceBlock}
 
 Aşağıdaki JSON formatında ve SADECE JSON dizisi döndür:
 [

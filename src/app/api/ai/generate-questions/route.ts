@@ -29,12 +29,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Konu bulunamadı" }, { status: 404 });
   }
 
+  // Soru Havuzu'nda (is_reference_only=true) bu konuya ait gercek sinav
+  // sorulari varsa, birkacini AI'ya tarz/zorluk referansi olarak veriyoruz -
+  // "soru üretirken buradaki bilgiyi inceleyip ona göre soru üretebilmeli"
+  // talebi. Basit ve deterministik: embedding/benzerlik siralamasi yok,
+  // sadece ayni topic_id ile dogrudan eslesen en fazla 4 ornek.
+  const { data: referenceRows } = await supabase
+    .from("questions")
+    .select("body, options, correct_option")
+    .eq("topic_id", topicId)
+    .eq("is_reference_only", true)
+    .limit(4);
+
   const drafts = await generateQuestions({
     topicName: topic.name,
     gradeLevel: topic.grade_level,
     difficulty,
     count,
     examTypes: topic.exam_types ?? [],
+    referenceExamples: (referenceRows ?? []) as { body: string; options: Record<string, string>; correct_option: string }[],
   });
 
   if (!Array.isArray(drafts) || drafts.length === 0) {
