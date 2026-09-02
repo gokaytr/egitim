@@ -37,6 +37,7 @@ export default async function OgretmenSorularPage({
     source: string;
     difficulty: QuestionDifficulty | null;
     topic_id: string;
+    follows_new_policy: boolean;
   }[] = [];
 
   if (subjectIds.length > 0) {
@@ -46,7 +47,9 @@ export default async function OgretmenSorularPage({
       .in("subject_id", subjectIds);
     const { data: pending } = await supabase
       .from("questions")
-      .select("id, body, options, correct_option, explanation, source, difficulty, topic_id, topics!inner(subject_id)")
+      .select(
+        "id, body, options, correct_option, explanation, source, difficulty, topic_id, follows_new_policy, topics!inner(subject_id)"
+      )
       .eq("is_approved", false)
       .in("topics.subject_id", subjectIds)
       .order("created_at", { ascending: false });
@@ -68,6 +71,7 @@ export default async function OgretmenSorularPage({
       source: q.source,
       difficulty: q.difficulty,
       topic_id: q.topic_id,
+      follows_new_policy: q.follows_new_policy ?? false,
     }));
   }
 

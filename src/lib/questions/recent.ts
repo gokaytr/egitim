@@ -18,6 +18,7 @@ type RawRow = {
   created_by: string | null;
   created_at: string;
   approved_at: string | null;
+  follows_new_policy: boolean | null;
   topics:
     | { name: string; subjects: { name: string } | { name: string }[] | null }
     | { name: string; subjects: { name: string } | { name: string }[] | null }[]
@@ -40,13 +41,14 @@ function mapRow(q: RawRow, sortDate: string): RecentQuestion {
     sort_date: sortDate,
     subject_name: subject?.name ?? "Diğer",
     topic_name: topic?.name ?? "Konu",
+    follows_new_policy: q.follows_new_policy ?? false,
   };
 }
 
 const SELECT_ALL =
-  "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, topics(name, subjects(name))";
+  "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, follows_new_policy, topics(name, subjects(name))";
 const SELECT_SCOPED =
-  "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, topics!inner(name, subject_id, subjects(name))";
+  "id, body, options, correct_option, explanation, difficulty, is_approved, approved_by, created_by, created_at, approved_at, follows_new_policy, topics!inner(name, subject_id, subjects(name))";
 
 export type RecentQuestionActivity = {
   added: RecentQuestion[];

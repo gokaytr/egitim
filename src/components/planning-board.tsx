@@ -16,9 +16,19 @@ export type PlanningTopic = {
   target_question_count: number | null;
 };
 
+export type ExamShare = {
+  id: string;
+  exam_type: string;
+  token: string;
+  label: string | null;
+  created_at: string;
+};
+
 // Anasayfa/Soru Havuzu ile ayni kanonik sinav sirasi (bkz.
 // lib/homepage-content.ts EXAM_COURSES, reference-pool-browser.tsx).
-const EXAM_ORDER = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+// BILSEM, kullanicinin "bilsem sinavini da ekle" talebiyle eklendi (bkz.
+// migration 0029 - exam_target enum'una BILSEM degeri eklendi).
+const EXAM_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 const NO_EXAM_BUCKET = "Diğer";
 const NO_GRADE_BUCKET = "Genel";
 
@@ -57,13 +67,62 @@ function gradeLabel(key: string): string {
   return key === NO_GRADE_BUCKET ? NO_GRADE_BUCKET : `${key}. Sınıf`;
 }
 
+function pctOf(done: number, target: number): number {
+  return target > 0 ? Math.round((done / target) * 100) : 0;
+}
+
 function ProgressBar({ done, target, thick = false }: { done: number; target: number; thick?: boolean }) {
   const pct = target > 0 ? Math.min(100, Math.round((done / target) * 100)) : 0;
   const tone = pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-indigo-500" : pct > 0 ? "bg-amber-500" : "bg-slate-300";
   return (
-    <div className={`w-full overflow-hidden rounded-full bg-slate-100 ${thick ? "h-3" : "h-2"}`}>
+    <div className={`w-full overflow-hidden rounded-full bg-slate-100 ${thick ? "h-3" : "h-1.5"}`}>
       <div className={`h-full rounded-full ${tone} transition-all`} style={{ width: `${pct}%` }} />
     </div>
+  );
+}
+
+// Sinav/sinif/ders kademelerinin ucunde de ayni gorsel dili kullanan tek bir
+// "kutu" bileseni - kullanicinin "yuzdeler ayni sekilde gorunsun, daha
+// profesyonel olsun" talebiyle, eskiden sinav kartlari buyuk kutu, sinif/
+// ders ise kucuk yuvarlak pillerdi; artik ucu de ayni kart deseni, sadece
+// boyutu (size) degisiyor.
+function PlanningTile({
+  title,
+  pct,
+  subtitle,
+  done,
+  target,
+  active,
+  onClick,
+  size = "md",
+}: {
+  title: string;
+  pct: number;
+  subtitle: string;
+  done: number;
+  target: number;
+  active: boolean;
+  onClick: () => void;
+  size?: "lg" | "md";
+}) {
+  const isLg = size === "lg";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`touch-manipulation rounded-2xl border text-left transition ${isLg ? "p-5" : "p-3"} ${
+        active ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
+      }`}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={`font-bold text-slate-900 ${isLg ? "text-xl" : "text-sm"}`}>{title}</span>
+        <span className={`font-bold text-slate-900 ${isLg ? "text-2xl" : "text-base"}`}>%{pct}</span>
+      </div>
+      <p className={`mt-1 text-slate-500 ${isLg ? "text-sm" : "text-xs"}`}>{subtitle}</p>
+      <div className={isLg ? "mt-3" : "mt-2"}>
+        <ProgressBar done={done} target={target} thick={isLg} />
+      </div>
+    </button>
   );
 }
 
@@ -71,17 +130,21 @@ function ProgressBar({ done, target, thick = false }: { done: number; target: nu
 // planlamasi" talebi uzerine kuruldu. Her konu icin bir hedef soru sayisi
 // var (target_question_count, admin duzenleyebilir); "eklenen" ise
 // questions tablosundaki gercek satirlardan (referans havuzu haric) canli
-// hesaplaniyor. Hiyerarsi kullanicinin talebiyle sinav -> sinif -> ders ->
-// konu seklinde (KPSS/ALES gibi sinifa bagli olmayan sinavlarda "Genel" tek
-// kova olarak calisir). Kullanicinin "dengeli ilerleyelim, 1 ayda tum sinav/
-// sinif/konulara elimizi degdirmis olalim" hedefine yardimci olmak icin her
+// hesaplaniyor. Hiyerarsi sinav -> sinif -> ders -> konu seklinde (KPSS/ALES
+// gibi sinifa bagli olmayan sinavlarda "Genel" tek kova olarak calisir).
+// Kullanicinin "dengeli ilerleyelim" hedefine yardimci olmak icin her
 // kademede en geride kalan (en dusuk yuzdeli) secenekler basa siralaniyor.
+// Ayrica admin bir sinavi "Paylas" butonuyla gizli bir token linki ile
+// disariya (girissiz, sadece linki bilen) acabilir - bkz. exam_shares
+// tablosu, /paylasim/[token] sayfasi.
 export function PlanningBoard({
   topics,
   questionCounts,
+  shares,
 }: {
   topics: PlanningTopic[];
   questionCounts: Map<string, Partial<Record<QuestionDifficulty, number>>>;
+  shares: Map<string, ExamShare[]>;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
@@ -89,6 +152,12 @@ export function PlanningBoard({
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const [sharePanelExam, setSharePanelExam] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [localShares, setLocalShares] = useState<Map<string, ExamShare[]> | null>(null);
+
+  const effectiveShares = localShares ?? shares;
 
   function targetOf(t: PlanningTopic): number {
     if (overrides.has(t.id)) return overrides.get(t.id)!;
@@ -109,6 +178,51 @@ export function PlanningBoard({
       .update({ target_question_count: value })
       .eq("id", topicId);
     setSavingId(null);
+  }
+
+  function generateToken(): string {
+    // Tahmin edilemez, uzun (64 hex karakter, ~256 bit) bir paylasim
+    // token'i - link'i sadece kimin bildiği görebilsin diye.
+    const rnd = () => crypto.randomUUID().replace(/-/g, "");
+    return rnd() + rnd();
+  }
+
+  async function createShare(examType: string) {
+    setShareBusy(true);
+    const token = generateToken();
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("exam_shares")
+      .insert({ exam_type: examType, token, created_by: userData.user?.id ?? null })
+      .select("id, exam_type, token, label, created_at")
+      .single();
+    setShareBusy(false);
+    if (!error && data) {
+      setLocalShares((prev) => {
+        const next = new Map(prev ?? shares);
+        next.set(examType, [data as ExamShare, ...(next.get(examType) ?? [])]);
+        return next;
+      });
+    }
+  }
+
+  async function revokeShare(examType: string, shareId: string) {
+    setShareBusy(true);
+    await supabase.from("exam_shares").update({ revoked_at: new Date().toISOString() }).eq("id", shareId);
+    setShareBusy(false);
+    setLocalShares((prev) => {
+      const next = new Map(prev ?? shares);
+      next.set(examType, (next.get(examType) ?? []).filter((s) => s.id !== shareId));
+      return next;
+    });
+  }
+
+  function copyLink(token: string) {
+    const url = `${window.location.origin}/paylasim/${token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken((cur) => (cur === token ? null : cur)), 2000);
+    });
   }
 
   const examCounts = useMemo(() => {
@@ -250,94 +364,142 @@ export function PlanningBoard({
           <div>
             <p className="text-sm font-medium text-slate-700">Genel ilerleme (tüm sınavlar)</p>
             <p className="text-xs text-slate-500">
-              {grandTotal.done} / {grandTotal.target} soru — hedefe göre %
-              {grandTotal.target > 0 ? Math.round((grandTotal.done / grandTotal.target) * 100) : 0}
+              {grandTotal.done} / {grandTotal.target} soru — hedefe göre %{pctOf(grandTotal.done, grandTotal.target)}
             </p>
           </div>
-          <span className="text-lg font-semibold text-slate-900">
-            %{grandTotal.target > 0 ? Math.round((grandTotal.done / grandTotal.target) * 100) : 0}
-          </span>
+          <span className="text-lg font-semibold text-slate-900">%{pctOf(grandTotal.done, grandTotal.target)}</span>
         </div>
         <div className="mt-2">
           <ProgressBar done={grandTotal.done} target={grandTotal.target} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {examOptions.map((exam) => {
-          const c = examCounts.get(exam)!;
-          const pct = c.target > 0 ? Math.round((c.done / c.target) * 100) : 0;
-          const active = exam === activeExam;
-          return (
-            <button
-              key={exam}
-              type="button"
-              onClick={() => pickExam(exam)}
-              className={`touch-manipulation rounded-2xl border p-5 text-left transition ${
-                active ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xl font-bold text-slate-900">{exam}</span>
-                <span className="text-2xl font-bold text-slate-900">%{pct}</span>
+      {/* DÜZLEM 1: Sınavlar - büyük kartlar, her birinde ayrıca "Paylaş" aksiyonu var */}
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Sınav</p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {examOptions.map((exam) => {
+            const c = examCounts.get(exam)!;
+            const pct = pctOf(c.done, c.target);
+            const active = exam === activeExam;
+            const activeShares = (effectiveShares.get(exam) ?? []).filter((s) => s);
+            return (
+              <div
+                key={exam}
+                className={`flex flex-col gap-3 rounded-2xl border p-5 transition ${
+                  active ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
+                }`}
+              >
+                <button type="button" onClick={() => pickExam(exam)} className="touch-manipulation text-left">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xl font-bold text-slate-900">{exam}</span>
+                    <span className="text-2xl font-bold text-slate-900">%{pct}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {c.done} / {c.target} soru · {c.topicCount} konu
+                    {c.gradeCount > 1 ? ` · ${c.gradeCount} sınıf` : ""}
+                  </p>
+                  <div className="mt-3">
+                    <ProgressBar done={c.done} target={c.target} thick />
+                  </div>
+                </button>
+
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSharePanelExam((cur) => (cur === exam ? null : exam))}
+                    className="touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
+                  >
+                    🔗 Paylaş{activeShares.length > 0 ? ` (${activeShares.length})` : ""}
+                  </button>
+                </div>
+
+                {sharePanelExam === exam && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                    <p className="mb-2 text-slate-600">
+                      Bu bağlantıyı bilen herkes (giriş yapmadan) <strong>{exam}</strong> sınavındaki tüm onaylı
+                      soruları cevap/açıklamalarıyla görebilir. Sadece paylaştığın kişiye ilet.
+                    </p>
+                    {activeShares.length > 0 && (
+                      <ul className="mb-2 flex flex-col gap-1.5">
+                        {activeShares.map((s) => (
+                          <li key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-white p-2">
+                            <span className="truncate text-slate-500">…/{s.token.slice(0, 10)}…</span>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => copyLink(s.token)}
+                                className="touch-manipulation font-medium text-indigo-600 hover:underline"
+                              >
+                                {copiedToken === s.token ? "Kopyalandı ✓" : "Linki kopyala"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={shareBusy}
+                                onClick={() => revokeShare(exam, s.id)}
+                                className="touch-manipulation font-medium text-red-600 hover:underline disabled:opacity-50"
+                              >
+                                İptal et
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <button
+                      type="button"
+                      disabled={shareBusy}
+                      onClick={() => createShare(exam)}
+                      className="touch-manipulation rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      {shareBusy ? "Oluşturuluyor…" : "Yeni bağlantı oluştur"}
+                    </button>
+                  </div>
+                )}
               </div>
-              <p className="mt-1 text-sm text-slate-500">
-                {c.done} / {c.target} soru · {c.topicCount} konu
-                {c.gradeCount > 1 ? ` · ${c.gradeCount} sınıf` : ""}
-              </p>
-              <div className="mt-3">
-                <ProgressBar done={c.done} target={c.target} thick />
-              </div>
-            </button>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {activeExam && (
         <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4">
+          {/* DÜZLEM 2: Sınıflar - ayrı bir bölge, sınav kartlarıyla aynı görsel dilde ama küçük */}
           <div>
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf</p>
-            <div className="flex flex-wrap gap-2">
-              {gradesForExam.map((g) => {
-                const pct = g.target > 0 ? Math.round((g.done / g.target) * 100) : 0;
-                const active = g.key === activeGrade;
-                return (
-                  <button
-                    key={g.key}
-                    type="button"
-                    onClick={() => pickGrade(g.key)}
-                    className={`touch-manipulation rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                      active ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {gradeLabel(g.key)} · %{pct} · {g.topicCount} konu
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {gradesForExam.map((g) => (
+                <PlanningTile
+                  key={g.key}
+                  title={gradeLabel(g.key)}
+                  pct={pctOf(g.done, g.target)}
+                  subtitle={`${g.topicCount} konu`}
+                  done={g.done}
+                  target={g.target}
+                  active={g.key === activeGrade}
+                  onClick={() => pickGrade(g.key)}
+                />
+              ))}
             </div>
           </div>
 
-          <div>
+          <div className="border-t border-slate-100 pt-4">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Ders</p>
-            <div className="flex flex-wrap gap-2">
-              {subjectsForExamGrade.map((s) => {
-                const pct = s.target > 0 ? Math.round((s.done / s.target) * 100) : 0;
-                const active = s.id === activeSubjectId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedSubjectId(s.id)}
-                    className={`touch-manipulation rounded-full border px-3 py-1 text-xs font-medium transition ${
-                      active ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {s.name} · %{pct}
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {subjectsForExamGrade.map((s) => (
+                <PlanningTile
+                  key={s.id}
+                  title={s.name}
+                  pct={pctOf(s.done, s.target)}
+                  subtitle="konu ilerlemesi"
+                  done={s.done}
+                  target={s.target}
+                  active={s.id === activeSubjectId}
+                  onClick={() => setSelectedSubjectId(s.id)}
+                />
+              ))}
               {subjectsForExamGrade.length === 0 && (
-                <p className="text-xs text-slate-400">Bu sınıfta henüz bu sınava atanmış ders/konu yok.</p>
+                <p className="col-span-full text-xs text-slate-400">Bu sınıfta henüz bu sınava atanmış ders/konu yok.</p>
               )}
             </div>
           </div>
@@ -357,6 +519,7 @@ export function PlanningBoard({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-slate-900">{t.name}</span>
+                      <span className="text-sm font-bold text-slate-900">%{pctOf(done, target)}</span>
                       {remaining === 0 && target > 0 && <Badge tone="green">Hedef tamam</Badge>}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500">

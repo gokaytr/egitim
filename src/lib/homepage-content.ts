@@ -38,4 +38,4 @@ export const FEATURE_TILES = [
 
 export const HERO_DEFAULT_IMAGE = "/grade-bg/varsayilan.jpg";
 
-export const EXAM_COURSES = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+export const EXAM_COURSES = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];

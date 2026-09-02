@@ -15,6 +15,7 @@ export type PendingQuestion = {
   source: string;
   difficulty: QuestionDifficulty | null;
   topic_id: string;
+  follows_new_policy?: boolean;
 };
 
 export type TopicRef = {
@@ -230,12 +231,18 @@ export function PendingQuestionsBrowser({ topics, questions }: { topics: TopicRe
             questionsForTopic.map((q) => (
               <Card key={q.id}>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
+                  {q.follows_new_policy && (
+                    <Badge tone="amber">* Yeni kural</Badge>
+                  )}
                   <Badge tone="amber">{q.source === "ai" ? "AI üretimi" : q.source}</Badge>
                   <Badge>{selectedTopic.name}</Badge>
                   {q.difficulty != null && <Badge>Zorluk: {DIFFICULTY_LABELS[q.difficulty]}</Badge>}
                   <Badge tone="green">Doğru cevap: {q.correct_option}</Badge>
                 </div>
-                <p className="font-medium text-slate-900">{q.body}</p>
+                <p className="font-medium text-slate-900">
+                  {q.follows_new_policy && <span className="mr-1 text-amber-600">*</span>}
+                  {q.body}
+                </p>
                 <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm md:grid-cols-2">
                   {Object.entries(q.options ?? {}).map(([key, val]) => {
                     const isCorrect = key === q.correct_option;

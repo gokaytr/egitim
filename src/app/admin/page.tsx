@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { RecentQuestionsCard } from "@/components/recent-questions-card";
 import { getRecentQuestionActivity } from "@/lib/questions/recent";
-import { PlanningBoard, type PlanningTopic } from "@/components/planning-board";
+import { PlanningBoard, type PlanningTopic, type ExamShare } from "@/components/planning-board";
 import type { QuestionDifficulty } from "@/lib/questions/difficulty";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
@@ -18,7 +18,7 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [recentActivity, { data: rawTopics }, { data: rawQuestions }] = await Promise.all([
+  const [recentActivity, { data: rawTopics }, { data: rawQuestions }, { data: rawShares }] = await Promise.all([
     getRecentQuestionActivity(supabase, null),
     supabase
       .from("topics")
@@ -28,7 +28,19 @@ export default async function AdminDashboard() {
       .from("questions")
       .select("topic_id, difficulty")
       .eq("is_reference_only", false),
+    supabase
+      .from("exam_shares")
+      .select("id, exam_type, token, label, created_at")
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
   ]);
+
+  const shares = new Map<string, ExamShare[]>();
+  (rawShares ?? []).forEach((s) => {
+    const list = shares.get(s.exam_type) ?? [];
+    list.push(s);
+    shares.set(s.exam_type, list);
+  });
 
   const planningTopics: PlanningTopic[] = (rawTopics ?? []).map((t) => ({
     id: t.id,
@@ -59,7 +71,7 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
-      <PlanningBoard topics={planningTopics} questionCounts={questionCounts} />
+      <PlanningBoard topics={planningTopics} questionCounts={questionCounts} shares={shares} />
 
       <RecentQuestionsCard added={recentActivity.added} approved={recentActivity.approved} isAdmin />
     </div>

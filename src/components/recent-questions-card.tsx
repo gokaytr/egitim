@@ -13,6 +13,7 @@ export type RecentQuestion = EditableQuestion & {
   subject_name: string;
   topic_name: string;
   difficulty: QuestionDifficulty | null;
+  follows_new_policy?: boolean;
 };
 
 // Genel Bakis sayfasindaki "Son Eklenen/Onaylanan Sorular" karti - eskiden
@@ -48,6 +49,7 @@ function QuestionRow({
         <span className="w-36 shrink-0 text-xs text-slate-400">
           {sortDate.toLocaleDateString("tr-TR")} {sortDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
         </span>
+        {q.follows_new_policy && <Badge tone="amber">*</Badge>}
         <Badge>{q.subject_name}</Badge>
         <Badge>{q.topic_name}</Badge>
         <span className="flex-1" />

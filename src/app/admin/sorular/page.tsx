@@ -41,7 +41,7 @@ export default async function SorularPage() {
       .order("grade_level"),
     supabase
       .from("questions")
-      .select("id, body, options, correct_option, explanation, source, difficulty, topic_id")
+      .select("id, body, options, correct_option, explanation, source, difficulty, topic_id, follows_new_policy")
       .eq("is_approved", false)
       .order("created_at", { ascending: false }),
     supabase
@@ -82,6 +82,7 @@ export default async function SorularPage() {
     source: q.source,
     difficulty: q.difficulty,
     topic_id: q.topic_id,
+    follows_new_policy: q.follows_new_policy ?? false,
   }));
 
   const referencePoolQuestions = (referenceQuestions ?? []).map((q) => ({

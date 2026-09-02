@@ -25,7 +25,7 @@ type Topic = {
 // sinav listesi (bkz. lib/homepage-content.ts EXAM_COURSES) - Soru
 // Havuzu'ndaki sekmeler de bu sirada gosterilsin diye ayni liste burada da
 // kullaniliyor.
-const EXAM_ORDER = ["LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+const EXAM_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 // Bir konuya hicbir sinav turu (exam_types) atanmamissa (ör. sadece ilkokul
 // mufredati) bu sinifta toplanir - havuzda "kaybolmasin" diye.
 const NO_EXAM_BUCKET = "Diğer";
