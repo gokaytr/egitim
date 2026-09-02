@@ -1,4 +1,5 @@
 import { loadSiteAnalytics } from "@/lib/reports/site-analytics";
+import { createClient } from "@/lib/supabase/server";
 import { StatCard, Card, Badge } from "@/components/ui";
 import { DailyPageViewsChart, RankedBarList } from "@/components/analytics-charts";
 
@@ -14,14 +15,34 @@ function timeAgo(iso: string): string {
 }
 
 export default async function IstatistiklerPage() {
-  const data = await loadSiteAnalytics();
+  const supabase = await createClient();
+  const [data, { count: studentCount }, { count: teacherCount }, { count: questionCount }, { count: pendingCount }] =
+    await Promise.all([
+      loadSiteAnalytics(),
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "student"),
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "teacher"),
+      supabase.from("questions").select("*", { count: "exact", head: true }),
+      supabase.from("questions").select("*", { count: "exact", head: true }).eq("is_approved", false),
+    ]);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">İstatistikler</h1>
-        <p className="text-sm text-slate-500">Son 30 günün ziyaret ve sayfa görüntüleme özeti</p>
+        <p className="text-sm text-slate-500">Platform özeti, ziyaret ve sayfa görüntüleme verileri</p>
       </div>
+
+      <div>
+        <h2 className="mb-3 font-semibold text-slate-900">Platform Özeti</h2>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <StatCard label="Öğrenci" value={studentCount ?? 0} />
+          <StatCard label="Öğretmen" value={teacherCount ?? 0} />
+          <StatCard label="Toplam Soru" value={questionCount ?? 0} />
+          <StatCard label="Onay Bekleyen Soru" value={pendingCount ?? 0} hint="AI üretimi dahil" />
+        </div>
+      </div>
+
+      <h2 className="-mb-2 font-semibold text-slate-900">Ziyaret İstatistikleri (Son 30 Gün)</h2>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <StatCard label="Sayfa Görüntüleme" value={data.totalPageViews} />

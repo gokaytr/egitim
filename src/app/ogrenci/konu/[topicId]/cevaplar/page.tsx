@@ -12,10 +12,14 @@ export default async function KonuCevaplarPage({ params }: { params: Promise<{ t
 
   const [{ data: topic }, { data: questions }] = await Promise.all([
     supabase.from("topics").select("id, name").eq("id", topicId).single(),
+    // is_reference_only=true olan sorular "Referans Havuzu"nda tutulur ve
+    // ogrenciye hicbir zaman gosterilmez - bkz. migration
+    // 0024_soru_referans_havuzu.sql.
     supabase
       .from("questions")
       .select("id, body, options, correct_option, explanation, image_url")
       .eq("topic_id", topicId)
+      .eq("is_reference_only", false)
       .order("created_at"),
   ]);
 

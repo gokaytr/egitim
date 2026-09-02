@@ -47,7 +47,7 @@ export default async function OgrenciDashboard({
     // burada özet olarak gösteriliyor.
     supabase
       .from("student_attempts")
-      .select("id, finished_at, total_questions, correct_count, wrong_count, empty_count, topics(name), exams(title, exam_type)")
+      .select("id, finished_at, total_questions, correct_count, wrong_count, empty_count, topic_id, exam_id, topics(name), exams(title, exam_type)")
       .eq("student_id", studentId)
       .not("finished_at", "is", null)
       .order("finished_at", { ascending: false })
@@ -82,6 +82,9 @@ export default async function OgrenciDashboard({
       wrong: a.wrong_count,
       empty: a.empty_count,
       pct,
+      // "Tekrar Çöz" linki icin - konu testleri /ogrenci/konu/{topic_id}'ye,
+      // deneme/seviye tespit ise /ogrenci/deneme/{exam_id}'ye gonderiyor.
+      redoHref: a.topic_id ? `/ogrenci/konu/${a.topic_id}` : a.exam_id ? `/ogrenci/deneme/${a.exam_id}` : null,
     };
   });
 

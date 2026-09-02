@@ -25,12 +25,19 @@ export function QuizRunner({
   questions,
   quizSettings = DEFAULT_QUIZ_DISPLAY_SETTINGS,
   gradeLevel,
+  effectiveStudentId,
 }: {
   topicId: string;
   topicName: string;
   questions: Question[];
   quizSettings?: QuizDisplaySettings;
   gradeLevel?: number | null;
+  // Admin bir test ogrenciyi onizlerken auth.uid() admin'in kendisi olur -
+  // sonuc kaydini yine test ogrenciye yazabilmek icin sayfa bilesenindeki
+  // resolveEffectiveStudent() sonucu buradan geciriliyor (bkz. CLAUDE.md
+  // "Admin onizleme paritesi kurali"). Gercek ogrenci girisinde bu zaten
+  // auth.uid() ile ayni kisi oldugu icin fark etmiyor.
+  effectiveStudentId?: string;
 }) {
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -55,6 +62,9 @@ export function QuizRunner({
     setError(null);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
+    // Admin onizlerken kaydin gercek test ogrenciye yazilmasi icin
+    // effectiveStudentId oncelikli - bkz. yukaridaki prop yorumu.
+    const studentIdForInsert = effectiveStudentId ?? userData.user?.id;
 
     let correct = 0, wrong = 0, empty = 0;
     const logs = questions.map((q) => {
@@ -74,7 +84,7 @@ export function QuizRunner({
       const { data: attempt, error: attemptError } = await supabase
         .from("student_attempts")
         .insert({
-          student_id: userData.user?.id,
+          student_id: studentIdForInsert,
           topic_id: topicId,
           total_questions: questions.length,
           correct_count: correct,
@@ -124,7 +134,7 @@ export function QuizRunner({
 
   if (result) {
     return (
-      <div className="flex w-full max-w-6xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <ResultRevealSound />
         <div>
           <h2 className="text-xl font-semibold text-slate-900">Sonuç</h2>
@@ -146,8 +156,8 @@ export function QuizRunner({
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className={`flex flex-col gap-3 ${result.diagnosis ? "lg:col-span-1" : "lg:col-span-3"}`}>
             <h3 className="font-semibold text-slate-900">Ne yapmak istersin?</h3>
             <Button
               variant={showReview ? "secondary" : "primary"}
@@ -156,14 +166,11 @@ export function QuizRunner({
             >
               {showReview ? "İncelemeyi kapat" : "📋 Yanlışlarımı incele"}
             </Button>
-            <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
-              ← Panel Anasayfasına Dön
-            </Link>
             {error && <p className="text-sm text-amber-600">{error}</p>}
           </Card>
 
           {result.diagnosis && (
-            <Card className="bg-indigo-50">
+            <Card className="bg-indigo-50 lg:col-span-2">
               <h3 className="font-semibold text-indigo-900">Değerlendirme</h3>
               <p className="mt-2 whitespace-pre-line text-sm text-slate-700">
                 {result.diagnosis.student_summary ?? result.diagnosis.ai_summary}
@@ -179,6 +186,10 @@ export function QuizRunner({
         </div>
 
         {showReview && <AnswerReviewList questions={questions} answers={answers} />}
+
+        <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
+          ← Panel Anasayfasına Dön
+        </Link>
       </div>
     );
   }

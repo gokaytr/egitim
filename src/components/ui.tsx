@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import Link from "next/link";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -23,6 +24,47 @@ export function StatCard({
       <span className="text-3xl font-semibold text-slate-900">{value}</span>
       {hint && <span className="text-xs text-slate-400">{hint}</span>}
     </Card>
+  );
+}
+
+// Admin ve ogretmen Genel Bakis sayfalarinin en ustunde gorunen, siteninin en
+// onemli konusu olan "soru" is akisina (ekleme/onaylama) dogrudan goturen
+// buyuk, goze carpan iki kart. href'e "?tab=ekle"/"?tab=onay" gibi bir query
+// verilirse ve hedef sayfadaki SimpleTabs'ta ayni ad ("tab") syncQueryParam
+// olarak tanimliysa, dogrudan o sekme acilir.
+export function DashboardActionCard({
+  href,
+  emoji,
+  title,
+  subtitle,
+  tone = "indigo",
+  badge,
+}: {
+  href: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  tone?: "indigo" | "amber";
+  badge?: number;
+}) {
+  const toneClasses = {
+    indigo: "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
+    amber: "border-amber-200 bg-amber-50 hover:bg-amber-100",
+  };
+  return (
+    <Link
+      href={href}
+      className={`flex touch-manipulation flex-col gap-2 rounded-2xl border p-6 shadow-sm transition ${toneClasses[tone]}`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-4xl">{emoji}</span>
+        {!!badge && badge > 0 && (
+          <span className="rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white">{badge}</span>
+        )}
+      </div>
+      <span className="text-xl font-semibold text-slate-900">{title}</span>
+      <span className="text-sm text-slate-600">{subtitle}</span>
+    </Link>
   );
 }
 

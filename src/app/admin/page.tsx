@@ -1,16 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { StatCard, Card } from "@/components/ui";
+import { Card, DashboardActionCard } from "@/components/ui";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [{ count: studentCount }, { count: teacherCount }, { count: questionCount }, { count: pendingCount }] =
-    await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "student"),
-      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "teacher"),
-      supabase.from("questions").select("*", { count: "exact", head: true }),
-      supabase.from("questions").select("*", { count: "exact", head: true }).eq("is_approved", false),
-    ]);
+  const { count: pendingCount } = await supabase
+    .from("questions")
+    .select("*", { count: "exact", head: true })
+    .eq("is_approved", false);
 
   const { data: pendingReferrals } = await supabase
     .from("tutor_referrals")
@@ -23,14 +20,27 @@ export default async function AdminDashboard() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Genel Bakış</h1>
-        <p className="text-sm text-slate-500">Platformun anlık durumu</p>
+        <p className="text-sm text-slate-500">
+          Sitenin en önemli konusu soru — önce soru ekleme ve onaylama akışı.
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Öğrenci" value={studentCount ?? 0} />
-        <StatCard label="Öğretmen" value={teacherCount ?? 0} />
-        <StatCard label="Toplam Soru" value={questionCount ?? 0} />
-        <StatCard label="Onay Bekleyen Soru" value={pendingCount ?? 0} hint="AI üretimi dahil" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <DashboardActionCard
+          href="/admin/sorular?tab=ekle"
+          emoji="➕"
+          title="Soru Ekle"
+          subtitle="Elle, kopyala-yapıştır veya yapay zeka ile yeni soru ekle."
+          tone="indigo"
+        />
+        <DashboardActionCard
+          href="/admin/sorular?tab=onay"
+          emoji="✅"
+          title="Soru Onayla"
+          subtitle="Onay bekleyen soruları incele ve kalite kontrolünden geçir."
+          tone="amber"
+          badge={pendingCount ?? 0}
+        />
       </div>
 
       <Card>

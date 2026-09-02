@@ -35,6 +35,7 @@ export function ExamRunner({
   questions,
   quizSettings = DEFAULT_QUIZ_DISPLAY_SETTINGS,
   gradeLevel,
+  effectiveStudentId,
 }: {
   examId: string;
   examTitle: string;
@@ -43,6 +44,12 @@ export function ExamRunner({
   questions: Question[];
   quizSettings?: QuizDisplaySettings;
   gradeLevel?: number | null;
+  // Admin bir test ogrenciyi onizlerken auth.uid() admin'in kendisi olur -
+  // sonuc kaydini yine test ogrenciye yazabilmek icin sayfa bilesenindeki
+  // resolveEffectiveStudent() sonucu buradan geciriliyor (bkz. CLAUDE.md
+  // "Admin onizleme paritesi kurali"). Gercek ogrenci girisinde bu zaten
+  // auth.uid() ile ayni kisi oldugu icin fark etmiyor.
+  effectiveStudentId?: string;
 }) {
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -59,6 +66,10 @@ export function ExamRunner({
     setError(null);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
+    // Admin onizlerken kaydin (ve seviye tespit sonucu/calisma takvimi
+    // eklemelerinin) gercek test ogrenciye yazilmasi icin effectiveStudentId
+    // oncelikli - bkz. yukaridaki prop yorumu.
+    const studentIdForInsert = effectiveStudentId ?? userData.user?.id;
 
     let correct = 0, wrong = 0, empty = 0;
     // Yanlis/bos birakilan sorularin konularini da topluyoruz - seviye
@@ -90,7 +101,7 @@ export function ExamRunner({
       const { data: attempt, error: attemptError } = await supabase
         .from("student_attempts")
         .insert({
-          student_id: userData.user?.id,
+          student_id: studentIdForInsert,
           exam_id: examId,
           total_questions: questions.length,
           correct_count: correct,
@@ -107,12 +118,12 @@ export function ExamRunner({
 
       await supabase.from("answer_logs").insert(logs.map((l) => ({ ...l, attempt_id: attempt.id })));
 
-      if (isSeviyeTespit && userData.user) {
+      if (isSeviyeTespit && studentIdForInsert) {
         const level = levelFromScore(pct);
         await supabase
           .from("profiles")
           .update({ level_label: level, level_score: pct, level_assessed_at: new Date().toISOString() })
-          .eq("id", userData.user.id);
+          .eq("id", studentIdForInsert);
 
         // Seviye tespitte zorlandigi konular icin otomatik olarak calisma
         // programina (takvime) hedef ekliyoruz - "auto"/"placement" ile ayni
@@ -124,7 +135,7 @@ export function ExamRunner({
           const { data: existingPlan } = await supabase
             .from("study_plans")
             .select("id")
-            .eq("student_id", userData.user.id)
+            .eq("student_id", studentIdForInsert)
             .eq("status", "active")
             .maybeSingle();
           plan = existingPlan;
@@ -132,7 +143,7 @@ export function ExamRunner({
           if (!plan) {
             const { data: newPlan } = await supabase
               .from("study_plans")
-              .insert({ student_id: userData.user.id, exam_target: "TYT" })
+              .insert({ student_id: studentIdForInsert, exam_target: "TYT" })
               .select("id")
               .single();
             plan = newPlan;
@@ -176,7 +187,7 @@ export function ExamRunner({
   if (result) {
     const level = levelFromScore(result.pct);
     return (
-      <div className="flex w-full max-w-6xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <ResultRevealSound />
         <div>
           <h2 className="text-xl font-semibold text-slate-900">Sonuç 🎉</h2>
@@ -202,8 +213,8 @@ export function ExamRunner({
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className={`flex flex-col gap-3 ${isSeviyeTespit ? "lg:col-span-1" : "lg:col-span-3"}`}>
             <h3 className="font-semibold text-slate-900">Ne yapmak istersin?</h3>
             <Button
               variant={showReview ? "secondary" : "primary"}
@@ -212,14 +223,11 @@ export function ExamRunner({
             >
               {showReview ? "İncelemeyi kapat" : "📋 Yanlışlarımı incele"}
             </Button>
-            <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
-              ← Panel Anasayfasına Dön
-            </Link>
             {error && <p className="text-sm text-amber-600">{error}</p>}
           </Card>
 
           {isSeviyeTespit && (
-            <Card className="bg-indigo-50">
+            <Card className="bg-indigo-50 lg:col-span-2">
               <Badge tone="default">Seviyen: {LEVEL_TITLES[level]}</Badge>
               <p className="mt-2 text-sm text-slate-700">
                 Bu sonuca göre sana uygun zorlukta denemeler önerebiliriz. Genel Bakış sayfasından &quot;Sana Uygun
@@ -252,6 +260,10 @@ export function ExamRunner({
             answers={answers}
           />
         )}
+
+        <Link href="/ogrenci" className="text-center text-sm font-medium text-indigo-600 underline">
+          ← Panel Anasayfasına Dön
+        </Link>
       </div>
     );
   }

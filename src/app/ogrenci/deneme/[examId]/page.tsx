@@ -55,6 +55,7 @@ export default async function DenemePage({ params }: { params: Promise<{ examId:
         questions={questions}
         quizSettings={quizSettings}
         gradeLevel={studentProfile?.grade_level}
+        effectiveStudentId={effectiveStudentId}
       />
     </div>
   );

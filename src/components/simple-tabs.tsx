@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 type Tab = {
   key: string;
@@ -25,8 +25,40 @@ const ACTIVE_TONE_CLASSES: Record<NonNullable<Tab["tone"]>, string> = {
 // turuncu bir isikla vurgulanir. `tone` verilen bir sekme secili oldugunda
 // notr beyaz yerine belirgin bir renkle (orn. Soru Ekle -> indigo, Soru
 // Onayi -> amber) vurgulanir.
-export function SimpleTabs({ tabs, defaultKey }: { tabs: Tab[]; defaultKey?: string }) {
+export function SimpleTabs({
+  tabs,
+  defaultKey,
+  syncQueryParam,
+}: {
+  tabs: Tab[];
+  defaultKey?: string;
+  // Verilirse, aktif sekme bu URL query param'inda ("?<syncQueryParam>=<key>")
+  // saklanir/okunur - boylece baska bir sayfadan (orn. Genel Bakis'taki "Soru
+  // Ekle"/"Soru Onayla" kartlari) dogrudan istenen sekmeye link verilebilir.
+  // Hydration uyumsuzlugu olmasin diye ilk render'da her zaman defaultKey
+  // kullanilir, URL'deki deger sadece mount sonrasi bir useEffect ile okunur.
+  syncQueryParam?: string;
+}) {
   const [active, setActive] = useState(defaultKey ?? tabs[0]?.key);
+
+  useEffect(() => {
+    if (!syncQueryParam) return;
+    const fromUrl = new URLSearchParams(window.location.search).get(syncQueryParam);
+    if (fromUrl && tabs.some((t) => t.key === fromUrl)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- URL, React disinda bir kaynak; mount sonrasi tek seferlik senkronizasyon.
+      setActive(fromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncQueryParam]);
+
+  function selectTab(key: string) {
+    setActive(key);
+    if (syncQueryParam) {
+      const url = new URL(window.location.href);
+      url.searchParams.set(syncQueryParam, key);
+      window.history.replaceState(null, "", url);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,7 +67,7 @@ export function SimpleTabs({ tabs, defaultKey }: { tabs: Tab[]; defaultKey?: str
           <button
             key={t.key}
             type="button"
-            onClick={() => setActive(t.key)}
+            onClick={() => selectTab(t.key)}
             className={`flex touch-manipulation items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
               active === t.key
                 ? (t.tone && ACTIVE_TONE_CLASSES[t.tone]) || "bg-white text-indigo-600 shadow-sm"

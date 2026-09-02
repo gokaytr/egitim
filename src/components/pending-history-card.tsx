@@ -15,6 +15,7 @@ export type AttemptSummary = {
   wrong: number;
   empty: number;
   pct: number;
+  redoHref: string | null;
 };
 
 // Genel Bakis'taki "Cozulen Test/Deneme" istatistik karti kaldirildi - onun
@@ -83,23 +84,28 @@ export function PendingHistoryCard({
         <>
           <ul className="flex flex-col gap-2">
             {attempts.map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={`/ogrenci/gecmis/${a.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm transition hover:bg-slate-100"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge tone="default">{a.kind}</Badge>
-                    <span className="text-slate-800">{a.title}</span>
-                    <span className="text-xs text-slate-400">
-                      {a.finishedAt ? new Date(a.finishedAt).toLocaleDateString("tr-TR") : ""}
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-2">
-                    <Badge tone={a.pct >= 80 ? "green" : a.pct >= 50 ? "amber" : "red"}>%{a.pct}</Badge>
-                    <span className="font-medium text-indigo-600">İncele →</span>
+              <li
+                key={a.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"
+              >
+                <Link href={`/ogrenci/gecmis/${a.id}`} className="flex items-center gap-2 hover:underline">
+                  <Badge tone="default">{a.kind}</Badge>
+                  <span className="text-slate-800">{a.title}</span>
+                  <span className="text-xs text-slate-400">
+                    {a.finishedAt ? new Date(a.finishedAt).toLocaleDateString("tr-TR") : ""}
                   </span>
                 </Link>
+                <span className="flex items-center gap-3">
+                  <Badge tone={a.pct >= 80 ? "green" : a.pct >= 50 ? "amber" : "red"}>%{a.pct}</Badge>
+                  <Link href={`/ogrenci/gecmis/${a.id}`} className="font-medium text-indigo-600 underline">
+                    İncele →
+                  </Link>
+                  {a.redoHref && (
+                    <Link href={a.redoHref} className="font-medium text-emerald-600 underline">
+                      Tekrar Çöz ↻
+                    </Link>
+                  )}
+                </span>
               </li>
             ))}
           </ul>

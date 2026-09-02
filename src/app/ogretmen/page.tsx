@@ -1,4 +1,4 @@
-import { StatCard, Card, Badge } from "@/components/ui";
+import { Card, Badge, DashboardActionCard } from "@/components/ui";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import { createClient } from "@/lib/supabase/server";
 
@@ -7,34 +7,26 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
   const { teacherId } = await resolveEffectiveTeacher(requestedTeacherId);
   const supabase = await createClient();
 
-  const [
-    { count: myLessonCount },
-    { count: myQuestionCount },
-    { count: myApprovedQuestionCount },
-    { data: referrals },
-    { data: mySubjects },
-    { data: myTutorSessions },
-  ] = await Promise.all([
-    supabase.from("lesson_contents").select("*", { count: "exact", head: true }).eq("teacher_id", teacherId),
-    supabase.from("questions").select("*", { count: "exact", head: true }).eq("created_by", teacherId),
-    supabase.from("questions").select("*", { count: "exact", head: true }).eq("approved_by", teacherId),
+  const [{ data: referrals }, { data: mySubjects }, { data: subjectRows }] = await Promise.all([
     supabase
       .from("tutor_referrals")
       .select("id, status, topics(name), profiles!tutor_referrals_student_id_fkey(full_name)")
       .in("status", ["pending", "matched"])
       .limit(5),
     supabase.from("teacher_subjects").select("subjects(name)").eq("teacher_id", teacherId),
-    // Ozel ders adedi ve toplam saati: tutor_sessions'ta ogretmen kimligi
-    // dogrudan yok, tutor_referrals uzerinden bu ogretmene ait olanlari buluyoruz.
-    supabase
-      .from("tutor_sessions")
-      .select("id, duration_minutes, tutor_referrals!inner(tutor_id)")
-      .eq("tutor_referrals.tutor_id", teacherId),
+    supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", teacherId ?? ""),
   ]);
 
-  const tutorSessionCount = myTutorSessions?.length ?? 0;
-  const tutorSessionHours =
-    Math.round(((myTutorSessions ?? []).reduce((s, x) => s + (x.duration_minutes ?? 0), 0) / 60) * 10) / 10;
+  const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
+  let pendingQuestionCount = 0;
+  if (subjectIds.length > 0) {
+    const { count } = await supabase
+      .from("questions")
+      .select("id, topics!inner(subject_id)", { count: "exact", head: true })
+      .eq("is_approved", false)
+      .in("topics.subject_id", subjectIds);
+    pendingQuestionCount = count ?? 0;
+  }
 
   type SubjectRow = { subjects: { name: string } | { name: string }[] | null };
   const branchNames = ((mySubjects ?? []) as SubjectRow[])
@@ -45,7 +37,9 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Genel Bakış</h1>
-        <p className="text-sm text-slate-500">Konu anlatımların ve sorularının özeti</p>
+        <p className="text-sm text-slate-500">
+          Sitenin en önemli konusu soru — önce soru ekleme ve onaylama akışı.
+        </p>
       </div>
 
       {branchNames.length > 0 && (
@@ -57,13 +51,22 @@ export default async function OgretmenDashboard({ searchParams }: { searchParams
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <StatCard label="Eklediğim Konu Anlatımı" value={myLessonCount ?? 0} />
-        <StatCard label="Eklediğim Soru" value={myQuestionCount ?? 0} />
-        <StatCard label="Onayladığım Soru" value={myApprovedQuestionCount ?? 0} />
-        <StatCard label="Bekleyen Özel Ders Talebi" value={referrals?.length ?? 0} />
-        <StatCard label="Özel Ders Adedi" value={tutorSessionCount} />
-        <StatCard label="Toplam Özel Ders Saati" value={tutorSessionHours} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <DashboardActionCard
+          href="/ogretmen/sorular?tab=ekle"
+          emoji="➕"
+          title="Soru Ekle"
+          subtitle="Elle, kopyala-yapıştır veya yapay zeka ile yeni soru ekle."
+          tone="indigo"
+        />
+        <DashboardActionCard
+          href="/ogretmen/sorular?tab=onay"
+          emoji="✅"
+          title="Soru Onayla"
+          subtitle="Branşındaki onay bekleyen soruları incele ve kalite kontrolünden geçir."
+          tone="amber"
+          badge={pendingQuestionCount}
+        />
       </div>
 
       <Card>

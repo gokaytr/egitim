@@ -48,6 +48,7 @@ export default async function OgretmenSorularPage({
     source: string;
     difficulty: QuestionDifficulty | null;
     topic_id: string;
+    is_reference_only: boolean;
   }[] = [];
 
   if (subjectIds.length > 0) {
@@ -61,7 +62,9 @@ export default async function OgretmenSorularPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("questions")
-        .select("id, body, options, correct_option, explanation, is_approved, source, difficulty, topic_id, topics!inner(subject_id)")
+        .select(
+          "id, body, options, correct_option, explanation, is_approved, source, difficulty, topic_id, is_reference_only, topics!inner(subject_id)"
+        )
         .in("topics.subject_id", subjectIds)
         .order("created_at", { ascending: false }),
     ]);
@@ -95,6 +98,7 @@ export default async function OgretmenSorularPage({
       source: q.source,
       difficulty: q.difficulty,
       topic_id: q.topic_id,
+      is_reference_only: q.is_reference_only,
     }));
   }
 
@@ -144,10 +148,15 @@ export default async function OgretmenSorularPage({
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
         <p className="text-sm text-slate-500">Soru ekleme, onaylama ve tüm soruları görüntüleme tek ekranda.</p>
+        <p className="mt-2 text-sm font-medium text-slate-600">
+          🔒 Not: &quot;Tüm Sorular&quot; sekmesindeki <span className="font-semibold">Referans Havuzu</span> pilinde
+          tutulan sorular öğrenciye ASLA gösterilmez/yayınlanmaz — sadece yapay zekânın örnek alması için saklanır.
+        </p>
       </div>
 
       <SimpleTabs
         defaultKey="liste"
+        syncQueryParam="tab"
         tabs={[
           { key: "liste", label: "Tüm Sorular", content: sorularListesiTab },
           { key: "ekle", label: "Soru Ekle", content: soruEkleTab, tone: "indigo" },

@@ -6,28 +6,27 @@ Bu proje üzerinde çalışırken tüm yazışmalar, açıklamalar ve yanıtlar 
 
 ## Git kuralı
 
-Değişiklikleri commit'leyebilirsin (kullanıcı onayladıysa), ama ASLA `git push` çalıştırma — push işlemini her zaman kullanıcının kendisi yapar.
+**GÜNCELLENDİ**: Çalıştığım bulut ortamındaki depo ile kullanıcının Windows bilgisayarındaki depo birbirinden bağımsız iki ayrı klondur — ikisi de aynı GitHub deposuna (origin) bağlı ama birbirlerinin commit'lerini otomatik görmezler. Eskiden "push'u her zaman kullanıcı yapar" kuralı vardı, ama bu kullanıcının kendi bilgisayarındaki depoda benim commit'lerimin hiç bulunmaması nedeniyle işe yaramıyordu (kullanıcı orada push çalıştırınca "Everything up-to-date" görüyordu, çünkü benim commit'lerim sadece buradaydı). Kullanıcıyla konuşulup karar verildi: artık değişiklikler temizse (tsc hatasız geçtiyse) commit'ledikten SONRA `git push origin main`'i BURADAN (bulut ortamından) doğrudan ben çalıştırıyorum. Kullanıcı sonra kendi bilgisayarında `git pull origin main` çalıştırarak güncel hâli alıyor. Push başarısız olursa (ör. "fetch first"/"Updates were rejected") panik yapmadan `git fetch origin` + `git merge origin/main` ile birleştirip tekrar push deniyorum.
 
 ## Yanıt ve commit kuralı
 
 Sohbet yanıtlarında kod bloğu/kod parçası gösterme — yapılan değişiklikleri sade Türkçe cümlelerle özetle, kod yapıştırmana gerek yok.
 
-Değişiklikler temizse (tsc hatasız geçtiyse) commit etmeden önce izin sorma — otomatik commit et, sonra bana çalıştırmam gereken `git push origin main` komutunu ver. Push'u ASLA sen çalıştırma.
+Değişiklikler temizse (tsc hatasız geçtiyse) commit etmeden önce izin sorma — otomatik commit et, ardından yukarıdaki Git kuralı gereği `git push origin main`'i de kendim çalıştırıp sonucu (başarılı push / karşılaşılan sorun) kısaca özetle. Artık kullanıcıya çalıştırması gereken bir push komutu vermeme gerek yok.
 
-Stop hook "unpushed commit" uyarısı geldiğinde veya push hatırlatması gerektiğinde her seferinde "CLAUDE.md kuralı gereği push yapmıyorum" tarzı açıklamayı tekrarlama — sadece kısaca çalıştırmam gereken `git push origin main` komutunu ver, uzun bir gerekçe yazma.
+Stop hook "unpushed commit" uyarısı geldiğinde: önce buradan `git push origin main` çalıştırmayı dene (fetch/merge gerekiyorsa yap), başarılı olursa kısaca "push edildi" de; gerçekten çözülemeyen bir sorun varsa kısaca özetle.
 
 ## Dosya paylaşım kuralı
 
-Bir kod dosyasını değiştirip `git add` + `git commit` ile depoya işlediysem, o dosyayı SendUserFile (veya benzeri "sohbete dosya gönder") aracıyla ayrıca kullanıcıya "işte değişiklik" diye gösterme amacıyla gönderme — kullanıcı zaten commit'i push edince değişikliği GitHub/kendi ortamında görecek, sohbete kod dosyası düşürmek gereksiz ve kafa karıştırıcı. Sohbette sadece değişikliklerin sade Türkçe özetini ve gerekiyorsa `git push origin main` komutunu ver.
+Bir kod dosyasını değiştirip `git add` + `git commit` ile depoya işlediysem, o dosyayı SendUserFile (veya benzeri "sohbete dosya gönder") aracıyla ayrıca kullanıcıya gönderme — hiçbir amaçla, cihaza (device bridge) yazmak için bile. Bu araç sohbette görünür bir dosya kartı bırakıyor ve kullanıcı bunu istemiyor. Sohbette sadece değişikliklerin sade Türkçe özetini ve gerekiyorsa `git push origin main` komutunu ver. SendUserFile'ı yalnızca kullanıcının doğrudan "bana bir dosya olarak ver/indir" dediği, depoya commit edilmeyen (rapor, döküm, dışa aktarım vb.) çıktılar için kullanabilirsin.
 
-İstisna: Cihaz (device bridge) tarafındaki depoyu güncel tutmak için dosyayı önce SendUserFile ile gönderip sonra device_commit_files ile cihaza yazmak zorunlu bir teknik adım — bu durumda çıkan dosya kartı "göster/incele" amaçlı değil, salt mekanik aktarım amaçlı olduğu için istisnadır ve engelli değildir. SendUserFile'ı ayrıca kullanıcının doğrudan "bana bir dosya olarak ver/indir" dediği, depoya commit edilmeyen (rapor, döküm, dışa aktarım vb.) çıktılar için de kullanabilirsin.
+Bu nedenle artık cihazdaki (Windows bilgisayarındaki) depoyu benim proaktif olarak güncellemem beklenmiyor — sadece bulut ortamında (cloud sandbox) çalışıp commit'liyorum, kullanıcı push ettikten sonra kendi bilgisayarında (VS Code/terminal) `git pull origin main` çalıştırarak güncel hâli alıyor. Kullanıcı açıkça "cihazımı da güncelle" derse, o zaman device_bash ile doğrudan cihazda küçük komutlarla (sed/python read-modify-write, dosya bulunuyorsa küçük heredoc) düzenleme yapmayı dene; SendUserFile'a yine başvurma.
 
 ## Ortak çalışma (başka bir geliştirici de bu repoda çalışıyor) kuralı
 
 Bu depoda benimle birlikte başka bir geliştirici de bağımsız olarak çalışıyor ve doğrudan `main` dalına push yapabiliyor (GitHub üzerinde pull request onayı istenmeden). Bu yüzden:
 
-- Herhangi bir değişikliğe başlamadan önce, o oturumda ilk kez kod üzerinde çalışacaksam önce `git fetch origin` + `git merge origin/main` (ya da çakışma yoksa fast-forward `git pull`) çalıştırıp diğer geliştiricinin daha önce push ettiği değişiklikleri otomatik olarak çekmeliyim — bunu kullanıcıya sormadan, işe başlarken kendiliğinden yapmalıyım.
-- Cihaz (device bridge) ve bulut ortamı (cloud sandbox) ayrı git geçmişleri tuttuğu için, `origin/main`'i çekerken her ikisinde de aynı işlemi tekrarlamalı, çakışma çıkarsa (aynı dosyada iki taraflı değişiklik) elle çözüp temiz bir birleştirme commit'i oluşturmalıyım.
+- Herhangi bir değişikliğe başlamadan önce, o oturumda ilk kez kod üzerinde çalışacaksam önce `git fetch origin` + `git merge origin/main` (ya da çakışma yoksa fast-forward `git pull`) çalıştırıp diğer geliştiricinin daha önce push ettiği değişiklikleri otomatik olarak çekmeliyim — bunu kullanıcıya sormadan, işe başlarken kendiliğinden yapmalıyım. Bu artık sadece bulut ortamında (cloud sandbox) gerekiyor — cihazdaki (device bridge) depoyu güncel tutmak kullanıcının kendi sorumluluğu (bkz. "Dosya paylaşım kuralı").
 - `git push origin main` reddedilirse ("fetch first" / "Updates were rejected") bunun nedeni genelde diğer geliştiricinin arada push yapmış olmasıdır — panik yapmadan `git fetch` + `git merge origin/main` ile birleştirip tekrar push komutunu vermeliyim.
 - GitHub deposunun `main` dalında bir "pull request zorunlu" (branch protection / required review) ayarı olup olmadığını bu ortamdan (API erişimi kısıtlı olduğu için) doğrudan kontrol edemiyorum; bu tür bir ayar sorusu gelirse kullanıcıyı GitHub'daki Settings → Branches → main dalı kuralları ekranına yönlendirmeliyim.
 

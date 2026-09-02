@@ -26,7 +26,7 @@ export default async function GecmisSonuclarimPage() {
   const { data: attempts } = await supabase
     .from("student_attempts")
     .select(
-      "id, started_at, finished_at, total_questions, correct_count, wrong_count, empty_count, topics(name), exams(title, exam_type)"
+      "id, started_at, finished_at, total_questions, correct_count, wrong_count, empty_count, topic_id, exam_id, topics(name), exams(title, exam_type)"
     )
     .eq("student_id", studentId)
     .not("finished_at", "is", null)
@@ -55,29 +55,35 @@ export default async function GecmisSonuclarimPage() {
             const kind = exam ? (exam.exam_type === "seviye_tespit" ? "Seviye Tespit" : "Deneme") : "Konu Testi";
             const total = a.total_questions || a.correct_count + a.wrong_count + a.empty_count || 1;
             const pct = Math.round((a.correct_count / total) * 100);
+            const redoHref = a.topic_id ? `/ogrenci/konu/${a.topic_id}` : a.exam_id ? `/ogrenci/deneme/${a.exam_id}` : null;
             return (
-              <Link key={a.id} href={`/ogrenci/gecmis/${a.id}`}>
-                <Card className="transition hover:border-indigo-300 hover:shadow-md">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge tone="default">{kind}</Badge>
-                        <h2 className="font-semibold text-slate-900">{title}</h2>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {a.finished_at ? new Date(a.finished_at).toLocaleString("tr-TR") : ""}
-                      </p>
+              <Card key={a.id} className="transition hover:border-indigo-300 hover:shadow-md">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Link href={`/ogrenci/gecmis/${a.id}`} className="hover:underline">
+                    <div className="flex items-center gap-2">
+                      <Badge tone="default">{kind}</Badge>
+                      <h2 className="font-semibold text-slate-900">{title}</h2>
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="text-slate-600">
-                        Doğru: {a.correct_count} · Yanlış: {a.wrong_count} · Boş: {a.empty_count}
-                      </span>
-                      <Badge tone={pct >= 80 ? "green" : pct >= 50 ? "amber" : "red"}>%{pct}</Badge>
-                      <span className="font-medium text-indigo-600">İncele →</span>
-                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {a.finished_at ? new Date(a.finished_at).toLocaleString("tr-TR") : ""}
+                    </p>
+                  </Link>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-slate-600">
+                      Doğru: {a.correct_count} · Yanlış: {a.wrong_count} · Boş: {a.empty_count}
+                    </span>
+                    <Badge tone={pct >= 80 ? "green" : pct >= 50 ? "amber" : "red"}>%{pct}</Badge>
+                    <Link href={`/ogrenci/gecmis/${a.id}`} className="font-medium text-indigo-600 underline">
+                      İncele →
+                    </Link>
+                    {redoHref && (
+                      <Link href={redoHref} className="font-medium text-emerald-600 underline">
+                        Tekrar Çöz ↻
+                      </Link>
+                    )}
                   </div>
-                </Card>
-              </Link>
+                </div>
+              </Card>
             );
           })}
         </div>

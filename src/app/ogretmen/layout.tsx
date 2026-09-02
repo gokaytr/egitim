@@ -29,6 +29,7 @@ export default async function OgretmenLayout({ children }: { children: React.Rea
     { href: "/ogretmen/sorular", label: "Sorular", tone: "emerald" as const, dot: pendingCount > 0 },
     { href: "/ogretmen/ozel-ders", label: "Özel Ders" },
     { href: "/ogretmen/ogrenci-raporlari", label: "Öğrenci Raporları" },
+    { href: "/ogretmen/istatistikler", label: "İstatistikler" },
   ];
 
   return (

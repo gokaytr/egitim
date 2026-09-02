@@ -53,10 +53,14 @@ export async function assembleDeneme(admin: SupabaseClient, input: AssembleInput
 
   // Soru gorunurlugu artik is_approved'a bagli degil (tum sorular yayinda,
   // ogretmen onayi ayri/paralel bir kalite rozeti) - bkz. migration
-  // 0023_soru_zorluk_kademesi_ve_yayin_kurali.sql.
+  // 0023_soru_zorluk_kademesi_ve_yayin_kurali.sql. is_reference_only=true
+  // olan sorular ise "Referans Havuzu"nda tutulur ve hicbir denemeye/seviye
+  // tespit sinavina asla dahil edilmez - bkz. migration
+  // 0024_soru_referans_havuzu.sql.
   const { data: questions } = await admin
     .from("questions")
     .select("id, topic_id, difficulty")
+    .eq("is_reference_only", false)
     .in("topic_id", topicIds);
 
   const pool = (questions ?? []) as { id: string; topic_id: string; difficulty: QuestionDifficulty | null }[];

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui";
 import { DIFFICULTY_LABELS, type QuestionDifficulty } from "@/lib/questions/difficulty";
+import { ReferencePoolToggleButton } from "@/components/reference-pool-toggle-button";
 
 type Question = {
   id: string;
@@ -14,6 +15,7 @@ type Question = {
   source: string;
   difficulty: QuestionDifficulty | null;
   topic_id: string;
+  is_reference_only?: boolean;
 };
 
 type Topic = {
@@ -53,18 +55,24 @@ function TabButton({
 // olarak, en ustteki Onayli/Onaysiz sekmesiyle secilen onay durumundaki tum
 // sorulari gruplu sekilde gosterir.
 export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; questions: Question[] }) {
-  const [approvalFilter, setApprovalFilter] = useState<"approved" | "unapproved">("approved");
+  const [approvalFilter, setApprovalFilter] = useState<"approved" | "unapproved" | "reference">("approved");
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
 
-  const approvedCount = useMemo(() => questions.filter((q) => q.is_approved).length, [questions]);
-  const unapprovedCount = questions.length - approvedCount;
+  // Referans Havuzu (is_reference_only), yayindaki (ogrenciye gosterilen)
+  // sorulardan tamamen ayri bir kume - onayli/onaysiz sayimlari ve
+  // filtreleri bu havuzdaki sorulari hic saymaz/gostermez, sadece kendi
+  // ayri pill'inde goruntulenir.
+  const publishableQuestions = useMemo(() => questions.filter((q) => !q.is_reference_only), [questions]);
+  const referenceQuestions = useMemo(() => questions.filter((q) => q.is_reference_only), [questions]);
+  const approvedCount = useMemo(() => publishableQuestions.filter((q) => q.is_approved).length, [publishableQuestions]);
+  const unapprovedCount = publishableQuestions.length - approvedCount;
 
-  const filteredQuestions = useMemo(
-    () => questions.filter((q) => (approvalFilter === "approved" ? q.is_approved : !q.is_approved)),
-    [questions, approvalFilter],
-  );
+  const filteredQuestions = useMemo(() => {
+    if (approvalFilter === "reference") return referenceQuestions;
+    return publishableQuestions.filter((q) => (approvalFilter === "approved" ? q.is_approved : !q.is_approved));
+  }, [publishableQuestions, referenceQuestions, approvalFilter]);
 
   const questionCountByTopic = useMemo(() => {
     const map = new Map<string, number>();
@@ -104,7 +112,7 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
     return filteredQuestions.filter((q) => q.topic_id === selectedTopicId);
   }, [filteredQuestions, selectedTopicId]);
 
-  function pickApprovalFilter(f: "approved" | "unapproved") {
+  function pickApprovalFilter(f: "approved" | "unapproved" | "reference") {
     setApprovalFilter(f);
     setSelectedGrade(null);
     setSelectedSubjectId(null);
@@ -143,7 +151,26 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
         >
           Onaysız ({unapprovedCount})
         </button>
+        <button
+          type="button"
+          onClick={() => pickApprovalFilter("reference")}
+          className={`touch-manipulation rounded-lg px-3 py-2 text-sm font-medium transition ${
+            approvalFilter === "reference" ? "bg-slate-700 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          🔒 Referans Havuzu ({referenceQuestions.length})
+        </button>
       </div>
+
+      {approvalFilter === "reference" && (
+        <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">⚠️ Bu havuzdaki sorular öğrenciye ASLA gösterilmez.</p>
+          <p className="mt-1">
+            Hiçbir konu testine, cevap anahtarına, denemeye veya seviye tespit sınavına dahil edilmezler — sadece
+            yapay zekânın kaliteli soru örneği olarak öğrenmesi/eğitilmesi için burada saklanırlar.
+          </p>
+        </div>
+      )}
 
       <div>
         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf</p>
@@ -192,9 +219,13 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
             <p className="text-sm text-slate-500">Bu konuda henüz soru yok.</p>
           ) : (
             questionsForTopic.map((q, i) => (
-              <div key={q.id} className="rounded-lg border border-slate-200 p-3 text-sm">
+              <div key={q.id} className={`rounded-lg border p-3 text-sm ${q.is_reference_only ? "border-slate-300 bg-slate-50" : "border-slate-200"}`}>
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                  <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
+                  {q.is_reference_only ? (
+                    <Badge tone="default">🔒 Referans Havuzu — öğrenciye gösterilmez</Badge>
+                  ) : (
+                    <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
+                  )}
                   <Badge>{q.source === "ai" ? "AI üretimi" : q.source}</Badge>
                   {q.difficulty != null && <Badge>Zorluk: {DIFFICULTY_LABELS[q.difficulty]}</Badge>}
                   <Badge tone="green">Doğru cevap: {q.correct_option}</Badge>
@@ -217,6 +248,7 @@ export function AllQuestionsBrowser({ topics, questions }: { topics: Topic[]; qu
                     <p>{q.explanation}</p>
                   </div>
                 )}
+                <ReferencePoolToggleButton questionId={q.id} isReferenceOnly={!!q.is_reference_only} />
               </div>
             ))
           )}

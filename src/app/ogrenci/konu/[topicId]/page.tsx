@@ -21,10 +21,14 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
       .select("id, title, content_md, video_url")
       .eq("topic_id", topicId)
       .order("created_at", { ascending: false }),
+    // is_reference_only=true olan sorular "Referans Havuzu"nda tutulur ve
+    // ogrenciye hicbir zaman gosterilmez - bkz. migration
+    // 0024_soru_referans_havuzu.sql.
     supabase
       .from("questions")
       .select("id, body, options, correct_option, explanation, option_error_tags, image_url")
       .eq("topic_id", topicId)
+      .eq("is_reference_only", false)
       .limit(8),
     // Tam ekran geri sayim ekranindaki arka plan gorseli, onizlenen/gercek
     // ogrencinin sinif duzeyine gore secilsin diye (bkz. pre-quiz-countdown.tsx).
@@ -71,6 +75,7 @@ export default async function KonuTestPage({ params }: { params: Promise<{ topic
           questions={questions}
           quizSettings={quizSettings}
           gradeLevel={studentProfile?.grade_level}
+          effectiveStudentId={effectiveStudentId}
         />
       )}
     </div>
