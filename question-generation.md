@@ -72,7 +72,11 @@ Soru Havuzu'ndaki (`is_reference_only=true`) gerçek geçmiş sınav soruları *
 
 ## 9. Grafik/tablo içeren sorular
 
-Bu sistem şu an sadece metinle (gerekiyorsa metin içi sayısal veri/tablo ile) çözülebilen sorular üretir — şekil/grafik/görsel GEREKTİREN soru üretilmez (bkz. mevcut sistem prompt kural 6). Metin içi tablo kullanılıyorsa veriler tutarlı olmalı, soruyla uyuşmalı, cevap gerçekten o veriden çıkarılabilmeli, gereksiz veri bulunmamalı.
+Bu sistem, gerçek bir görsel/fotoğraf/harita GEREKTİREN — yani metne dökülemeyen — soru üretmez (bkz. sistem prompt kural 6). Ama ÖSYM'nin gerçek sorularında olduğu gibi, pasta/çubuk grafiğin dilimleri, bir tablonun satır/sütunları, bir oda-koridor/kat düzeninin numaralandırması, bir yarışma/sıralama tablosu gibi veriler TAMAMEN METİNLE (gerekirse madde işaretli liste veya metin-tablo halinde) eksiksiz ve tutarlı biçimde betimlenebiliyorsa, bu tür "veriyi sözel temsille aktaran" sorular YAZILMALIDIR — bu, ÖSYM tarzının ayırt edici bir parçasıdır, kaçınılması gereken bir şey değildir. Metin içi tablo/veri kullanılıyorsa: veriler tutarlı olmalı, soruyla uyuşmalı, cevap gerçekten o veriden çıkarılabilmeli, gereksiz veri bulunmamalı.
+
+## 11. Uzunluk ve çok adımlılık — TYT/AYT/YKS ve merkezi sınavlar için
+
+Kullanıcı geri bildirimiyle netleşen bir kural: ÖSYM'nin gerçek TYT/AYT/YKS sorularının büyük çoğunluğu KISA/TEK ADIMLI değildir. Soru kökü genelde birkaç cümle sürer, birden fazla veri/koşul/kişi/nesne içerir (ör. iki ayrı olayın/kişinin karşılaştırılması, bir oran zincirinden geçilmesi, önce bir ara değerin bulunup sonra asıl sorunun cevaplanması) ve çözüm EN AZ İKİ işlem adımı gerektirir. "Orta", "zor" ve "çok zor" zorluk kademesinde, özellikle TYT/AYT/YKS sınav türü için ve sayısal derslerde (Matematik, Geometri, Fizik, Kimya): tek cümlelik, tek işlemli, kısa bir soru kökü YETERSİZ sayılır — bunun yerine yukarıdaki gibi çok adımlı, veri-zengin bir kurgu tercih edilmelidir. "Kolay" zorlukta ve alt sınıf seviyelerinde (1-8. sınıf) bu zorunlu değildir; oradaki kural hâlâ §6'daki seviyeye-göre-üslup ilkesidir.
 
 ## 10. Toplu üretim (bir seferde birden fazla soru)
 
