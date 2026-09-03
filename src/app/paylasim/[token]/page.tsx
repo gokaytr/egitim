@@ -12,7 +12,7 @@ const SHOWN_QUESTION_LIMIT = 5;
 
 // Admin'in "Paylaş" butonuyla ürettiği gizli token linki - giriş
 // GEREKTİRMEZ, sadece bu linki bilen görebilir (bkz. exam_shares tablosu,
-// planning-board.tsx). Bu sayfa KASITLI OLARAK createAdminClient() (service
+// question-bank-browser.tsx). Bu sayfa KASITLI OLARAK createAdminClient() (service
 // role, RLS bypass) kullanıyor - exam_shares tablosunda hiçbir anon select
 // politikası yok, yani token doğrulaması ve soru sorgusu SADECE burada,
 // sunucu tarafında yapılabiliyor; anon anahtarla (tarayıcıdan) bu tabloyu

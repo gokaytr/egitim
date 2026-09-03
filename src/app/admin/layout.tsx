@@ -13,19 +13,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .select("id", { count: "exact", head: true })
     .eq("teacher_pending", true);
 
-  // Admin panelinin ilk giris ekrani artik "Planlama" (sinav/sinif/ders/konu
-  // bazinda hedef-ilerleme takvimi, bkz. admin/page.tsx + planning-board.tsx)
-  // - kullanicinin "admin panelinde ilk giris planlama olacak" talebi.
-  // "Sorular" (Soru Ekle/Onayla/Havuzu uc sekmesi, /admin/sorular) eskiden
-  // sadece Planlama'daki kartlardan erisilebiliyordu, artik ayrica sol
-  // menude de kendi girdisi var.
+  // "Planlama" (sinav/sinif/ders/konu bazinda hedef-ilerleme takvimi)
+  // kullanicinin acik talebiyle ("adminde planlamayi kaldir") tamamen
+  // kaldirildi - artik admin panelinin ilk giris ekrani dogrudan "Sorular".
+  // /admin route'u geriye donuk (eski linkler icin) /admin/sorular'a
+  // yonlendiriyor, bkz. admin/page.tsx.
   const { count: pendingQuestionCount } = await supabase
     .from("questions")
     .select("id", { count: "exact", head: true })
     .eq("is_approved", false);
 
   const NAV = [
-    { href: "/admin", label: "Planlama" },
     { href: "/admin/sorular", label: "Sorular", dot: (pendingQuestionCount ?? 0) > 0 },
     { href: "/admin/kullanicilar", label: "Kullanıcılar" },
     { href: "/admin/ogrenci-raporlari", label: "Öğrenci Raporları" },
