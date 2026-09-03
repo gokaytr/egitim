@@ -23,6 +23,10 @@ export default async function OgretmenSorularPage({
     .select("subject_id, subjects(name)")
     .eq("teacher_id", effectiveTeacherId ?? "");
   const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
+  const teacherSubjects = (subjectRows ?? []).map((r) => ({
+    id: r.subject_id,
+    name: firstOf(r.subjects)?.name ?? "Diğer",
+  }));
 
   let topics: PanelTopic[] = [];
   const counts = new Map<string, number>();
@@ -70,7 +74,7 @@ export default async function OgretmenSorularPage({
           Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
         </p>
       ) : (
-        <QuestionTopicPanel topics={topics} counts={counts} subjectIds={subjectIds} isAdmin={false} />
+        <QuestionTopicPanel topics={topics} counts={counts} subjects={teacherSubjects} subjectIds={subjectIds} isAdmin={false} />
       )}
     </div>
   );

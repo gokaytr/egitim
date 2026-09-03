@@ -113,7 +113,9 @@ export default async function SorularPage() {
     created_at: f.created_at,
   }));
 
-  const genelBakisTab = <QuestionTopicPanel topics={panelTopics} counts={counts} shares={shares} isAdmin />;
+  const genelBakisTab = (
+    <QuestionTopicPanel topics={panelTopics} counts={counts} subjects={subjects ?? []} shares={shares} isAdmin />
+  );
 
   const soruHavuzuTab = (
     <div className="flex flex-col gap-6">

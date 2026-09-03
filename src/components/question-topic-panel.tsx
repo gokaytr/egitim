@@ -70,12 +70,18 @@ function RowButton({
 export function QuestionTopicPanel({
   topics,
   counts,
+  subjects,
   subjectIds,
   shares,
   isAdmin,
 }: {
   topics: PanelTopic[];
   counts: Map<string, number>;
+  /** Ders secimi artik sadece secili sinif/sinavda konusu olan degil, TUM
+   * dersleri gosteriyor (kullanicinin "tum siniflarin derslerini soru
+   * olmasa da ekle" talebi) - boylece henuz konu/soru girilmemis bir ders
+   * de gorunur ve secilebilir kalir. */
+  subjects: { id: string; name: string }[];
   subjectIds?: string[];
   /** Sadece admin: konu basina paylasim satirlari icin sinav -> mevcut linkler. */
   shares?: Map<string, ExamShare[]>;
@@ -96,12 +102,13 @@ export function QuestionTopicPanel({
 
   const selectedTopic = topicId ? topicById.get(topicId) : undefined;
 
+  // Secili sinif/sinavda henuz konusu olmayan bir ders de listede kalsin
+  // diye burada topics'e gore filtrelemiyoruz - sistemdeki (ogretmen icin
+  // kendi atanmis) TUM dersler her zaman gosteriliyor.
   const subjectsForRow = useMemo(() => {
     if (!row) return [];
-    const map = new Map<string, { id: string; name: string }>();
-    topics.filter((t) => rowMatches(row, t)).forEach((t) => map.set(t.subject_id, { id: t.subject_id, name: t.subject_name }));
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "tr"));
-  }, [row, topics]);
+    return [...subjects].sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  }, [row, subjects]);
 
   const topicsForRowSubject = useMemo(() => {
     if (!row || !subjectId) return [];
@@ -211,18 +218,25 @@ export function QuestionTopicPanel({
             <p className="text-xs text-slate-500">Bu sınıf/ders için henüz konu yok.</p>
           ) : (
             <div className="flex flex-col gap-1.5">
-              {topicsForRowSubject.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => pickTopic(t.id)}
-                  className={`touch-manipulation rounded-lg border px-3 py-2 text-left text-sm transition ${
-                    topicId === t.id ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  {t.name}
-                </button>
-              ))}
+              {topicsForRowSubject.map((t) => {
+                const topicAdded = counts.get(t.id) ?? 0;
+                const topicTarget = t.target_question_count ?? DEFAULT_TARGET;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => pickTopic(t.id)}
+                    className={`touch-manipulation flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                      topicId === t.id ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{t.name}</span>
+                    <Badge tone={topicAdded >= topicTarget ? "green" : topicAdded > 0 ? "amber" : "default"}>
+                      {topicAdded}/{topicTarget} soru
+                    </Badge>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
