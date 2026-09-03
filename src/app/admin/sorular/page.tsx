@@ -9,7 +9,7 @@ import { PendingQuestionsBrowser } from "@/components/pending-questions-browser"
 import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
 import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 import { ReferencePoolFiles } from "@/components/reference-pool-files";
-import { QuestionBankBrowser, type BankShare, type BankQuestion } from "@/components/question-bank-browser";
+import { QuestionBankBrowser, type BankShare } from "@/components/question-bank-browser";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -33,14 +33,14 @@ export default async function SorularPage() {
     { data: pending },
     { data: referenceQuestions },
     { data: referenceFiles },
-    { data: newQuestionRows },
+    { data: countRows },
     { data: rawShares },
   ] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
     supabase
       .from("topics")
-      .select("id, name, kazanim, grade_level, exam_types, subject_id, subjects(name)")
+      .select("id, name, kazanim, grade_level, exam_types, subject_id, target_question_count, subjects(name)")
       .order("grade_level"),
     supabase
       .from("questions")
@@ -57,19 +57,12 @@ export default async function SorularPage() {
       .select("id, file_name, storage_path, mime_type, created_at")
       .order("created_at", { ascending: false }),
     // Sorulara girer girmez gorulen "Genel Bakis" sekmesi icin - kullanicinin
-    // "ilk acilista mumkunse bir sey gosterme, sadece test sorulari ve
-    // cevaplari gelsin" talebiyle artik sinif/ders/konu piller/sayim yerine
-    // dogrudan yeni kurala gore eklenen (follows_new_policy=true, "*"
-    // isaretli) sorularin TAMAMI onceden cekiliyor - bunlar zaten kucuk bir
-    // "test" seti oldugu icin (onbinlerce degil) hepsini bastan yuklemek
-    // sorun degil; eski sorular istenirse client tarafinda ayrica cekilir
-    // (bkz. question-bank-browser.tsx).
-    supabase
-      .from("questions")
-      .select("id, body, options, correct_option, explanation, difficulty, topic_id, is_approved, follows_new_policy, created_at")
-      .eq("is_reference_only", false)
-      .eq("follows_new_policy", true)
-      .order("created_at", { ascending: false }),
+    // gonderdigi ornek tabloya (sinif/sinav x ders matrisi, her hucrede
+    // "eklenen/hedef") gore artik sadece konu basina TOPLAM soru sayisi
+    // (onayli/bekleyen farketmeksizin) lazim - tek tek sorularin icerigi
+    // sadece bir hucreye tiklaninca client tarafinda ayrica cekiliyor (bkz.
+    // question-bank-browser.tsx).
+    supabase.from("questions").select("topic_id").eq("is_reference_only", false),
     supabase
       .from("exam_shares")
       .select("id, exam_type, token")
@@ -77,18 +70,11 @@ export default async function SorularPage() {
       .order("created_at", { ascending: false }),
   ]);
 
-  const newQuestions: BankQuestion[] = (newQuestionRows ?? []).map((q) => ({
-    id: q.id,
-    body: q.body,
-    options: (q.options ?? {}) as Record<string, string>,
-    correct_option: q.correct_option,
-    explanation: q.explanation,
-    difficulty: q.difficulty,
-    topic_id: q.topic_id,
-    is_approved: q.is_approved,
-    follows_new_policy: q.follows_new_policy ?? false,
-    created_at: q.created_at,
-  }));
+  const counts = new Map<string, number>();
+  (countRows ?? []).forEach((q) => {
+    if (!q.topic_id) return;
+    counts.set(q.topic_id, (counts.get(q.topic_id) ?? 0) + 1);
+  });
 
   const shares = new Map<string, BankShare[]>();
   (rawShares ?? []).forEach((s) => {
@@ -113,6 +99,7 @@ export default async function SorularPage() {
     subject_id: t.subject_id,
     subject_name: firstOf(t.subjects)?.name ?? "Diğer",
     exam_types: t.exam_types,
+    target_question_count: t.target_question_count,
   }));
 
   const pendingQuestions = (pending ?? []).map((q) => ({
@@ -137,7 +124,7 @@ export default async function SorularPage() {
     topic_id: q.topic_id,
   }));
 
-  const genelBakisTab = <QuestionBankBrowser topics={browserTopics} newQuestions={newQuestions} shares={shares} canShare />;
+  const genelBakisTab = <QuestionBankBrowser topics={browserTopics} counts={counts} shares={shares} canShare />;
 
   const curriculumTab = (
     <div className="flex flex-col gap-6">

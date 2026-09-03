@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionAddScreen } from "@/components/question-add-screen";
 import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
-import { QuestionBankBrowser, type BankQuestion } from "@/components/question-bank-browser";
+import { QuestionBankBrowser } from "@/components/question-bank-browser";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 import type { QuestionDifficulty } from "@/lib/questions/difficulty";
 
@@ -35,6 +35,7 @@ export default async function OgretmenSorularPage({
     subject_id: string;
     subject_name: string;
     exam_types: string[] | null;
+    target_question_count: number | null;
   }[] = [];
   let questions: {
     id: string;
@@ -47,13 +48,13 @@ export default async function OgretmenSorularPage({
     topic_id: string;
     follows_new_policy: boolean;
   }[] = [];
-  let newQuestions: BankQuestion[] = [];
+  const counts = new Map<string, number>();
 
   if (subjectIds.length > 0) {
-    const [{ data: rawTopics }, { data: pending }, { data: newRows }] = await Promise.all([
+    const [{ data: rawTopics }, { data: pending }, { data: countRows }] = await Promise.all([
       supabase
         .from("topics")
-        .select("id, name, grade_level, subject_id, exam_types, subjects(name)")
+        .select("id, name, grade_level, subject_id, exam_types, target_question_count, subjects(name)")
         .in("subject_id", subjectIds),
       supabase
         .from("questions")
@@ -64,19 +65,15 @@ export default async function OgretmenSorularPage({
         .in("topics.subject_id", subjectIds)
         .order("created_at", { ascending: false }),
       // Ogretmenin "Sorulara girince" gordugu Genel Bakis sekmesi icin -
-      // kullanicinin "ilk acilista mumkunse bir sey gosterme, sadece test
-      // sorulari ve cevaplari gelsin" talebiyle artik sinif/ders/konu piller
-      // yerine dogrudan yeni kurala gore eklenen sorular cekiliyor (bkz.
-      // admin/sorular/page.tsx'teki ayni degisiklik).
+      // kullanicinin gonderdigi ornek tabloya (sinif/sinav x ders matrisi,
+      // her hucrede "eklenen/hedef") gore artik sadece konu basina TOPLAM
+      // soru sayisi (onayli/bekleyen farketmeksizin) lazim - bkz.
+      // admin/sorular/page.tsx'teki ayni degisiklik.
       supabase
         .from("questions")
-        .select(
-          "id, body, options, correct_option, explanation, difficulty, topic_id, is_approved, follows_new_policy, created_at, topics!inner(subject_id)"
-        )
+        .select("topic_id, topics!inner(subject_id)")
         .eq("is_reference_only", false)
-        .eq("follows_new_policy", true)
-        .in("topics.subject_id", subjectIds)
-        .order("created_at", { ascending: false }),
+        .in("topics.subject_id", subjectIds),
     ]);
 
     topics = (rawTopics ?? []).map((t) => ({
@@ -86,6 +83,7 @@ export default async function OgretmenSorularPage({
       subject_id: t.subject_id,
       subject_name: firstOf(t.subjects)?.name ?? "Diğer",
       exam_types: t.exam_types,
+      target_question_count: t.target_question_count,
     }));
 
     questions = (pending ?? []).map((q) => ({
@@ -100,18 +98,10 @@ export default async function OgretmenSorularPage({
       follows_new_policy: q.follows_new_policy ?? false,
     }));
 
-    newQuestions = (newRows ?? []).map((q) => ({
-      id: q.id,
-      body: q.body,
-      options: (q.options ?? {}) as Record<string, string>,
-      correct_option: q.correct_option,
-      explanation: q.explanation,
-      difficulty: q.difficulty,
-      topic_id: q.topic_id,
-      is_approved: q.is_approved,
-      follows_new_policy: q.follows_new_policy ?? false,
-      created_at: q.created_at,
-    }));
+    (countRows ?? []).forEach((q) => {
+      if (!q.topic_id) return;
+      counts.set(q.topic_id, (counts.get(q.topic_id) ?? 0) + 1);
+    });
   }
 
   const genelBakisTab =
@@ -120,7 +110,7 @@ export default async function OgretmenSorularPage({
         Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
       </p>
     ) : (
-      <QuestionBankBrowser topics={topics} newQuestions={newQuestions} canShare={false} />
+      <QuestionBankBrowser topics={topics} counts={counts} canShare={false} />
     );
 
   const soruEkleTab = (

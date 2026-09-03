@@ -12,6 +12,7 @@ export type BankTopic = {
   subject_id: string;
   subject_name: string;
   exam_types: string[] | null;
+  target_question_count: number | null;
 };
 
 export type BankQuestion = EditableQuestion & {
@@ -23,44 +24,52 @@ export type BankQuestion = EditableQuestion & {
 
 export type BankShare = { id: string; exam_type: string; token: string };
 
-const EXAM_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
-const NO_EXAM_BUCKET = "Diğer";
+// Kullanicinin gonderdigi ornek tabloya ("Sorular Açılış sayfası.xlsx")
+// gore: satirlar 1-12. sinif + sinav turleri (bir konu ayni anda hem bir
+// sinifa hem bir/birden fazla sinava ait olabilir - ayni soru bu yuzden
+// birden fazla satirda sayilabilir, bu KASITLI, "onun ayiklamasini sen yap"
+// talebiyle boyle tasarlandi), sutunlar dersler. Her hucre "eklenen/hedef"
+// gosterir (onayli/bekleyen farketmeksizin TUM sorular sayilir). Hedefi
+// olmayan (target_question_count=null) konular icin varsayilan hedef
+// kullanilir - bkz. DEFAULT_TARGET_PER_TOPIC.
+const EXAM_ROWS = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
+const DEFAULT_TARGET_PER_TOPIC = 60;
+const LOAD_QUESTIONS_LIMIT = 300;
 
-function examTagsOf(t: BankTopic): string[] {
-  return t.exam_types && t.exam_types.length > 0 ? t.exam_types : [NO_EXAM_BUCKET];
-}
-function gradeLabel(g: number | null): string {
-  return g == null ? "Genel" : `${g}. Sınıf`;
-}
+type GridRow = { key: string; label: string; match: (t: BankTopic) => boolean };
 
-// Kullanicinin "sorularda ilk acilista mumkunse bir sey gosterme, sadece
-// test sorulari ve cevaplari gelsin, paylasim secenegi de olsun" talebiyle
-// - bu bilesen artik sinif/ders/konu piller/hiyerarsi GOSTERMIYOR. Sayfa
-// acildiginda dogrudan (sunucudan onceden gelen, follows_new_policy=true
-// olan - yani "*" ile isaretli yeni kural/test sorulari) sorularin kendisi
-// ve cevaplari duz bir liste halinde goruluyor; her sorunun ustunde hangi
-// sinif/ders/konuya ait oldugunu gosteren kucuk bir bilgi satiri var (tikla-
-// goz-at bir gezinme degil, sadece baglam). "Eski sorulari da goster"
-// checkbox'i acilirsa eski (follows_new_policy=false) sorular da AYRICA,
-// SADECE O AN client tarafinda cekilip listeye eklenir (on binlerce soruya
-// olceklensin diye hepsi bastan yuklenmiyor, bkz. LOAD_OLD_LIMIT).
-const LOAD_OLD_LIMIT = 50;
+function buildRows(): GridRow[] {
+  const gradeRows: GridRow[] = GRADE_ROWS.map((g) => ({
+    key: `g-${g}`,
+    label: `${g}. Sınıf`,
+    match: (t) => t.grade_level === g,
+  }));
+  const examRows: GridRow[] = EXAM_ROWS.map((e) => ({
+    key: `e-${e}`,
+    label: e,
+    match: (t) => (t.exam_types ?? []).includes(e),
+  }));
+  return [...gradeRows, ...examRows];
+}
 
 export function QuestionBankBrowser({
   topics,
-  newQuestions,
+  counts,
   shares,
   canShare,
 }: {
   topics: BankTopic[];
-  newQuestions: BankQuestion[];
+  counts: Map<string, number>;
   shares?: Map<string, BankShare[]>;
   canShare: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [showOld, setShowOld] = useState(false);
-  const [oldQuestions, setOldQuestions] = useState<BankQuestion[] | null>(null);
-  const [loadingOld, setLoadingOld] = useState(false);
+  const [selected, setSelected] = useState<{ key: string; label: string; column: string; topicIds: string[] } | null>(
+    null
+  );
+  const [questions, setQuestions] = useState<BankQuestion[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [shareExam, setShareExam] = useState<string>("");
   const [shareOpen, setShareOpen] = useState(false);
@@ -70,48 +79,62 @@ export function QuestionBankBrowser({
 
   const effectiveShares = localShares ?? shares ?? new Map<string, BankShare[]>();
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
+  const rows = useMemo(() => buildRows(), []);
+  const columns = useMemo(
+    () => Array.from(new Set(topics.map((t) => t.subject_name))).sort((a, b) => a.localeCompare(b, "tr")),
+    [topics]
+  );
 
-  async function toggleShowOld(checked: boolean) {
-    setShowOld(checked);
-    if (checked && oldQuestions === null) {
-      setLoadingOld(true);
-      const { data } = await supabase
-        .from("questions")
-        .select("id, body, options, correct_option, explanation, difficulty, topic_id, is_approved, follows_new_policy, created_at")
-        .eq("is_reference_only", false)
-        .eq("follows_new_policy", false)
-        .order("created_at", { ascending: false })
-        .limit(LOAD_OLD_LIMIT);
-      setOldQuestions(
-        ((data ?? []) as Record<string, unknown>[]).map((q) => ({
-          id: q.id as string,
-          body: q.body as string,
-          options: (q.options ?? {}) as Record<string, string>,
-          correct_option: q.correct_option as string,
-          explanation: (q.explanation as string) ?? null,
-          difficulty: q.difficulty as EditableQuestion["difficulty"],
-          topic_id: q.topic_id as string,
-          is_approved: !!q.is_approved,
-          follows_new_policy: !!q.follows_new_policy,
-          created_at: q.created_at as string,
-        }))
-      );
-      setLoadingOld(false);
+  const cellIndex = useMemo(() => {
+    const map = new Map<string, { topicIds: string[]; added: number; target: number }>();
+    for (const row of rows) {
+      for (const col of columns) {
+        const matching = topics.filter((t) => t.subject_name === col && row.match(t));
+        if (matching.length === 0) continue;
+        const added = matching.reduce((sum, t) => sum + (counts.get(t.id) ?? 0), 0);
+        const target = matching.reduce((sum, t) => sum + (t.target_question_count ?? DEFAULT_TARGET_PER_TOPIC), 0);
+        map.set(`${row.key}|${col}`, { topicIds: matching.map((t) => t.id), added, target });
+      }
     }
-  }
-
-  const visibleQuestions = useMemo(() => {
-    const list = showOld ? [...newQuestions, ...(oldQuestions ?? [])] : newQuestions;
-    return [...list].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  }, [newQuestions, oldQuestions, showOld]);
+    return map;
+  }, [rows, columns, topics, counts]);
 
   const examOptions = useMemo(() => {
-    const present = new Set(topics.flatMap(examTagsOf));
-    present.delete(NO_EXAM_BUCKET);
-    const known = EXAM_ORDER.filter((e) => present.has(e));
-    const extra = Array.from(present).filter((e) => !EXAM_ORDER.includes(e)).sort((a, b) => a.localeCompare(b, "tr"));
-    return [...known, ...extra];
+    const present = new Set(topics.flatMap((t) => t.exam_types ?? []));
+    return EXAM_ROWS.filter((e) => present.has(e));
   }, [topics]);
+
+  async function openCell(row: GridRow, column: string, topicIds: string[]) {
+    if (topicIds.length === 0) return;
+    if (selected?.key === row.key && selected.column === column) {
+      setSelected(null);
+      return;
+    }
+    setSelected({ key: row.key, label: row.label, column, topicIds });
+    setLoadingQuestions(true);
+    const { data } = await supabase
+      .from("questions")
+      .select("id, body, options, correct_option, explanation, difficulty, topic_id, is_approved, follows_new_policy, created_at")
+      .in("topic_id", topicIds)
+      .eq("is_reference_only", false)
+      .order("created_at", { ascending: false })
+      .limit(LOAD_QUESTIONS_LIMIT);
+    setQuestions(
+      ((data ?? []) as Record<string, unknown>[]).map((q) => ({
+        id: q.id as string,
+        body: q.body as string,
+        options: (q.options ?? {}) as Record<string, string>,
+        correct_option: q.correct_option as string,
+        explanation: (q.explanation as string) ?? null,
+        difficulty: q.difficulty as EditableQuestion["difficulty"],
+        topic_id: q.topic_id as string,
+        is_approved: !!q.is_approved,
+        follows_new_policy: !!q.follows_new_policy,
+        created_at: q.created_at as string,
+      }))
+    );
+    setLoadingQuestions(false);
+  }
 
   function generateToken(): string {
     const rnd = () => crypto.randomUUID().replace(/-/g, "");
@@ -157,15 +180,14 @@ export function QuestionBankBrowser({
     });
   }
 
+  if (columns.length === 0) {
+    return <p className="text-sm text-slate-500">Henüz hiç konu (müfredat) eklenmemiş.</p>;
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="flex items-center gap-1.5 text-xs text-slate-500">
-          <input type="checkbox" checked={showOld} onChange={(e) => toggleShowOld(e.target.checked)} />
-          Eski soruları da göster
-        </label>
-
-        {canShare && (
+      {canShare && (
+        <div className="flex justify-end">
           <div className="relative">
             <button
               type="button"
@@ -223,71 +245,125 @@ export function QuestionBankBrowser({
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {loadingOld && <p className="text-xs text-slate-400">Eski sorular yükleniyor…</p>}
-
-      {visibleQuestions.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-          Henüz gösterilecek bir soru yok.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {visibleQuestions.map((q) => {
-            const topic = topicById.get(q.topic_id);
-            return (
-              <li key={q.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
-                <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
-                  {topic && (
-                    <span>
-                      {gradeLabel(topic.grade_level)} · {topic.subject_name} · {topic.name}
-                    </span>
-                  )}
-                  {q.follows_new_policy && <Badge tone="amber">*</Badge>}
-                  <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
-                </div>
-                <p className="font-medium text-slate-900">{q.body}</p>
-                <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
-                  {Object.entries(q.options ?? {}).map(([key, val]) => {
-                    const isCorrect = key === q.correct_option;
-                    return (
-                      <li
-                        key={key}
-                        className={`rounded-lg border px-2.5 py-1.5 ${
-                          isCorrect
-                            ? "border-emerald-400 bg-emerald-50 font-semibold text-emerald-800"
-                            : "border-slate-200 text-slate-600"
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="min-w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-10 bg-slate-50 px-2 py-2 text-left font-semibold text-slate-500">
+                &nbsp;
+              </th>
+              {columns.map((col) => (
+                <th key={col} className="whitespace-nowrap border-l border-slate-100 bg-slate-50 px-2 py-2 text-left font-semibold text-slate-500">
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={row.key} className={i === GRADE_ROWS.length ? "border-t-2 border-slate-300" : ""}>
+                <td className="sticky left-0 z-10 whitespace-nowrap border-t border-slate-100 bg-white px-2 py-1.5 font-medium text-slate-700">
+                  {row.label}
+                </td>
+                {columns.map((col) => {
+                  const cell = cellIndex.get(`${row.key}|${col}`);
+                  const isSelected = selected?.key === row.key && selected.column === col;
+                  if (!cell) {
+                    return <td key={col} className="border-l border-t border-slate-100 px-2 py-1.5" />;
+                  }
+                  const ratio = cell.target > 0 ? cell.added / cell.target : 0;
+                  const tone =
+                    ratio >= 1
+                      ? "bg-emerald-50 text-emerald-700"
+                      : ratio > 0
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-slate-50 text-slate-500";
+                  return (
+                    <td key={col} className="border-l border-t border-slate-100 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => openCell(row, col, cell.topicIds)}
+                        className={`touch-manipulation w-full rounded-md px-2 py-1 text-left font-medium transition hover:opacity-80 ${tone} ${
+                          isSelected ? "ring-2 ring-indigo-400" : ""
                         }`}
                       >
-                        {key}) {val}
-                        {isCorrect && " ✓"}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {q.explanation && (
-                  <div className="mt-2 rounded-lg bg-indigo-50 p-2.5 text-xs text-indigo-900">
-                    <p className="mb-1 font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
-                    <p>{q.explanation}</p>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setEditingId(editingId === q.id ? null : q.id)}
-                  className="mt-2 touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
-                >
-                  {editingId === q.id ? "Kapat" : "Düzenle"}
-                </button>
-                {editingId === q.id && (
-                  <div className="mt-2">
-                    <QuestionEditForm question={q} onDone={() => setEditingId(null)} />
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                        {cell.added}/{cell.target}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selected && (
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-800">
+            {selected.label} · {selected.column}
+          </p>
+          {loadingQuestions ? (
+            <p className="text-xs text-slate-400">Yükleniyor…</p>
+          ) : questions.length === 0 ? (
+            <p className="text-xs text-slate-400">Bu kombinasyonda henüz soru yok.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {questions.map((q) => {
+                const topic = topicById.get(q.topic_id);
+                return (
+                  <li key={q.id} className="rounded-lg border border-slate-200 p-2.5 text-sm">
+                    <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                      {topic && <span>{topic.name}</span>}
+                      {q.follows_new_policy && <Badge tone="amber">*</Badge>}
+                      <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
+                    </div>
+                    <p className="font-medium text-slate-900">{q.body}</p>
+                    <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+                      {Object.entries(q.options ?? {}).map(([key, val]) => {
+                        const isCorrect = key === q.correct_option;
+                        return (
+                          <li
+                            key={key}
+                            className={`rounded-lg border px-2.5 py-1.5 ${
+                              isCorrect
+                                ? "border-emerald-400 bg-emerald-50 font-semibold text-emerald-800"
+                                : "border-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {key}) {val}
+                            {isCorrect && " ✓"}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {q.explanation && (
+                      <div className="mt-2 rounded-lg bg-indigo-50 p-2.5 text-xs text-indigo-900">
+                        <p className="mb-1 font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
+                        <p>{q.explanation}</p>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(editingId === q.id ? null : q.id)}
+                      className="mt-2 touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
+                    >
+                      {editingId === q.id ? "Kapat" : "Düzenle"}
+                    </button>
+                    {editingId === q.id && (
+                      <div className="mt-2">
+                        <QuestionEditForm question={q} onDone={() => setEditingId(null)} />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
