@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { SimpleTabs } from "@/components/simple-tabs";
 import { SubjectAddForm } from "@/components/subject-add-form";
 import { CourseManager } from "@/components/course-manager";
 import { TopicAddForm } from "@/components/topic-add-form";
@@ -7,23 +8,17 @@ import { ReferencePoolFiles } from "@/components/reference-pool-files";
 import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
 import { QuestionTopicPanel, type PanelTopic } from "@/components/question-topic-panel";
-import { ExamSharePanel, type ExamShare } from "@/components/exam-share-panel";
-
-const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+import type { ExamShare } from "@/components/exam-share-panel";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-// Kullanicinin "sinif/sinav x ders" matrisini ("hicolmadi, karisik oldu,
-// soru sayfasini bir turlu beceremedik") tamamen terk etme talebiyle bu
-// sayfa yeniden yazildi. Artik grid/hucre yok: soru ekleme, gorme ve
-// onaylama, uygulamada zaten var olan ve calisan "sinif -> ders -> (sinav)
-// -> konu" sekmeli secici (TopicPickerTabs, bkz. question-topic-panel.tsx)
-// uzerinden TEK bir konu secilerek yapiliyor - konu secilince o konunun
-// sorulari, ekleme butonu ve onaylama AYNI YERDE gorunur. Paylasim, Soru
-// Havuzu, Mufredat Yonetimi bunun disinda ayri, net basliklarla ayrilmis
-// bolumler.
+// Kullanicinin "sinif/sinav x ders" matrisini terk etme talebiyle Genel
+// Bakis artik tek bir konu seciminden ibaret (bkz. question-topic-panel.tsx:
+// sinif/sinav satiri -> ders -> konu -> o konunun sorulari+ekle+onayla+
+// paylas ayni yerde). Soru Havuzu ve Mufredat Yonetimi ise kullanicinin
+// acik talebiyle (<details> degil) ayri SEKMELER olarak duruyor.
 export default async function SorularPage() {
   const supabase = await createClient();
 
@@ -118,51 +113,53 @@ export default async function SorularPage() {
     created_at: f.created_at,
   }));
 
-  const examOptions = EXAM_ROW_ORDER.filter((e) => panelTopics.some((t) => (t.exam_types ?? []).includes(e)));
+  const genelBakisTab = <QuestionTopicPanel topics={panelTopics} counts={counts} shares={shares} isAdmin />;
+
+  const soruHavuzuTab = (
+    <div className="flex flex-col gap-6">
+      <ReferencePoolAddPanel />
+      <div className="border-t border-slate-200 pt-6">
+        <ReferencePoolBrowser topics={referencePoolTopics} questions={referencePoolQuestions} />
+      </div>
+      <div className="border-t border-slate-200 pt-6">
+        <p className="mb-3 text-sm font-semibold text-slate-700">Soru Havuzu Dosyaları</p>
+        <p className="mb-3 text-xs text-slate-500">
+          Havuza yüklediğin PDF/Word/metin dosyaları — kaynak olarak burada saklanır.
+        </p>
+        <ReferencePoolFiles files={referencePoolFiles} />
+      </div>
+    </div>
+  );
+
+  const mufredatTab = (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SubjectAddForm />
+        <CourseManager courses={courses ?? []} />
+      </div>
+      <TopicAddForm subjects={subjects ?? []} courses={courses ?? []} />
+      <CurriculumBrowser topics={curriculumTopics} />
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
         <p className="text-sm text-slate-500">
-          Bir konu seç; o konunun soruları, ekleme ve onaylama seçenekleriyle birlikte aşağıda açılır.
+          Bir konu seç; o konunun soruları, ekleme, onaylama ve paylaşım seçenekleriyle birlikte aşağıda açılır.
         </p>
       </div>
 
-      <ExamSharePanel examOptions={examOptions} shares={shares} />
-
-      <QuestionTopicPanel topics={panelTopics} counts={counts} isAdmin />
-
-      <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-        <summary className="cursor-pointer touch-manipulation font-medium text-slate-500">
-          Soru Havuzu <span className="font-normal text-slate-400">— yapay zekâ için referans kaynak, öğrenciye asla gösterilmez</span>
-        </summary>
-        <div className="mt-3 flex flex-col gap-6">
-          <ReferencePoolAddPanel />
-          <div className="border-t border-slate-200 pt-6">
-            <ReferencePoolBrowser topics={referencePoolTopics} questions={referencePoolQuestions} />
-          </div>
-          <div className="border-t border-slate-200 pt-6">
-            <p className="mb-3 text-sm font-semibold text-slate-700">Soru Havuzu Dosyaları</p>
-            <p className="mb-3 text-xs text-slate-500">
-              Havuza yüklediğin PDF/Word/metin dosyaları — kaynak olarak burada saklanır.
-            </p>
-            <ReferencePoolFiles files={referencePoolFiles} />
-          </div>
-        </div>
-      </details>
-
-      <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-        <summary className="cursor-pointer touch-manipulation font-medium text-slate-500">Müfredat Yönetimi</summary>
-        <div className="mt-3 flex flex-col gap-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <SubjectAddForm />
-            <CourseManager courses={courses ?? []} />
-          </div>
-          <TopicAddForm subjects={subjects ?? []} courses={courses ?? []} />
-          <CurriculumBrowser topics={curriculumTopics} />
-        </div>
-      </details>
+      <SimpleTabs
+        defaultKey="genel"
+        syncQueryParam="tab"
+        tabs={[
+          { key: "genel", label: "Genel Bakış", content: genelBakisTab, tone: "indigo" },
+          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab },
+          { key: "mufredat", label: "Müfredat", content: mufredatTab },
+        ]}
+      />
     </div>
   );
 }

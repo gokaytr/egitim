@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Button } from "@/components/ui";
-import { TopicPickerTabs } from "@/components/topic-picker-tabs";
 import { ManualQuestionForm } from "@/components/manual-question-form";
 import { BulkQuestionImport } from "@/components/bulk-question-import";
 import { AiQuestionGenerate } from "@/components/ai-question-generate";
 import { QuestionEditForm, type EditableQuestion } from "@/components/question-edit-form";
+import { TopicExamShareRow, type ExamShare } from "@/components/exam-share-panel";
 
 export type PanelTopic = {
   id: string;
@@ -24,31 +24,68 @@ type PanelQuestion = EditableQuestion & {
   follows_new_policy: boolean;
 };
 
+type RowSel = { type: "grade"; value: number } | { type: "exam"; value: string };
+
 const DEFAULT_TARGET = 60;
 const LOAD_LIMIT = 300;
+const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
+// Anasayfadaki kanonik sinav sirasiyla ayni (bkz. reference-pool-browser.tsx
+// EXAM_ORDER) - kullanicinin talebiyle bu satirlar sinif pillerinin SAGINDA,
+// ayni satirda sirali gosteriliyor (ör. "12. Sınıf ... KPSS AYT YKS ...").
+const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+
+function rowMatches(row: RowSel, t: PanelTopic): boolean {
+  return row.type === "grade" ? t.grade_level === row.value : (t.exam_types ?? []).includes(row.value);
+}
+
+function RowButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`touch-manipulation rounded-full border px-3 py-1 text-xs font-medium transition ${
+        active ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 // Kullanicinin defalarca "olmadi, karisik oldu" dedigi sinif/sinav x ders
-// matrisi (question-bank-browser.tsx, artik silindi) tamamen terk edildi.
-// Bunun yerine, uygulamada zaten calisan ve kullanicidan sikayet gelmeyen
-// tek bir kalip tekrar kullaniliyor: Soru Ekle ekraninda ve Soru Havuzu'nda
-// zaten var olan "sinif -> ders -> (sinav) -> konu" sekmeli secici
-// (TopicPickerTabs). Konu secilince o konunun sorulari, ekleme butonu ve
-// onay butonu AYNI YERDE, duz bir liste halinde gorunur - grid/hucre
-// kavrami yok, floating panel yok.
+// matrisi tamamen terk edildi. Bunun yerine TEK bir konu seciliyor: once
+// "sinif VEYA sinav" (ayni satirda, sinif pilleri 1-12, saginda sinav
+// pilleri LGS/TYT/AYT/YKS/KPSS/ALES/BILSEM), sonra ders, sonra konu. Konu
+// secilince o konunun sorulari, ekleme butonu, onay butonu VE (admin ise)
+// o konunun bagli oldugu her sinav icin ayri bir paylas satiri ayni yerde
+// gorunur.
 export function QuestionTopicPanel({
   topics,
   counts,
   subjectIds,
+  shares,
   isAdmin,
 }: {
   topics: PanelTopic[];
   counts: Map<string, number>;
   subjectIds?: string[];
+  /** Sadece admin: konu basina paylasim satirlari icin sinav -> mevcut linkler. */
+  shares?: Map<string, ExamShare[]>;
   isAdmin: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
 
+  const [row, setRow] = useState<RowSel | null>(null);
+  const [subjectId, setSubjectId] = useState<string | null>(null);
   const [topicId, setTopicId] = useState("");
   const [questions, setQuestions] = useState<PanelQuestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,14 +96,37 @@ export function QuestionTopicPanel({
 
   const selectedTopic = topicId ? topicById.get(topicId) : undefined;
 
+  const subjectsForRow = useMemo(() => {
+    if (!row) return [];
+    const map = new Map<string, { id: string; name: string }>();
+    topics.filter((t) => rowMatches(row, t)).forEach((t) => map.set(t.subject_id, { id: t.subject_id, name: t.subject_name }));
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  }, [row, topics]);
+
+  const topicsForRowSubject = useMemo(() => {
+    if (!row || !subjectId) return [];
+    return topics.filter((t) => rowMatches(row, t) && t.subject_id === subjectId).sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  }, [row, subjectId, topics]);
+
+  function pickRow(next: RowSel) {
+    setRow(next);
+    setSubjectId(null);
+    setTopicId("");
+    setQuestions([]);
+    setAddOpen(false);
+  }
+
+  function pickSubject(id: string) {
+    setSubjectId(id);
+    setTopicId("");
+    setQuestions([]);
+    setAddOpen(false);
+  }
+
   async function pickTopic(id: string) {
     setTopicId(id);
     setAddOpen(false);
     setEditingId(null);
-    if (!id) {
-      setQuestions([]);
-      return;
-    }
     setLoading(true);
     const { data } = await supabase
       .from("questions")
@@ -107,13 +167,66 @@ export function QuestionTopicPanel({
 
   const added = selectedTopic ? counts.get(selectedTopic.id) ?? 0 : 0;
   const target = selectedTopic ? selectedTopic.target_question_count ?? DEFAULT_TARGET : 0;
+  const examTypesOfTopic = selectedTopic?.exam_types ?? [];
 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Konu</label>
-        <TopicPickerTabs value={topicId} onChange={pickTopic} subjectIds={subjectIds} />
+        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf / Sınav</p>
+        <div className="flex flex-wrap gap-1.5">
+          {GRADE_ROWS.map((g) => (
+            <RowButton key={`g-${g}`} active={!!row && row.type === "grade" && row.value === g} onClick={() => pickRow({ type: "grade", value: g })}>
+              {g}. Sınıf
+            </RowButton>
+          ))}
+          {EXAM_ROW_ORDER.map((e) => (
+            <RowButton key={`e-${e}`} active={!!row && row.type === "exam" && row.value === e} onClick={() => pickRow({ type: "exam", value: e })}>
+              {e}
+            </RowButton>
+          ))}
+        </div>
       </div>
+
+      {row && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Ders</p>
+          {subjectsForRow.length === 0 ? (
+            <p className="text-xs text-slate-500">Bu seçimde henüz konu yok.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {subjectsForRow.map((s) => (
+                <RowButton key={s.id} active={subjectId === s.id} onClick={() => pickSubject(s.id)}>
+                  {s.name}
+                </RowButton>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {row && subjectId && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Konu</p>
+          {topicsForRowSubject.length === 0 ? (
+            <p className="text-xs text-slate-500">Bu sınıf/ders için henüz konu yok.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {topicsForRowSubject.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => pickTopic(t.id)}
+                  className={`touch-manipulation rounded-lg border px-3 py-2 text-left text-sm transition ${
+                    topicId === t.id ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedTopic && (
         <div className="rounded-xl border border-slate-200 bg-white p-3">
@@ -128,6 +241,15 @@ export function QuestionTopicPanel({
               {addOpen ? "Kapat" : "+ Soru Ekle"}
             </Button>
           </div>
+
+          {isAdmin && shares && examTypesOfTopic.length > 0 && (
+            <div className="mb-4 flex flex-col gap-1.5">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Bu konunun sınavları</p>
+              {examTypesOfTopic.map((exam) => (
+                <TopicExamShareRow key={exam} examType={exam} initialShares={shares.get(exam) ?? []} />
+              ))}
+            </div>
+          )}
 
           {addOpen && (
             <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
