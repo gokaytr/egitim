@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Badge } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import { QuestionEditForm, type EditableQuestion } from "@/components/question-edit-form";
+import { QuestionAddScreen } from "@/components/question-add-screen";
+import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 
 export type BankTopic = {
   id: string;
@@ -28,18 +30,23 @@ export type BankShare = { id: string; exam_type: string; token: string };
 // gore: satirlar 1-12. sinif + sinav turleri (bir konu ayni anda hem bir
 // sinifa hem bir/birden fazla sinava ait olabilir - ayni soru bu yuzden
 // birden fazla satirda sayilabilir, bu KASITLI, "onun ayiklamasini sen yap"
-// talebiyle boyle tasarlandi), sutunlar dersler. Her hucre "eklenen/hedef"
-// gosterir (onayli/bekleyen farketmeksizin TUM sorular sayilir). Hedefi
-// olmayan (target_question_count=null) konular icin varsayilan hedef
-// kullanilir - bkz. DEFAULT_TARGET_PER_TOPIC.
+// talebiyle boyle tasarlandi), en altta (sadece admin icin) tek bir "Soru
+// Havuzu" satiri, sutunlar dersler. "Soru Ekle" ve "Soru Onayla" artik ayri
+// sekmeler DEGIL - bir hucreye tiklaninca acilan panelde soru listesi,
+// onayla butonu ve "+ Soru Ekle" (QuestionAddScreen/ReferencePoolAddPanel,
+// oldugu gibi tekrar kullanilir) bulunuyor. Kullanicinin acik talebiyle
+// ("soru ekle ve soru onayla mantigini tamamen sil... o excel goruntusu
+// uzerinden ilerleyerek yapalim, basitlestir") eski sekmeli yapi tamamen
+// kaldirildi.
 const EXAM_ROWS = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
 const DEFAULT_TARGET_PER_TOPIC = 60;
 const LOAD_QUESTIONS_LIMIT = 300;
+const HAVUZ_ROW_KEY = "havuz";
 
-type GridRow = { key: string; label: string; match: (t: BankTopic) => boolean };
+type GridRow = { key: string; label: string; isHavuz?: boolean; match: (t: BankTopic) => boolean };
 
-function buildRows(): GridRow[] {
+function buildRows(canManageHavuz: boolean): GridRow[] {
   const gradeRows: GridRow[] = GRADE_ROWS.map((g) => ({
     key: `g-${g}`,
     label: `${g}. Sınıf`,
@@ -50,27 +57,35 @@ function buildRows(): GridRow[] {
     label: e,
     match: (t) => (t.exam_types ?? []).includes(e),
   }));
-  return [...gradeRows, ...examRows];
+  const rows = [...gradeRows, ...examRows];
+  if (canManageHavuz) {
+    rows.push({ key: HAVUZ_ROW_KEY, label: "Soru Havuzu", isHavuz: true, match: () => true });
+  }
+  return rows;
 }
 
 export function QuestionBankBrowser({
   topics,
   counts,
+  havuzCounts,
   shares,
-  canShare,
+  isAdmin,
 }: {
   topics: BankTopic[];
   counts: Map<string, number>;
+  havuzCounts?: Map<string, number>;
   shares?: Map<string, BankShare[]>;
-  canShare: boolean;
+  isAdmin: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [selected, setSelected] = useState<{ key: string; label: string; column: string; topicIds: string[] } | null>(
+  const [selected, setSelected] = useState<{ key: string; label: string; column: string; topicIds: string[]; isHavuz: boolean } | null>(
     null
   );
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [shareExam, setShareExam] = useState<string>("");
   const [shareOpen, setShareOpen] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
@@ -79,7 +94,7 @@ export function QuestionBankBrowser({
 
   const effectiveShares = localShares ?? shares ?? new Map<string, BankShare[]>();
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
-  const rows = useMemo(() => buildRows(), []);
+  const rows = useMemo(() => buildRows(isAdmin), [isAdmin]);
   const columns = useMemo(
     () => Array.from(new Set(topics.map((t) => t.subject_name))).sort((a, b) => a.localeCompare(b, "tr")),
     [topics]
@@ -91,13 +106,16 @@ export function QuestionBankBrowser({
       for (const col of columns) {
         const matching = topics.filter((t) => t.subject_name === col && row.match(t));
         if (matching.length === 0) continue;
-        const added = matching.reduce((sum, t) => sum + (counts.get(t.id) ?? 0), 0);
-        const target = matching.reduce((sum, t) => sum + (t.target_question_count ?? DEFAULT_TARGET_PER_TOPIC), 0);
+        const countsMap = row.isHavuz ? havuzCounts : counts;
+        const added = matching.reduce((sum, t) => sum + (countsMap?.get(t.id) ?? 0), 0);
+        const target = row.isHavuz
+          ? 0
+          : matching.reduce((sum, t) => sum + (t.target_question_count ?? DEFAULT_TARGET_PER_TOPIC), 0);
         map.set(`${row.key}|${col}`, { topicIds: matching.map((t) => t.id), added, target });
       }
     }
     return map;
-  }, [rows, columns, topics, counts]);
+  }, [rows, columns, topics, counts, havuzCounts]);
 
   const examOptions = useMemo(() => {
     const present = new Set(topics.flatMap((t) => t.exam_types ?? []));
@@ -110,13 +128,14 @@ export function QuestionBankBrowser({
       setSelected(null);
       return;
     }
-    setSelected({ key: row.key, label: row.label, column, topicIds });
+    setSelected({ key: row.key, label: row.label, column, topicIds, isHavuz: !!row.isHavuz });
+    setAddOpen(false);
     setLoadingQuestions(true);
     const { data } = await supabase
       .from("questions")
       .select("id, body, options, correct_option, explanation, difficulty, topic_id, is_approved, follows_new_policy, created_at")
       .in("topic_id", topicIds)
-      .eq("is_reference_only", false)
+      .eq("is_reference_only", !!row.isHavuz)
       .order("created_at", { ascending: false })
       .limit(LOAD_QUESTIONS_LIMIT);
     setQuestions(
@@ -134,6 +153,17 @@ export function QuestionBankBrowser({
       }))
     );
     setLoadingQuestions(false);
+  }
+
+  async function approveQuestion(id: string) {
+    setApprovingId(id);
+    const { data: userData } = await supabase.auth.getUser();
+    await supabase
+      .from("questions")
+      .update({ is_approved: true, approved_by: userData.user?.id ?? null, approved_at: new Date().toISOString() })
+      .eq("id", id);
+    setApprovingId(null);
+    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, is_approved: true } : q)));
   }
 
   function generateToken(): string {
@@ -186,65 +216,66 @@ export function QuestionBankBrowser({
 
   return (
     <div className="flex flex-col gap-3">
-      {canShare && (
-        <div className="flex justify-end">
-          <div className="relative">
+      {isAdmin && (
+        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-500">Bir sınav türünü dışarıyla, giriş gerektirmeyen gizli bir linkle paylaş.</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select
+              value={shareExam}
+              onChange={(e) => setShareExam(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs"
+            >
+              <option value="">Sınav seç…</option>
+              {examOptions.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={shareBusy || !shareExam}
+              onClick={() => createShare(shareExam)}
+              className="touch-manipulation rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            >
+              Yeni link
+            </button>
             <button
               type="button"
               onClick={() => setShareOpen((v) => !v)}
               className="touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
             >
-              🔗 Sınav paylaş
+              {shareOpen ? "Linkleri gizle" : "Linkleri göster"}
             </button>
-            {shareOpen && (
-              <div className="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-lg">
-                <div className="mb-2 flex gap-1.5">
-                  <select
-                    value={shareExam}
-                    onChange={(e) => setShareExam(e.target.value)}
-                    className="flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs"
-                  >
-                    <option value="">Sınav seç…</option>
-                    {examOptions.map((e) => (
-                      <option key={e} value={e}>
-                        {e}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    disabled={shareBusy || !shareExam}
-                    onClick={() => createShare(shareExam)}
-                    className="touch-manipulation rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-                  >
-                    Yeni link
-                  </button>
-                </div>
-                {shareExam && (effectiveShares.get(shareExam) ?? []).length > 0 && (
-                  <ul className="flex flex-col gap-1.5">
-                    {(effectiveShares.get(shareExam) ?? []).map((s) => (
-                      <li key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 p-1.5">
-                        <span className="truncate text-slate-500">…/{s.token.slice(0, 10)}…</span>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <button type="button" onClick={() => copyLink(s.token)} className="touch-manipulation font-medium text-indigo-600 hover:underline">
-                            {copiedToken === s.token ? "Kopyalandı ✓" : "Kopyala"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={shareBusy}
-                            onClick={() => revokeShare(shareExam, s.id)}
-                            className="touch-manipulation font-medium text-red-600 hover:underline disabled:opacity-50"
-                          >
-                            İptal
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
           </div>
+          {shareOpen && shareExam && (
+            <div className="w-full border-t border-slate-100 pt-2 sm:col-span-2">
+              {(effectiveShares.get(shareExam) ?? []).length === 0 ? (
+                <p className="text-xs text-slate-400">Bu sınav için henüz link yok.</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {(effectiveShares.get(shareExam) ?? []).map((s) => (
+                    <li key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 p-1.5 text-xs">
+                      <span className="truncate text-slate-500">…/{s.token.slice(0, 10)}…</span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button type="button" onClick={() => copyLink(s.token)} className="touch-manipulation font-medium text-indigo-600 hover:underline">
+                          {copiedToken === s.token ? "Kopyalandı ✓" : "Kopyala"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={shareBusy}
+                          onClick={() => revokeShare(shareExam, s.id)}
+                          className="touch-manipulation font-medium text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          İptal
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -252,19 +283,22 @@ export function QuestionBankBrowser({
         <table className="min-w-full border-collapse text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-slate-50 px-2 py-2 text-left font-semibold text-slate-500">
+              <th className="sticky left-0 top-0 z-20 bg-slate-50 px-2 py-2 text-left font-semibold text-slate-500">
                 &nbsp;
               </th>
               {columns.map((col) => (
-                <th key={col} className="whitespace-nowrap border-l border-slate-100 bg-slate-50 px-2 py-2 text-left font-semibold text-slate-500">
+                <th
+                  key={col}
+                  className="sticky top-0 z-10 whitespace-nowrap border-l border-slate-100 bg-slate-50 px-2 py-2 text-left font-semibold text-slate-500"
+                >
                   {col}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.key} className={i === GRADE_ROWS.length ? "border-t-2 border-slate-300" : ""}>
+            {rows.map((row) => (
+              <tr key={row.key} className={row.isHavuz ? "border-t-2 border-slate-300 bg-violet-50/40" : ""}>
                 <td className="sticky left-0 z-10 whitespace-nowrap border-t border-slate-100 bg-white px-2 py-1.5 font-medium text-slate-700">
                   {row.label}
                 </td>
@@ -275,8 +309,9 @@ export function QuestionBankBrowser({
                     return <td key={col} className="border-l border-t border-slate-100 px-2 py-1.5" />;
                   }
                   const ratio = cell.target > 0 ? cell.added / cell.target : 0;
-                  const tone =
-                    ratio >= 1
+                  const tone = row.isHavuz
+                    ? "bg-violet-50 text-violet-700"
+                    : ratio >= 1
                       ? "bg-emerald-50 text-emerald-700"
                       : ratio > 0
                         ? "bg-amber-50 text-amber-700"
@@ -286,11 +321,11 @@ export function QuestionBankBrowser({
                       <button
                         type="button"
                         onClick={() => openCell(row, col, cell.topicIds)}
-                        className={`touch-manipulation w-full rounded-md px-2 py-1 text-left font-medium transition hover:opacity-80 ${tone} ${
+                        className={`touch-manipulation w-full rounded-md px-2 py-1.5 text-left font-medium transition hover:opacity-80 ${tone} ${
                           isSelected ? "ring-2 ring-indigo-400" : ""
                         }`}
                       >
-                        {cell.added}/{cell.target}
+                        {row.isHavuz ? cell.added : `${cell.added}/${cell.target}`}
                       </button>
                     </td>
                   );
@@ -303,9 +338,22 @@ export function QuestionBankBrowser({
 
       {selected && (
         <div className="rounded-xl border border-slate-200 bg-white p-3">
-          <p className="mb-2 text-sm font-semibold text-slate-800">
-            {selected.label} · {selected.column}
-          </p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">
+              {selected.label} · {selected.column}
+              {selected.isHavuz && <Badge tone="violet">Soru Havuzu</Badge>}
+            </p>
+            <Button variant="secondary" onClick={() => setAddOpen((v) => !v)}>
+              {addOpen ? "Kapat" : "+ Soru Ekle"}
+            </Button>
+          </div>
+
+          {addOpen && (
+            <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+              {selected.isHavuz ? <ReferencePoolAddPanel /> : <QuestionAddScreen showAiTab={isAdmin} />}
+            </div>
+          )}
+
           {loadingQuestions ? (
             <p className="text-xs text-slate-400">Yükleniyor…</p>
           ) : questions.length === 0 ? (
@@ -320,6 +368,16 @@ export function QuestionBankBrowser({
                       {topic && <span>{topic.name}</span>}
                       {q.follows_new_policy && <Badge tone="amber">*</Badge>}
                       <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
+                      {!q.is_approved && (
+                        <button
+                          type="button"
+                          disabled={approvingId === q.id}
+                          onClick={() => approveQuestion(q.id)}
+                          className="touch-manipulation font-medium text-emerald-600 hover:underline disabled:opacity-50"
+                        >
+                          {approvingId === q.id ? "Onaylanıyor…" : "Onayla"}
+                        </button>
+                      )}
                     </div>
                     <p className="font-medium text-slate-900">{q.body}</p>
                     <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">

@@ -90,12 +90,13 @@ export function Button({
   );
 }
 
-export function Badge({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "green" | "amber" | "red" }) {
+export function Badge({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "green" | "amber" | "red" | "violet" }) {
   const styles = {
     default: "bg-slate-100 text-slate-700",
     green: "bg-emerald-100 text-emerald-700",
     amber: "bg-amber-100 text-amber-700",
     red: "bg-red-100 text-red-700",
+    violet: "bg-violet-100 text-violet-700",
   };
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[tone]}`}>

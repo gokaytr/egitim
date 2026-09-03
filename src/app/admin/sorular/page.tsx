@@ -1,13 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { SimpleTabs } from "@/components/simple-tabs";
-import { QuestionAddScreen } from "@/components/question-add-screen";
 import { SubjectAddForm } from "@/components/subject-add-form";
 import { CourseManager } from "@/components/course-manager";
 import { TopicAddForm } from "@/components/topic-add-form";
 import { CurriculumBrowser, type CurriculumTopicRow } from "@/components/curriculum-browser";
-import { PendingQuestionsBrowser } from "@/components/pending-questions-browser";
-import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
-import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 import { ReferencePoolFiles } from "@/components/reference-pool-files";
 import { QuestionBankBrowser, type BankShare } from "@/components/question-bank-browser";
 
@@ -15,14 +10,15 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-// Eskiden "Soru Ekle", "Soru Onayı" ve "Sorular" (tum liste) admin menusunde
-// ayri ayri sayfalardi - artik tek bir "Sorular" sayfasi altinda uc sekme
-// olarak birlestirildi, boylece soru is akisinin tamami (ekle -> onayla ->
-// havuz) tek yerden yonetiliyor. "Soru Havuzu" sekmesi SADECE admin
-// panelinde var (ogretmen panelinde yok) ve normal soru akisindan tamamen
-// bagimsiz: buraya eklenen sorular (orn. ÖSYM'nin gecmis sinav sorulari)
-// hicbir zaman ogrenciye gosterilmez, sadece yapay zekanin ornek alip
-// egitilmesi icin saklanir - bkz. CLAUDE.md.
+// Kullanicinin acik talebiyle ("soru ekle ve soru onayla mantigini
+// tamamen sil, soru havuzu da dahil olmak uzere tamamen o excel goruntusu
+// uzerinden ilerleyerek yapalim, basitlestir ekrani") bu sayfa artik tek
+// bir sekmeli/karmasik yapi degil: tek ekran = sinif/sinav x ders kapsama
+// matrisi (bkz. question-bank-browser.tsx). Soru ekleme, onaylama ve
+// Soru Havuzu artik ayri sekmeler degil, matristeki bir hucreye tiklaninca
+// acilan panelin icinde. Mufredat (ders/konu) yonetimi ve yuklenen PDF
+// dosyalari listesi, gunluk is akisinin disinda kaldigi icin sayfanin en
+// altinda varsayilan olarak kapali iki kucuk <details> olarak duruyor.
 export default async function SorularPage() {
   const supabase = await createClient();
 
@@ -30,10 +26,9 @@ export default async function SorularPage() {
     { data: subjects },
     { data: courses },
     { data: rawTopics },
-    { data: pending },
-    { data: referenceQuestions },
     { data: referenceFiles },
     { data: countRows },
+    { data: havuzCountRows },
     { data: rawShares },
   ] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
@@ -43,26 +38,15 @@ export default async function SorularPage() {
       .select("id, name, kazanim, grade_level, exam_types, subject_id, target_question_count, subjects(name)")
       .order("grade_level"),
     supabase
-      .from("questions")
-      .select("id, body, options, correct_option, explanation, source, difficulty, topic_id, follows_new_policy")
-      .eq("is_approved", false)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("questions")
-      .select("id, body, options, correct_option, explanation, difficulty, topic_id")
-      .eq("is_reference_only", true)
-      .order("created_at", { ascending: false }),
-    supabase
       .from("reference_pool_files")
       .select("id, file_name, storage_path, mime_type, created_at")
       .order("created_at", { ascending: false }),
-    // Sorulara girer girmez gorulen "Genel Bakis" sekmesi icin - kullanicinin
-    // gonderdigi ornek tabloya (sinif/sinav x ders matrisi, her hucrede
-    // "eklenen/hedef") gore artik sadece konu basina TOPLAM soru sayisi
-    // (onayli/bekleyen farketmeksizin) lazim - tek tek sorularin icerigi
-    // sadece bir hucreye tiklaninca client tarafinda ayrica cekiliyor (bkz.
-    // question-bank-browser.tsx).
+    // Kapsama matrisinin ust kismi (sinif/sinav satirlari) icin - konu
+    // basina TOPLAM (onayli/bekleyen farketmeksizin) normal soru sayisi.
     supabase.from("questions").select("topic_id").eq("is_reference_only", false),
+    // Matrisin en alt "Soru Havuzu" satiri icin - konu basina referans
+    // (is_reference_only=true) soru sayisi.
+    supabase.from("questions").select("topic_id").eq("is_reference_only", true),
     supabase
       .from("exam_shares")
       .select("id, exam_type, token")
@@ -74,6 +58,12 @@ export default async function SorularPage() {
   (countRows ?? []).forEach((q) => {
     if (!q.topic_id) return;
     counts.set(q.topic_id, (counts.get(q.topic_id) ?? 0) + 1);
+  });
+
+  const havuzCounts = new Map<string, number>();
+  (havuzCountRows ?? []).forEach((q) => {
+    if (!q.topic_id) return;
+    havuzCounts.set(q.topic_id, (havuzCounts.get(q.topic_id) ?? 0) + 1);
   });
 
   const shares = new Map<string, BankShare[]>();
@@ -102,62 +92,6 @@ export default async function SorularPage() {
     target_question_count: t.target_question_count,
   }));
 
-  const pendingQuestions = (pending ?? []).map((q) => ({
-    id: q.id,
-    body: q.body,
-    options: (q.options ?? {}) as Record<string, string>,
-    correct_option: q.correct_option,
-    explanation: q.explanation,
-    source: q.source,
-    difficulty: q.difficulty,
-    topic_id: q.topic_id,
-    follows_new_policy: q.follows_new_policy ?? false,
-  }));
-
-  const referencePoolQuestions = (referenceQuestions ?? []).map((q) => ({
-    id: q.id,
-    body: q.body,
-    options: (q.options ?? {}) as Record<string, string>,
-    correct_option: q.correct_option,
-    explanation: q.explanation,
-    difficulty: q.difficulty,
-    topic_id: q.topic_id,
-  }));
-
-  const genelBakisTab = <QuestionBankBrowser topics={browserTopics} counts={counts} shares={shares} canShare />;
-
-  const curriculumTab = (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SubjectAddForm />
-        <CourseManager courses={courses ?? []} />
-      </div>
-      <TopicAddForm subjects={subjects ?? []} courses={courses ?? []} />
-      <CurriculumBrowser topics={curriculumTopics} />
-    </div>
-  );
-
-  const soruEkleTab = (
-    <div className="flex flex-col gap-6">
-      <p className="text-sm text-slate-500">
-        Önce müfredat/konu ekleyin, sonra elle soru ekleyin veya kopyala-yapıştır ile ya da PDF/Word dosyası
-        yükleyerek toplu soru içe aktarın.
-      </p>
-      <QuestionAddScreen showAiTab curriculumTab={curriculumTab} />
-    </div>
-  );
-
-  const soruOnayTab = (
-    <div className="flex flex-col gap-6">
-      <p className="text-sm text-slate-500">
-        Yapay zekanın ürettiği sorular öğrencilere hemen yayınlanır; burada yapılan onay sorunun görünürlüğünü değil
-        kalite kontrolünü (öğretmen/admin incelemesinden geçti mi) belirler. İncelenmemiş soru bulunan sınıf, ders ve
-        konularda turuncu bir ışık yanar.
-      </p>
-      <PendingQuestionsBrowser topics={browserTopics} questions={pendingQuestions} />
-    </div>
-  );
-
   const referencePoolFiles = (referenceFiles ?? []).map((f) => ({
     id: f.id,
     file_name: f.file_name,
@@ -166,73 +100,43 @@ export default async function SorularPage() {
     created_at: f.created_at,
   }));
 
-  const havuzEkleTab = (
-    <div className="flex flex-col gap-6">
-      <ReferencePoolAddPanel />
-    </div>
-  );
-
-  const havuzBirikenTab = <ReferencePoolBrowser topics={browserTopics} questions={referencePoolQuestions} />;
-
-  const havuzPdfTab = (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-slate-500">
-        Soru Havuzu&apos;na yüklediğin PDF/Word/metin dosyaları — kaynak olarak burada saklanır, istediğinde
-        görüntüleyip silebilirsin.
-      </p>
-      <ReferencePoolFiles files={referencePoolFiles} />
-    </div>
-  );
-
-  const soruHavuzuTab = (
-    <div className="flex flex-col gap-6">
-      <SimpleTabs
-        defaultKey="havuz-ekle"
-        tabs={[
-          { key: "havuz-ekle", label: "Şu An Eklenenler", content: havuzEkleTab, tone: "indigo" },
-          { key: "havuz-biriken", label: "Biriken Sorular", content: havuzBirikenTab, tone: "emerald" },
-          { key: "havuz-pdf", label: "PDF'ler", content: havuzPdfTab },
-        ]}
-      />
-      {/* Aciklama kutusu eskiden en ustteydi, kullanicinin "aşağıdaki kısmı
-          kapat, sayfa en altında yaz" talebiyle sayfanin en altina, varsayilan
-          olarak kapali (kucuk bir <details>) bir nota tasindi - boylece asil
-          is akisi (dosya yukle/ayristir) ekrani actiginda hemen karsina cikan
-          ilk sey oluyor. */}
-      <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-        <summary className="cursor-pointer touch-manipulation font-medium text-slate-500">
-          🔒 Soru Havuzu ne işe yarar?
-        </summary>
-        <div className="mt-2 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">Bu havuzdaki sorular öğrenciye ASLA gösterilmez.</p>
-          <p className="mt-1">
-            Soru Havuzu, normal soru ekleme/onaylama akışından tamamen bağımsız, sadece yapay zekânın örnek alıp
-            eğitilmesi için bir kaynak. Buraya örneğin ÖSYM&apos;nin geçmiş sınav sorularını cevaplarıyla birlikte
-            ekleyebilirsin — sistem bunları öğrenir ama ürettiği sorular birebir aynısı olmaz, benzer nitelikte yeni
-            sorular üretir. Bu sekme sadece admin panelinde var.
-          </p>
-        </div>
-      </details>
-    </div>
-  );
-
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
-        <p className="text-sm text-slate-500">Soru ekleme, onaylama ve yapay zeka için soru havuzu tek ekranda.</p>
+        <p className="text-sm text-slate-500">
+          Sınıf/sınav — ders kapsama tablosu. Bir hücreye tıklayınca o kombinasyondaki sorular, onaylama ve soru
+          ekleme seçenekleriyle birlikte açılır.
+        </p>
       </div>
 
-      <SimpleTabs
-        defaultKey="genel"
-        syncQueryParam="tab"
-        tabs={[
-          { key: "genel", label: "Genel Bakış", content: genelBakisTab, tone: "indigo" },
-          { key: "ekle", label: "Soru Ekle", content: soruEkleTab },
-          { key: "onay", label: "Soru Onayla", content: soruOnayTab, dot: pendingQuestions.length > 0, tone: "amber" },
-          { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab },
-        ]}
-      />
+      <QuestionBankBrowser topics={browserTopics} counts={counts} havuzCounts={havuzCounts} shares={shares} isAdmin />
+
+      <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+        <summary className="cursor-pointer touch-manipulation font-medium text-slate-500">Müfredat Yönetimi</summary>
+        <div className="mt-3 flex flex-col gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <SubjectAddForm />
+            <CourseManager courses={courses ?? []} />
+          </div>
+          <TopicAddForm subjects={subjects ?? []} courses={courses ?? []} />
+          <CurriculumBrowser topics={curriculumTopics} />
+        </div>
+      </details>
+
+      <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+        <summary className="cursor-pointer touch-manipulation font-medium text-slate-500">
+          Soru Havuzu Dosyaları
+        </summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <p className="text-sm text-slate-700">
+            Soru Havuzu&apos;na (matrisin en altındaki satır) yüklediğin PDF/Word/metin dosyaları — kaynak olarak
+            burada saklanır, istediğinde görüntüleyip silebilirsin. Bu havuzdaki sorular öğrenciye ASLA gösterilmez,
+            sadece yapay zekânın örnek alıp eğitilmesi için saklanır.
+          </p>
+          <ReferencePoolFiles files={referencePoolFiles} />
+        </div>
+      </details>
     </div>
   );
 }
