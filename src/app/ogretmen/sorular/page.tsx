@@ -1,18 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { QuestionBankBrowser } from "@/components/question-bank-browser";
+import { QuestionTopicPanel, type PanelTopic } from "@/components/question-topic-panel";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
 }
 
-// Kullanicinin talebiyle ("soru ekle ve soru onayla mantigini tamamen sil...
-// basitlestir ekrani") bu sayfa artik SimpleTabs/ayri sekmeler kullanmiyor:
-// tek ekran = sinif/sinav x ders kapsama matrisi (bkz.
-// question-bank-browser.tsx). Soru ekleme, hucreye tiklaninca acilan panelin
-// icinde; soru onaylama da ayni panelde soru basina kucuk bir "Onayla"
-// butonuyla yapiliyor - PendingQuestionsBrowser artik kullanilmiyor.
-// Ogretmen "Soru Havuzu" satirini gormez (isAdmin=false).
+// Adminle ayni basitlestirilmis yaklasim: grid/sekme yok, sinif -> ders ->
+// (sinav) -> konu sekmeli secici ile TEK bir konu seciliyor, o konunun
+// sorulari + ekleme + onaylama ayni yerde. Ogretmen "Soru Havuzu" ve
+// "Paylasim"i gormez - bunlar sadece admin panelinde.
 export default async function OgretmenSorularPage({
   searchParams,
 }: {
@@ -27,15 +24,7 @@ export default async function OgretmenSorularPage({
     .eq("teacher_id", effectiveTeacherId ?? "");
   const subjectIds = (subjectRows ?? []).map((r) => r.subject_id);
 
-  let topics: {
-    id: string;
-    name: string;
-    grade_level: number | null;
-    subject_id: string;
-    subject_name: string;
-    exam_types: string[] | null;
-    target_question_count: number | null;
-  }[] = [];
+  let topics: PanelTopic[] = [];
   const counts = new Map<string, number>();
 
   if (subjectIds.length > 0) {
@@ -44,9 +33,6 @@ export default async function OgretmenSorularPage({
         .from("topics")
         .select("id, name, grade_level, subject_id, exam_types, target_question_count, subjects(name)")
         .in("subject_id", subjectIds),
-      // Genel Bakis matrisi icin - konu basina TOPLAM (onayli/bekleyen
-      // farketmeksizin) normal soru sayisi. Onaylama artik matrisin
-      // icindeki hucre panelinde tek tek yapiliyor.
       supabase
         .from("questions")
         .select("topic_id, topics!inner(subject_id)")
@@ -75,8 +61,7 @@ export default async function OgretmenSorularPage({
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Sorular</h1>
         <p className="text-sm text-slate-500">
-          Sınıf/sınav — ders kapsama tablosu. Bir hücreye tıklayınca o kombinasyondaki sorular, onaylama ve soru
-          ekleme seçenekleriyle birlikte açılır.
+          Bir konu seç; o konunun soruları, ekleme ve onaylama seçenekleriyle birlikte aşağıda açılır.
         </p>
       </div>
 
@@ -85,7 +70,7 @@ export default async function OgretmenSorularPage({
           Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
         </p>
       ) : (
-        <QuestionBankBrowser topics={topics} counts={counts} isAdmin={false} />
+        <QuestionTopicPanel topics={topics} counts={counts} subjectIds={subjectIds} isAdmin={false} />
       )}
     </div>
   );
