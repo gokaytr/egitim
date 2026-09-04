@@ -20,8 +20,17 @@ export type PanelTopic = {
 
 type PanelQuestion = EditableQuestion & {
   is_approved: boolean;
+  is_rejected: boolean;
   follows_new_policy: boolean;
 };
+
+type ReviewStatus = "pending" | "approved" | "rejected";
+
+function reviewStatusOf(q: { is_approved: boolean; is_rejected: boolean }): ReviewStatus {
+  if (q.is_approved) return "approved";
+  if (q.is_rejected) return "rejected";
+  return "pending";
+}
 
 type RowSel = { type: "grade"; value: number } | { type: "exam"; value: string };
 
@@ -275,7 +284,9 @@ export function QuestionTopicPanel({
   const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
   const selectedTopic = topicId ? topicById.get(topicId) : undefined;
@@ -329,7 +340,7 @@ export function QuestionTopicPanel({
     setLoading(true);
     const { data } = await supabase
       .from("questions")
-      .select("id, body, options, correct_option, explanation, difficulty, is_approved, follows_new_policy")
+      .select("id, body, options, correct_option, explanation, difficulty, is_approved, is_rejected, follows_new_policy")
       .eq("topic_id", id)
       .eq("is_reference_only", false)
       .order("created_at", { ascending: false })
@@ -343,6 +354,7 @@ export function QuestionTopicPanel({
         explanation: (q.explanation as string) ?? null,
         difficulty: q.difficulty as EditableQuestion["difficulty"],
         is_approved: !!q.is_approved,
+        is_rejected: !!q.is_rejected,
         follows_new_policy: !!q.follows_new_policy,
       }))
     );
@@ -356,15 +368,81 @@ export function QuestionTopicPanel({
     await loadQuestions(id);
   }
 
-  async function approveQuestion(id: string) {
-    setApprovingId(id);
+  // Tek bir sorunun onay durumunu degistirir: "onayla" -> is_approved=true,
+  // "reddet" -> is_rejected=true, ikisi de birbirini otomatik temizler (bir
+  // soru ayni anda hem onayli hem reddedilmis olamaz). Zaten onayli/reddedilmis
+  // olan bir soruya tekrar tiklanirsa (buyuk durum butonu) "onay bekliyor"
+  // durumuna geri doner - boylece yanlislikla onaylanan/reddedilen bir soru
+  // kolayca geri alinabilir.
+  async function setQuestionStatus(id: string, next: ReviewStatus) {
+    setReviewingId(id);
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id ?? null;
+    const now = new Date().toISOString();
+    const patch =
+      next === "approved"
+        ? { is_approved: true, is_rejected: false, approved_by: userId, approved_at: now, rejected_by: null, rejected_at: null }
+        : next === "rejected"
+          ? { is_approved: false, is_rejected: true, rejected_by: userId, rejected_at: now }
+          : { is_approved: false, is_rejected: false, approved_by: null, approved_at: null, rejected_by: null, rejected_at: null };
+    await supabase.from("questions").update(patch).eq("id", id);
+    setReviewingId(null);
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, is_approved: next === "approved", is_rejected: next === "rejected" } : q))
+    );
+  }
+
+  // Konudaki onay bekleyen (ve daha once reddedilmis) TUM sorulari tek
+  // seferde onaylar - kullanicinin "chatgpt'ye sorup dogru dedikten sonra
+  // toplu onaylayabilelim" talebiyle eklendi.
+  async function approveAllInTopic() {
+    if (!selectedTopic) return;
+    const reviewCount = questions.filter((q) => reviewStatusOf(q) !== "approved").length;
+    if (reviewCount === 0) return;
+    if (!window.confirm(`${selectedTopic.name} konusundaki onaylanmamış ${reviewCount} soru toplu olarak onaylansın mı?`)) {
+      return;
+    }
+    setBulkApproving(true);
     const { data: userData } = await supabase.auth.getUser();
     await supabase
       .from("questions")
-      .update({ is_approved: true, approved_by: userData.user?.id ?? null, approved_at: new Date().toISOString() })
-      .eq("id", id);
-    setApprovingId(null);
-    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, is_approved: true } : q)));
+      .update({
+        is_approved: true,
+        is_rejected: false,
+        approved_by: userData.user?.id ?? null,
+        approved_at: new Date().toISOString(),
+        rejected_by: null,
+        rejected_at: null,
+      })
+      .eq("topic_id", selectedTopic.id)
+      .eq("is_reference_only", false)
+      .eq("is_approved", false);
+    await loadQuestions(selectedTopic.id);
+    setBulkApproving(false);
+  }
+
+  // Konudaki tum sorulari, bir yapay zeka sohbetine yapistirilip kalite
+  // kontrolu icin sorulabilecek duz metin haline getirip panoya kopyalar.
+  async function copyTopicQuestions() {
+    if (!selectedTopic) return;
+    const header = `Konu: ${selectedTopic.name} (${selectedTopic.subject_name})\n\n`;
+    const body = questions
+      .map((q, i) => {
+        const opts = Object.entries(q.options ?? {})
+          .map(([key, val]) => `${key}) ${val}${key === q.correct_option ? "  <-- doğru cevap" : ""}`)
+          .join("\n");
+        return `${i + 1}. ${q.body}\n${opts}\nAçıklama: ${q.explanation ?? "(açıklama yok)"}`;
+      })
+      .join("\n\n");
+    const prompt =
+      "\n\n---\nYukarıdaki sorular ve cevapları ile doğru mudur? Kontrol et; yanlış, hatalı veya belirsiz bir soru varsa hangisi olduğunu ve sebebini belirt.";
+    try {
+      await navigator.clipboard.writeText(header + body + prompt);
+      setCopyStatus("Kopyalandı ✓");
+    } catch {
+      setCopyStatus("Kopyalanamadı, tarayıcı izni gerekebilir.");
+    }
+    setTimeout(() => setCopyStatus(null), 2500);
   }
 
   if (topics.length === 0) {
@@ -457,6 +535,26 @@ export function QuestionTopicPanel({
               <Badge tone={added >= target ? "green" : added > 0 ? "amber" : "default"}>
                 {added}/{target} soru
               </Badge>
+              {questions.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    disabled={bulkApproving || questions.every((q) => reviewStatusOf(q) === "approved")}
+                    onClick={approveAllInTopic}
+                    className="touch-manipulation rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {bulkApproving ? "Onaylanıyor…" : "Tümünü Onayla"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyTopicQuestions}
+                    className="touch-manipulation rounded-full border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Kopyala (AI kontrolü için)
+                  </button>
+                  {copyStatus && <span className="text-xs text-slate-500">{copyStatus}</span>}
+                </>
+              )}
             </div>
             {allowAdd && (
               <Button variant="secondary" onClick={() => setAddOpen((v) => !v)}>
@@ -499,63 +597,109 @@ export function QuestionTopicPanel({
             <p className="text-xs text-slate-400">Bu konuda henüz soru yok.</p>
           ) : (
             <ul className="flex flex-col gap-3">
-              {questions.map((q, i) => (
-                <li key={q.id} className="rounded-lg border border-slate-200 p-2.5 text-sm">
-                  <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
-                    {q.follows_new_policy && <Badge tone="amber">*</Badge>}
-                    <Badge tone={q.is_approved ? "green" : "amber"}>{q.is_approved ? "Onaylı" : "Onay bekliyor"}</Badge>
-                    {!q.is_approved && (
+              {questions.map((q, i) => {
+                const reviewStatus = reviewStatusOf(q);
+                const busy = reviewingId === q.id;
+                return (
+                  <li key={q.id} className="flex items-start gap-3 rounded-lg border border-slate-200 p-2.5 text-sm">
+                    <div className="min-w-0 flex-1">
+                      {q.follows_new_policy && (
+                        <div className="mb-1">
+                          <Badge tone="amber">*</Badge>
+                        </div>
+                      )}
+                      <p className="font-medium text-slate-900">
+                        {i + 1}. {q.body}
+                      </p>
+                      <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+                        {Object.entries(q.options ?? {}).map(([key, val]) => {
+                          const isCorrect = key === q.correct_option;
+                          return (
+                            <li
+                              key={key}
+                              className={`rounded-lg border px-2.5 py-1.5 ${
+                                isCorrect
+                                  ? "border-emerald-400 bg-emerald-50 font-semibold text-emerald-800"
+                                  : "border-slate-200 text-slate-600"
+                              }`}
+                            >
+                              {key}) {val}
+                              {isCorrect && " ✓"}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {q.explanation && (
+                        <div className="mt-2 rounded-lg bg-indigo-50 p-2.5 text-xs text-indigo-900">
+                          <p className="mb-1 font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
+                          <p>{q.explanation}</p>
+                        </div>
+                      )}
                       <button
                         type="button"
-                        disabled={approvingId === q.id}
-                        onClick={() => approveQuestion(q.id)}
-                        className="touch-manipulation font-medium text-emerald-600 hover:underline disabled:opacity-50"
+                        onClick={() => setEditingId(editingId === q.id ? null : q.id)}
+                        className="mt-2 touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
                       >
-                        {approvingId === q.id ? "Onaylanıyor…" : "Onayla"}
+                        {editingId === q.id ? "Kapat" : "Düzenle"}
                       </button>
-                    )}
-                  </div>
-                  <p className="font-medium text-slate-900">
-                    {i + 1}. {q.body}
-                  </p>
-                  <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
-                    {Object.entries(q.options ?? {}).map(([key, val]) => {
-                      const isCorrect = key === q.correct_option;
-                      return (
-                        <li
-                          key={key}
-                          className={`rounded-lg border px-2.5 py-1.5 ${
-                            isCorrect
-                              ? "border-emerald-400 bg-emerald-50 font-semibold text-emerald-800"
-                              : "border-slate-200 text-slate-600"
-                          }`}
+                      {editingId === q.id && (
+                        <div className="mt-2">
+                          <QuestionEditForm question={q} onDone={() => setEditingId(null)} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Buyuk durum butonu: onay bekliyorsa yan yana
+                        Onayla/Reddet, aksi halde tek bir "Onaylandı"/
+                        "Reddedildi" butonu - tekrar tiklamak onay
+                        bekliyor durumuna geri dondurur. */}
+                    <div className="flex w-32 shrink-0 flex-col gap-1.5 sm:w-36">
+                      {reviewStatus === "pending" && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setQuestionStatus(q.id, "approved")}
+                            className="touch-manipulation rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {busy ? "…" : "✓ Onayla"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setQuestionStatus(q.id, "rejected")}
+                            className="touch-manipulation rounded-lg bg-red-600 px-2 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {busy ? "…" : "✕ Reddet"}
+                          </button>
+                        </>
+                      )}
+                      {reviewStatus === "approved" && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setQuestionStatus(q.id, "pending")}
+                          title="Onayı kaldırıp 'onay bekliyor' durumuna döndürmek için tıkla"
+                          className="touch-manipulation rounded-lg border-2 border-emerald-600 bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
                         >
-                          {key}) {val}
-                          {isCorrect && " ✓"}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {q.explanation && (
-                    <div className="mt-2 rounded-lg bg-indigo-50 p-2.5 text-xs text-indigo-900">
-                      <p className="mb-1 font-semibold uppercase tracking-wide text-indigo-500">Açıklama</p>
-                      <p>{q.explanation}</p>
+                          {busy ? "…" : "✓ Onaylandı"}
+                        </button>
+                      )}
+                      {reviewStatus === "rejected" && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setQuestionStatus(q.id, "pending")}
+                          title="Reddi kaldırıp 'onay bekliyor' durumuna döndürmek için tıkla"
+                          className="touch-manipulation rounded-lg border-2 border-red-600 bg-red-50 px-2 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                        >
+                          {busy ? "…" : "✕ Reddedildi"}
+                        </button>
+                      )}
                     </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(editingId === q.id ? null : q.id)}
-                    className="mt-2 touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
-                  >
-                    {editingId === q.id ? "Kapat" : "Düzenle"}
-                  </button>
-                  {editingId === q.id && (
-                    <div className="mt-2">
-                      <QuestionEditForm question={q} onDone={() => setEditingId(null)} />
-                    </div>
-                  )}
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

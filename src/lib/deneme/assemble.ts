@@ -51,17 +51,34 @@ export async function assembleDeneme(admin: SupabaseClient, input: AssembleInput
     return { error: "Henüz müfredatında konu tanımlı değil, deneme oluşturulamadı." };
   }
 
-  // Soru gorunurlugu artik is_approved'a bagli degil (tum sorular yayinda,
-  // ogretmen onayi ayri/paralel bir kalite rozeti) - bkz. migration
-  // 0023_soru_zorluk_kademesi_ve_yayin_kurali.sql. is_reference_only=true
-  // olan sorular ise "Referans Havuzu"nda tutulur ve hicbir denemeye/seviye
-  // tespit sinavina asla dahil edilmez - bkz. migration
-  // 0024_soru_referans_havuzu.sql.
-  const { data: questions } = await admin
+  // Soru gorunurlugu varsayilan olarak is_approved'a bagli degil (tum
+  // sorular yayinda, ogretmen onayi ayri/paralel bir kalite rozeti) - bkz.
+  // migration 0023_soru_zorluk_kademesi_ve_yayin_kurali.sql. Admin panelinden
+  // "sadece onayli sorular gorunsun" ayari acilirsa (site_settings.
+  // require_question_approval) bu montaj da ayni kurala uyar - bkz. migration
+  // 0034_soru_onay_reddet_ve_gorunurluk_ayari.sql. Reddedilen (is_rejected)
+  // bir soru ise bu ayardan bagimsiz olarak HICBIR ZAMAN denemeye dahil
+  // edilmez. is_reference_only=true olan sorular ise "Referans Havuzu"nda
+  // tutulur ve hicbir denemeye/seviye tespit sinavina asla dahil edilmez -
+  // bkz. migration 0024_soru_referans_havuzu.sql. Bu fonksiyon service-role
+  // client kullandigi (RLS'i baypas ettigi) icin bu filtreler burada elle
+  // uygulanmali - questions_read_all RLS politikasina guvenilemez.
+  const { data: siteSettings } = await admin
+    .from("site_settings")
+    .select("require_question_approval")
+    .eq("id", true)
+    .single();
+
+  let questionsQuery = admin
     .from("questions")
     .select("id, topic_id, difficulty")
     .eq("is_reference_only", false)
+    .eq("is_rejected", false)
     .in("topic_id", topicIds);
+  if (siteSettings?.require_question_approval) {
+    questionsQuery = questionsQuery.eq("is_approved", true);
+  }
+  const { data: questions } = await questionsQuery;
 
   const pool = (questions ?? []) as { id: string; topic_id: string; difficulty: QuestionDifficulty | null }[];
   if (pool.length < MIN_POOL) {

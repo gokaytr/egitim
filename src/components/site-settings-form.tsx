@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Button, Input, Textarea } from "@/components/ui";
 
-type Settings = { site_name: string; support_email: string | null; maintenance_mode: boolean; show_demo_data: boolean; admin_notification_emails: string | null };
+type Settings = {
+  site_name: string;
+  support_email: string | null;
+  maintenance_mode: boolean;
+  show_demo_data: boolean;
+  admin_notification_emails: string | null;
+  require_question_approval: boolean;
+};
 
 export function SiteSettingsForm({ settings }: { settings: Settings }) {
   const router = useRouter();
@@ -14,6 +21,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
   const [maintenanceMode, setMaintenanceMode] = useState(settings.maintenance_mode);
   const [showDemoData, setShowDemoData] = useState(settings.show_demo_data);
   const [adminEmails, setAdminEmails] = useState(settings.admin_notification_emails ?? "");
+  const [requireQuestionApproval, setRequireQuestionApproval] = useState(settings.require_question_approval);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -30,6 +38,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         maintenance_mode: maintenanceMode,
         show_demo_data: showDemoData,
         admin_notification_emails: adminEmails.trim() || null,
+        require_question_approval: requireQuestionApproval,
       })
       .eq("id", true);
     setLoading(false);
@@ -73,6 +82,15 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={showDemoData} onChange={(e) => setShowDemoData(e.target.checked)} />
           Demo/test verilerini göster (öğrenci, öğretmen, veli hesapları ve içerikleri) — kapatınca listelerden gizlenir, silinmez.
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={requireQuestionApproval}
+            onChange={(e) => setRequireQuestionApproval(e.target.checked)}
+          />
+          Sadece onaylı sorular öğrenciye/veliye gösterilsin — kapalıyken (varsayılan) onay bekleyen sorular da
+          öğrenciye görünmeye devam eder; reddedilmiş sorular bu ayardan bağımsız olarak her zaman gizlenir.
         </label>
         <Button type="submit" disabled={loading} className="self-start">
           {loading ? "Kaydediliyor..." : "Kaydet"}

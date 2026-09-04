@@ -13,7 +13,7 @@ export default async function GenelAyarlarPage() {
   const supabase = await createClient();
   const { data: settings } = await supabase
     .from("site_settings")
-    .select("site_name, support_email, maintenance_mode, show_demo_data, admin_notification_emails")
+    .select("site_name, support_email, maintenance_mode, show_demo_data, admin_notification_emails, require_question_approval")
     .eq("id", true)
     .single();
   const { data: allowlist } = await supabase.from("admin_allowlist").select("email").order("email", { ascending: true });
@@ -26,7 +26,18 @@ export default async function GenelAyarlarPage() {
 
   const ayarlarTab = (
     <div className="flex flex-col gap-6">
-      <SiteSettingsForm settings={settings ?? { site_name: "Odak", support_email: null, maintenance_mode: false, show_demo_data: true, admin_notification_emails: null }} />
+      <SiteSettingsForm
+        settings={
+          settings ?? {
+            site_name: "Odak",
+            support_email: null,
+            maintenance_mode: false,
+            show_demo_data: true,
+            admin_notification_emails: null,
+            require_question_approval: false,
+          }
+        }
+      />
       <AdminAllowlistForm emails={allowlist?.map((a) => a.email) ?? []} />
     </div>
   );

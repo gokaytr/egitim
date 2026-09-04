@@ -60,14 +60,31 @@ export default async function Home() {
     { data: heroSettings },
     { data: tileSettings },
     { count: topicCount },
-    { count: questionCount },
+    { data: siteSettings },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
     supabase.from("homepage_tiles").select("tile_index, media_type, media_url"),
     supabase.from("topics").select("id", { count: "exact", head: true }),
-    supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_reference_only", false).eq("is_approved", true),
+    supabase.from("site_settings").select("require_question_approval").eq("id", true).single(),
   ]);
+
+  // Sadece "onaylı" sorular sayilirsa (eski davranis), admin panelinden
+  // "sadece onayli sorular ogrenciye gorunsun" ayari kapaliyken (varsayilan)
+  // ogrenciye fiilen gorunen soru sayisiyla bu sayac uyusmuyordu - onay artik
+  // gorunurlugu degil sadece kalite kontrolunu belirtiyor (bkz. RLS
+  // "questions_read_all"). Bu yuzden sayac da ayni kurala uyuyor: reddedilen
+  // sorular her zaman disarida, onay ise sadece ayar acikken sayiliyor.
+  const requireApproval = siteSettings?.require_question_approval ?? false;
+  let questionCountQuery = supabase
+    .from("questions")
+    .select("id", { count: "exact", head: true })
+    .eq("is_reference_only", false)
+    .eq("is_rejected", false);
+  if (requireApproval) {
+    questionCountQuery = questionCountQuery.eq("is_approved", true);
+  }
+  const { count: questionCount } = await questionCountQuery;
 
   // Sistemdeki sinif sayisi sabit (1-12) - kullanicinin talebiyle sinav
   // rozetlerinin altina eklenmis olan, her sinifin soru sayisini gosteren
