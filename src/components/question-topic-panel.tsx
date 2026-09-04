@@ -36,33 +36,63 @@ const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 
 // "1. sinifa basinca fizik gorunmesin, her sinifin altinda olan dersler
 // gorunsun" talebiyle - Ders secimi artik sistemdeki TUM dersleri degil,
-// gercek Turkiye mufredatinda o sinif/sinavda okutulan/sorulan dersleri
-// gosteriyor. Isimler subjects tablosundaki gercek ders adlariyla BIREBIR
-// eslesmeli (bkz. asagidaki subjects.name degerleri) - yeni bir ders
-// (subjects tablosuna) eklenirse bu iki liste de guncellenmeli, yoksa o
-// ders hicbir sinif/sinavin altinda gorunmez.
+// gercek Turkiye mufredatinda (MEB haftalik ders cizelgeleri, ttkb.meb.gov.tr
+// kaynakli) o sinif/sinavda okutulan/sorulan dersleri gosteriyor. Isimler
+// subjects tablosundaki gercek ders adlariyla BIREBIR eslesmeli - yeni bir
+// ders (subjects tablosuna) eklenirse bu iki liste de guncellenmeli, yoksa
+// o ders hicbir sinif/sinavin altinda gorunmez.
+//
+// Kaynak (MEB resmi haftalik ders cizelgeleri): Turkce 1-8. sinif (lisede
+// "Turk Dili ve Edebiyati" adini alir, sistemde ayri ders olarak yok);
+// Matematik 1-12 kesintisiz; Hayat Bilgisi 1-3. sinif; Fen Bilimleri 3-8.
+// sinif (lisede Fizik/Kimya/Biyoloji'ye ayrilir); Sosyal Bilgiler 4-8.
+// sinif; Yabanci Dil (Ingilizce) 2. siniftan itibaren kesintisiz; Din
+// Kulturu ve Ahlak Bilgisi 4. siniftan itibaren kesintisiz (anayasal
+// olarak 1-3. sinifta yok); T.C. Inkilap Tarihi ve Ataturkculuk SADECE
+// 8. sinif (LGS dersi) ve lisede SADECE 11. sinifta okutuluyor; Fizik
+// lisede 9-12 kesintisiz ortak ders.
 const GRADE_SUBJECT_NAMES: Record<number, string[]> = {
-  1: ["Türkçe", "Matematik"],
-  2: ["Türkçe", "Matematik", "İngilizce"],
-  3: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri"],
-  4: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
-  5: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
-  6: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
-  7: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
-  8: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  1: ["Türkçe", "Matematik", "Hayat Bilgisi"],
+  2: ["Türkçe", "Matematik", "Hayat Bilgisi", "İngilizce"],
+  3: ["Türkçe", "Matematik", "Hayat Bilgisi", "İngilizce", "Fen Bilimleri"],
+  4: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Sosyal Bilgiler", "Din Kültürü ve Ahlak Bilgisi"],
+  5: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Sosyal Bilgiler", "Din Kültürü ve Ahlak Bilgisi"],
+  6: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Sosyal Bilgiler", "Din Kültürü ve Ahlak Bilgisi"],
+  7: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Sosyal Bilgiler", "Din Kültürü ve Ahlak Bilgisi"],
+  8: [
+    "Türkçe",
+    "Matematik",
+    "İngilizce",
+    "Fen Bilimleri",
+    "Sosyal Bilgiler",
+    "Din Kültürü ve Ahlak Bilgisi",
+    "T.C. İnkılap Tarihi ve Atatürkçülük",
+  ],
   9: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
   10: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
-  11: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
-  12: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  11: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  12: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
 };
 
 const EXAM_SUBJECT_NAMES: Record<string, string[]> = {
-  BILSEM: ["Türkçe", "Matematik", "Fen Bilimleri"],
+  // BILSEM sinavi ozellikle ilkokul (2-4. sinif) ogrencilerine uygulaniyor.
+  BILSEM: ["Türkçe", "Matematik", "Fen Bilimleri", "Hayat Bilgisi"],
+  // LGS (8. sinif merkezi sinavi, OSYM): Turkce, Matematik, Fen Bilimleri,
+  // T.C. Inkilap Tarihi ve Ataturkculuk, Din Kulturu, Ingilizce - 6 ders.
   LGS: ["Türkçe", "Matematik", "Fen Bilimleri", "İngilizce", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  // TYT: Turkce, Matematik, Fen Bilimleri (Fizik/Kimya/Biyoloji), Sosyal
+  // Bilimler (Tarih/Cografya/Felsefe/Din Kulturu).
   TYT: ["Türkçe", "Matematik", "Fizik", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
-  AYT: ["Matematik", "Fizik"],
-  YKS: ["Türkçe", "Matematik", "Fizik", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  // AYT: sayisal (Matematik, Fizik/Kimya/Biyoloji), esit agirlik/sozel ve
+  // ayri bir oturum olarak Yabanci Dil testi de var.
+  AYT: ["Matematik", "Fizik", "İngilizce"],
+  // YKS, TYT+AYT'yi kapsayan sinav markasi - ikisinin birlestirilmis ders
+  // kumesi.
+  YKS: ["Türkçe", "Matematik", "Fizik", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi", "İngilizce"],
+  // KPSS Genel Yetenek-Genel Kultur: Turkce, Matematik, Tarih (en yakini
+  // T.C. Inkilap Tarihi ve Ataturkculuk).
   KPSS: ["Türkçe", "Matematik", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  // ALES: sozel + sayisal akil yurutme, Turkce/Matematik agirlikli.
   ALES: ["Türkçe", "Matematik"],
 };
 
