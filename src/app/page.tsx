@@ -61,22 +61,44 @@ export default async function Home() {
     { data: tileSettings },
     { count: topicCount },
     { count: questionCount },
+    { data: gradeTopicRows },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
     supabase.from("homepage_tiles").select("tile_index, media_type, media_url"),
     supabase.from("topics").select("id", { count: "exact", head: true }),
     supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_reference_only", false).eq("is_approved", true),
+    // Sinif bazli soru sayaci icin: her konunun TEK bir grade_level'i var
+    // (topics.grade_level skaler bir kolon, dizi degil), bu yuzden bir soru
+    // burada asla iki sinifa birden sayilmaz - kullanicinin "bir soru hem
+    // AYT hem de 9. sinifta olmasin" talebiyle bulunan ayri bir veri
+    // hatasi (bazi konularin exam_types'ina ait olmadiklari sinavlarin
+    // yanlislikla eklenmis olmasi) migrations/0031'de duzeltildi.
+    supabase
+      .from("questions")
+      .select("topics!inner(grade_level)")
+      .eq("is_reference_only", false)
+      .eq("is_approved", true)
+      .not("topics.grade_level", "is", null),
   ]);
 
-  // Anasayfadaki "toplam konu/sinav/soru" sayaci icin - kullaniciya
+  const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
+  const gradeCounts = new Map<number, number>();
+  (gradeTopicRows ?? []).forEach((row) => {
+    const topic = Array.isArray(row.topics) ? row.topics[0] : row.topics;
+    const grade = topic?.grade_level;
+    if (typeof grade === "number") gradeCounts.set(grade, (gradeCounts.get(grade) ?? 0) + 1);
+  });
+
+  // Anasayfadaki "toplam konu/sinav/sinif/soru" sayaci icin - kullaniciya
   // gosterilecek soru sayisi sadece onayli ve ogrenciye acik (referans
   // havuzu degil) sorular; boylece rakam gercekte erisilebilir soru
   // sayisini yansitir, taslak/onay bekleyen sorularla sisirilmez.
   const STATS = [
     { label: "Konu", value: topicCount ?? 0 },
     { label: "Sınav Türü", value: EXAM_COURSES.length },
-    { label: "Soru", value: questionCount ?? 0 },
+    { label: "Sınıf", value: GRADE_ROWS.length },
+    { label: "Soru", value: questionCount ?? 0, emphasized: true },
   ];
 
   let panelHref: string | null = null;
@@ -204,13 +226,35 @@ export default async function Home() {
             ))}
           </div>
 
-          {/* Platformdaki toplam konu/sinav turu/soru sayisini gosteren
-              sayac - kullanicinin "toplam gorunsun" talebiyle eklendi.
-              Rakamlar sabit degil, her istekte veritabanindan taze cekiliyor. */}
-          <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-slate-100 pt-8">
+          {/* Sinav turlerinin hemen altinda, ayni pil stiliyle 1-12. sinif
+              kutucuklari - her birinde o sinifa ait onayli soru sayisi.
+              Kullanicinin "BILSEM LGS TYT... yazan yer gibi 1 satirda
+              1.siniftan 12.sinifa kadar kutucuklar yap, soru sayisini ekle"
+              talebiyle eklendi. */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {GRADE_ROWS.map((g) => (
+              <span
+                key={g}
+                className="rounded-md border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-bold text-slate-700"
+              >
+                {g}. Sınıf <span className="text-slate-400">({(gradeCounts.get(g) ?? 0).toLocaleString("tr-TR")})</span>
+              </span>
+            ))}
+          </div>
+
+          {/* Platformdaki toplam konu/sinav turu/sinif/soru sayisini
+              gosteren sayac - kullanicinin "toplam gorunsun" talebiyle
+              eklendi. Rakamlar sabit degil, her istekte veritabanindan taze
+              cekiliyor. "Soru" rakami kullanicinin talebiyle koyu (marka
+              mavisi) renkle vurgulanarak diger sayilardan ayristirilir. */}
+          <div className="mx-auto mt-10 grid max-w-2xl grid-cols-2 gap-4 border-t border-slate-100 pt-8 sm:grid-cols-4">
             {STATS.map((s) => (
               <div key={s.label} className="flex flex-col items-center">
-                <span className="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
+                <span
+                  className={`text-3xl font-extrabold tracking-tight md:text-4xl ${
+                    s.emphasized ? "text-blue-700" : "text-slate-900"
+                  }`}
+                >
                   {s.value.toLocaleString("tr-TR")}
                 </span>
                 <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{s.label}</span>

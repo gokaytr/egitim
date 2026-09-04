@@ -16,11 +16,20 @@ export const LEVEL_TITLES: Record<LevelLabel, string> = {
 
 // "Sana ozel" deneme montaji, ogrencinin seviye-tespit sonucuna (level_label)
 // en yakin zorluktaki sorulari secer - bkz. lib/deneme/assemble.ts.
+//
+// NOT: "cok_iyi" (yuzde 85+ dogru) seviyesindeki bir ogrenciye burada hala
+// "zor" (3. kademe) atanir, "olimpiyat" (4. kademe) DEGIL. Kullanicinin "4.
+// kademe olimpiyat sorusu" talebiyle bu kademe eklendi ama olimpiyat, sinav
+// hazirligindaki NORMAL en-iyi ogrenci grubu icin degil, ozel/istisnai bir
+// ust seviye - "cok iyi" seviye-tespit sonucu alan her ogrenciye otomatik
+// olimpiyat sorusu cikarmak onlari haksiz yere zorlardi. Olimpiyat kademesi
+// bu otomatik montaja dahil edilmez; ogretmen/admin onu bilerek ayri
+// filtreleyebilir/uretebilir (bkz. lib/questions/difficulty.ts).
 export const LEVEL_TO_DIFFICULTY: Record<LevelLabel, QuestionDifficulty> = {
   baslangic: "kolay",
   orta: "orta",
   iyi: "zor",
-  cok_iyi: "cok_zor",
+  cok_iyi: "zor",
 };
 
 export function levelFromScore(pct: number): LevelLabel {

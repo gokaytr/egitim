@@ -119,8 +119,8 @@ const DIFFICULTY_PROMPT_HINTS: Record<QuestionDifficulty, string> = {
     "iki-üç adımlı bir uygulama ya da bir kuralı yeni bir örneğe uyarlama gerektirir - ilk bakışta çözüm yolu net değildir, biraz düşünmek gerekir",
   zor:
     "çok adımlı akıl yürütme, birden fazla kazanımı aynı anda kullanma ya da bilgiyi alışılmadık bir bağlamda/bir senaryo içinde uygulama gerektirir",
-  cok_zor:
-    "ÖSYM tarzı: uzun ve bağlamsal bir kök (gerekirse kısa bir senaryo/paragraf/veri seti ile başlar), birden fazla kazanımın sentezini ve dikkatli, çok adımlı bir çözümü gerektirir - deneyimli bir öğrenci bile en az bir kez kontrol etmeden emin olamaz",
+  olimpiyat:
+    "ÖSYM/merkezi sınav seviyesinin de ÜSTÜNDE: olimpiyat/yarışma tarzı - standart çözüm yollarıyla değil, özgün bir fikir/hile/dönüşüm bulmayı gerektiren, birden fazla kazanımın yaratıcı bir sentezini isteyen, alanında güçlü bir öğrencinin bile uzun süre düşünmeden çözemeyeceği bir soru. Yine de sistemin 4 şıklı (A-D) formatına uygun olmalı - kanıt yazdıran açık uçlu bir soru değil, doğru şıkkı bulmak için de o yaratıcı adımın gerçekten kullanılması gereken bir çoktan seçmeli soru.",
 };
 
 /**
