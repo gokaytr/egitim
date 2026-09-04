@@ -61,34 +61,19 @@ export default async function Home() {
     { data: tileSettings },
     { count: topicCount },
     { count: questionCount },
-    { data: gradeTopicRows },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
     supabase.from("homepage_tiles").select("tile_index, media_type, media_url"),
     supabase.from("topics").select("id", { count: "exact", head: true }),
     supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_reference_only", false).eq("is_approved", true),
-    // Sinif bazli soru sayaci icin: her konunun TEK bir grade_level'i var
-    // (topics.grade_level skaler bir kolon, dizi degil), bu yuzden bir soru
-    // burada asla iki sinifa birden sayilmaz - kullanicinin "bir soru hem
-    // AYT hem de 9. sinifta olmasin" talebiyle bulunan ayri bir veri
-    // hatasi (bazi konularin exam_types'ina ait olmadiklari sinavlarin
-    // yanlislikla eklenmis olmasi) migrations/0031'de duzeltildi.
-    supabase
-      .from("questions")
-      .select("topics!inner(grade_level)")
-      .eq("is_reference_only", false)
-      .eq("is_approved", true)
-      .not("topics.grade_level", "is", null),
   ]);
 
-  const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
-  const gradeCounts = new Map<number, number>();
-  (gradeTopicRows ?? []).forEach((row) => {
-    const topic = Array.isArray(row.topics) ? row.topics[0] : row.topics;
-    const grade = topic?.grade_level;
-    if (typeof grade === "number") gradeCounts.set(grade, (gradeCounts.get(grade) ?? 0) + 1);
-  });
+  // Sistemdeki sinif sayisi sabit (1-12) - kullanicinin talebiyle sinav
+  // rozetlerinin altina eklenmis olan, her sinifin soru sayisini gosteren
+  // ayri pil satiri kaldirildi ("aradaki kismi kaldir"); sadece asagidaki
+  // ozet sayacta "Sinif: 12" olarak kaliyor.
+  const GRADE_COUNT = 12;
 
   // Anasayfadaki "toplam konu/sinav/sinif/soru" sayaci icin - kullaniciya
   // gosterilecek soru sayisi sadece onayli ve ogrenciye acik (referans
@@ -97,7 +82,7 @@ export default async function Home() {
   const STATS = [
     { label: "Konu", value: topicCount ?? 0 },
     { label: "Sınav Türü", value: EXAM_COURSES.length },
-    { label: "Sınıf", value: GRADE_ROWS.length },
+    { label: "Sınıf", value: GRADE_COUNT },
     { label: "Soru", value: questionCount ?? 0, emphasized: true },
   ];
 
@@ -222,22 +207,6 @@ export default async function Home() {
             {EXAM_COURSES.map((c) => (
               <span key={c} className="rounded-md border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-700">
                 {c}
-              </span>
-            ))}
-          </div>
-
-          {/* Sinav turlerinin hemen altinda, ayni pil stiliyle 1-12. sinif
-              kutucuklari - her birinde o sinifa ait onayli soru sayisi.
-              Kullanicinin "BILSEM LGS TYT... yazan yer gibi 1 satirda
-              1.siniftan 12.sinifa kadar kutucuklar yap, soru sayisini ekle"
-              talebiyle eklendi. */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            {GRADE_ROWS.map((g) => (
-              <span
-                key={g}
-                className="rounded-md border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-bold text-slate-700"
-              >
-                {g}. Sınıf <span className="text-slate-400">({(gradeCounts.get(g) ?? 0).toLocaleString("tr-TR")})</span>
               </span>
             ))}
           </div>

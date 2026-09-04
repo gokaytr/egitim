@@ -295,12 +295,21 @@ export function QuestionTopicPanel({
     return topics.filter((t) => rowMatches(row, t) && t.subject_id === subjectId).sort((a, b) => a.name.localeCompare(b.name, "tr"));
   }, [row, subjectId, topics]);
 
+  // Kullanicinin talebiyle: bir ogretmenin (ya da herhangi bir kullanicinin)
+  // secilen sinif/sinavda YALNIZCA tek bir dersi varsa ("bu ogretmenin
+  // birden fazla branşı yoksa"), Ders adimini ayrica tiklatmadan o tek ders
+  // otomatik secilir - subjectsForRow useMemo'su henuz guncellenmeden
+  // (state degisikligi asenkron) hesaplanacagi icin ayni filtreleme burada
+  // dogrudan tekrarlaniyor. Birden fazla ders varsa (ör. admin, ya da
+  // birden fazla branşı olan bir ogretmen) eskisi gibi kullanici secer.
   function pickRow(next: RowSel) {
     setRow(next);
-    setSubjectId(null);
     setTopicId("");
     setQuestions([]);
     setAddOpen(false);
+    const allowed = new Set(allowedSubjectNames(next));
+    const matches = subjects.filter((s) => allowed.has(s.name));
+    setSubjectId(matches.length === 1 ? matches[0].id : null);
   }
 
   function pickSubject(id: string) {
