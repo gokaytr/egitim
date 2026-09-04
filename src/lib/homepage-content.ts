@@ -38,4 +38,7 @@ export const FEATURE_TILES = [
 
 export const HERO_DEFAULT_IMAGE = "/grade-bg/varsayilan.jpg";
 
-export const EXAM_COURSES = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
+// question-topic-panel.tsx'teki EXAM_ROW_ORDER ile ayni sinav kumesi -
+// kullanicinin "sisteme DGS/YDS/YOKDIL de eklendi, anasayfada da gorunsun"
+// talebiyle guncellendi, artik platformdaki TUM sinav turlerini kapsiyor.
+export const EXAM_COURSES = ["BILSEM", "LGS", "TYT", "AYT", "YDT", "YKS", "DGS", "KPSS", "ALES", "YDS", "YOKDIL"];

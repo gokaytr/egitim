@@ -55,11 +55,29 @@ const ROLE_PANEL_CTA: Record<string, string> = {
 // devam eder.
 export default async function Home() {
   const supabase = await createClient();
-  const [{ data: userData }, { data: heroSettings }, { data: tileSettings }] = await Promise.all([
+  const [
+    { data: userData },
+    { data: heroSettings },
+    { data: tileSettings },
+    { count: topicCount },
+    { count: questionCount },
+  ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
     supabase.from("homepage_tiles").select("tile_index, media_type, media_url"),
+    supabase.from("topics").select("id", { count: "exact", head: true }),
+    supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_reference_only", false).eq("is_approved", true),
   ]);
+
+  // Anasayfadaki "toplam konu/sinav/soru" sayaci icin - kullaniciya
+  // gosterilecek soru sayisi sadece onayli ve ogrenciye acik (referans
+  // havuzu degil) sorular; boylece rakam gercekte erisilebilir soru
+  // sayisini yansitir, taslak/onay bekleyen sorularla sisirilmez.
+  const STATS = [
+    { label: "Konu", value: topicCount ?? 0 },
+    { label: "Sınav Türü", value: EXAM_COURSES.length },
+    { label: "Soru", value: questionCount ?? 0 },
+  ];
 
   let panelHref: string | null = null;
   let panelLabel = "Panelim";
@@ -183,6 +201,20 @@ export default async function Home() {
               <span key={c} className="rounded-md border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-700">
                 {c}
               </span>
+            ))}
+          </div>
+
+          {/* Platformdaki toplam konu/sinav turu/soru sayisini gosteren
+              sayac - kullanicinin "toplam gorunsun" talebiyle eklendi.
+              Rakamlar sabit degil, her istekte veritabanindan taze cekiliyor. */}
+          <div className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-slate-100 pt-8">
+            {STATS.map((s) => (
+              <div key={s.label} className="flex flex-col items-center">
+                <span className="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
+                  {s.value.toLocaleString("tr-TR")}
+                </span>
+                <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{s.label}</span>
+              </div>
             ))}
           </div>
         </div>
