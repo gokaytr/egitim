@@ -8,7 +8,6 @@ import { ReferencePoolFiles } from "@/components/reference-pool-files";
 import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
 import { QuestionTopicPanel, type PanelTopic } from "@/components/question-topic-panel";
-import type { ExamShare } from "@/components/exam-share-panel";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -29,7 +28,6 @@ export default async function SorularPage() {
     { data: referenceQuestions },
     { data: referenceFiles },
     { data: countRows },
-    { data: rawShares },
   ] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
@@ -47,24 +45,12 @@ export default async function SorularPage() {
       .select("id, file_name, storage_path, mime_type, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("questions").select("topic_id").eq("is_reference_only", false),
-    supabase
-      .from("exam_shares")
-      .select("id, exam_type, token")
-      .is("revoked_at", null)
-      .order("created_at", { ascending: false }),
   ]);
 
   const counts = new Map<string, number>();
   (countRows ?? []).forEach((q) => {
     if (!q.topic_id) return;
     counts.set(q.topic_id, (counts.get(q.topic_id) ?? 0) + 1);
-  });
-
-  const shares = new Map<string, ExamShare[]>();
-  (rawShares ?? []).forEach((s) => {
-    const list = shares.get(s.exam_type) ?? [];
-    list.push(s);
-    shares.set(s.exam_type, list);
   });
 
   const curriculumTopics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({
@@ -114,7 +100,7 @@ export default async function SorularPage() {
   }));
 
   const genelBakisTab = (
-    <QuestionTopicPanel topics={panelTopics} counts={counts} subjects={subjects ?? []} shares={shares} isAdmin />
+    <QuestionTopicPanel topics={panelTopics} counts={counts} subjects={subjects ?? []} isAdmin />
   );
 
   const soruHavuzuTab = (

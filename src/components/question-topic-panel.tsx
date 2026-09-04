@@ -7,7 +7,6 @@ import { ManualQuestionForm } from "@/components/manual-question-form";
 import { BulkQuestionImport } from "@/components/bulk-question-import";
 import { AiQuestionGenerate } from "@/components/ai-question-generate";
 import { QuestionEditForm, type EditableQuestion } from "@/components/question-edit-form";
-import { TopicExamShareRow, type ExamShare } from "@/components/exam-share-panel";
 
 export type PanelTopic = {
   id: string;
@@ -247,7 +246,6 @@ export function QuestionTopicPanel({
   counts,
   subjects,
   subjectIds,
-  shares,
   isAdmin,
 }: {
   topics: PanelTopic[];
@@ -258,8 +256,6 @@ export function QuestionTopicPanel({
    * de gorunur ve secilebilir kalir. */
   subjects: { id: string; name: string }[];
   subjectIds?: string[];
-  /** Sadece admin: konu basina paylasim satirlari icin sinav -> mevcut linkler. */
-  shares?: Map<string, ExamShare[]>;
   isAdmin: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -351,7 +347,6 @@ export function QuestionTopicPanel({
 
   const added = selectedTopic ? counts.get(selectedTopic.id) ?? 0 : 0;
   const target = selectedTopic ? selectedTopic.target_question_count ?? DEFAULT_TARGET : 0;
-  const examTypesOfTopic = selectedTopic?.exam_types ?? [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -432,15 +427,6 @@ export function QuestionTopicPanel({
               {addOpen ? "Kapat" : "+ Soru Ekle"}
             </Button>
           </div>
-
-          {isAdmin && shares && examTypesOfTopic.length > 0 && (
-            <div className="mb-4 flex flex-col gap-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Bu konunun sınavları</p>
-              {examTypesOfTopic.map((exam) => (
-                <TopicExamShareRow key={exam} examType={exam} initialShares={shares.get(exam) ?? []} />
-              ))}
-            </div>
-          )}
 
           {addOpen && (
             <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
