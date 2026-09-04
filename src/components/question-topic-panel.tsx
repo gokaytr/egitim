@@ -45,14 +45,18 @@ const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 // Kaynak (MEB resmi haftalik ders cizelgeleri): Turkce 1-8. sinif (lisede
 // "Turk Dili ve Edebiyati" adini alir, sistemde ayri ders olarak yok);
 // Matematik 1-12 kesintisiz; Hayat Bilgisi 1-3. sinif; Fen Bilimleri 3-8.
-// sinif (lisede Fizik/Kimya/Biyoloji'ye ayrilir); Sosyal Bilgiler 4-8.
-// sinif; Yabanci Dil (Ingilizce) 2. siniftan itibaren kesintisiz; Din
-// Kulturu ve Ahlak Bilgisi 4. siniftan itibaren kesintisiz (anayasal
-// olarak 1-3. sinifta yok); T.C. Inkilap Tarihi ve Ataturkculuk SADECE
-// 8. sinif (LGS dersi) ve lisede SADECE 11. sinifta okutuluyor; Fizik
-// lisede 9-12 kesintisiz ortak ders.
+// sinif (lisede Fizik/Kimya/Biyoloji'ye ayrilir); Sosyal Bilgiler 4-7.
+// sinif (8. sinifta yerini tamamen T.C. Inkilap Tarihi ve Ataturkculuk'e
+// birakiyor - 8. sinifta ayrica Sosyal Bilgiler dersi YOK); Yabanci Dil
+// (Ingilizce) MEB devlet okullarinda resmi olarak 2. siniftan itibaren
+// zorunlu, ancak ozel okul/kolejlerin buyuk cogunlugunda (ve kullanicinin
+// talebiyle) 1. siniftan itibaren de okutuluyor - kullanicinin acik
+// talebiyle 1. sinifa da eklendi; Din Kulturu ve Ahlak Bilgisi 4.
+// siniftan itibaren kesintisiz (anayasal olarak 1-3. sinifta yok); T.C.
+// Inkilap Tarihi ve Ataturkculuk SADECE 8. sinif (LGS dersi) ve lisede
+// SADECE 11. sinifta okutuluyor; Fizik lisede 9-12 kesintisiz ortak ders.
 const GRADE_SUBJECT_NAMES: Record<number, string[]> = {
-  1: ["Türkçe", "Matematik", "Hayat Bilgisi"],
+  1: ["Türkçe", "Matematik", "Hayat Bilgisi", "İngilizce"],
   2: ["Türkçe", "Matematik", "Hayat Bilgisi", "İngilizce"],
   3: ["Türkçe", "Matematik", "Hayat Bilgisi", "İngilizce", "Fen Bilimleri"],
   4: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Sosyal Bilgiler", "Din Kültürü ve Ahlak Bilgisi"],
@@ -64,7 +68,6 @@ const GRADE_SUBJECT_NAMES: Record<number, string[]> = {
     "Matematik",
     "İngilizce",
     "Fen Bilimleri",
-    "Sosyal Bilgiler",
     "Din Kültürü ve Ahlak Bilgisi",
     "T.C. İnkılap Tarihi ve Atatürkçülük",
   ],
@@ -248,7 +251,7 @@ export function QuestionTopicPanel({
     <div className="flex flex-col gap-4">
       <div>
         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Sınıf / Sınav</p>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex w-full max-w-full flex-wrap gap-1.5 overflow-x-hidden">
           {GRADE_ROWS.map((g) => (
             <RowButton key={`g-${g}`} active={!!row && row.type === "grade" && row.value === g} onClick={() => pickRow({ type: "grade", value: g })}>
               {g}. Sınıf
@@ -268,7 +271,7 @@ export function QuestionTopicPanel({
           {subjectsForRow.length === 0 ? (
             <p className="text-xs text-slate-500">Bu seçimde henüz konu yok.</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex w-full max-w-full flex-wrap gap-1.5 overflow-x-hidden">
               {subjectsForRow.map((s) => (
                 <RowButton key={s.id} active={subjectId === s.id} onClick={() => pickSubject(s.id)}>
                   {s.name}
