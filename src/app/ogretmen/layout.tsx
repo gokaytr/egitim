@@ -5,11 +5,11 @@ import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 export default async function OgretmenLayout({ children }: { children: React.ReactNode }) {
   const { teacherId: effectiveTeacherId, isAdminPreview, candidates } = await resolveEffectiveTeacher();
 
-  // "Sorular" sol menuden kaldirildi - Genel Bakis'taki buyuk "Soru Ekle"/
-  // "Soru Onayla" kartlari zaten oraya dogrudan goturuyor (bkz. ogretmen/page.tsx),
-  // ayrica bir menu girdisine gerek yok.
+  // Admin panelindeki "Sorular" ile birebir ayni yapi: ilk menu girdisi
+  // dogrudan konu secici + kartlar/son sorular sekmelerine goturuyor (bkz.
+  // ogretmen/page.tsx), bu yuzden etiket de admin'deki gibi "Sorular".
   const NAV = [
-    { href: "/ogretmen", label: "Genel Bakış" },
+    { href: "/ogretmen", label: "Sorular" },
     { href: "/ogretmen/mufredat", label: "Müfredat / Konu Ekle" },
     { href: "/ogretmen/konu-anlatim", label: "Konu Anlatımı" },
     { href: "/ogretmen/ozel-ders", label: "Özel Ders" },

@@ -4,5 +4,5 @@ import { redirect } from "next/navigation";
 // birlestirildi - eski baglantilar/yer imleri kirilmasin diye buraya
 // gelenler yonlendiriliyor.
 export default function SoruEkleRedirect() {
-  redirect("/ogretmen/sorular");
+  redirect("/ogretmen");
 }

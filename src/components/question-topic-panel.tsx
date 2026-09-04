@@ -370,7 +370,16 @@ export function QuestionTopicPanel({
         <div>
           <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">Ders</p>
           {subjectsForRow.length === 0 ? (
-            <p className="text-xs text-slate-500">Bu seçimde henüz konu yok.</p>
+            <p className="text-xs text-slate-500">
+              {/* Ogretmen icin: bu sinif/sinavda ders yoksa nedeni cogunlukla
+                  ders eksikligi degil, o ogretmenin branşinin bu sinif/sinavda
+                  okutulmamasi/sorulmamasi (ör. Matematik ogretmeni YOKDIL'e
+                  tiklarsa). Kullanicinin talebiyle bu durumda genel "henuz
+                  konu yok" yerine branşa ozel bir mesaj gosteriliyor - admin
+                  ise (tum dersleri gordugu icin) genel mesaji gormeye devam
+                  ediyor. */}
+              {!isAdmin ? "Bu sınıf veya sınavda senin branşına ait ders yok." : "Bu seçimde henüz konu yok."}
+            </p>
           ) : (
             <div className="flex w-full max-w-full flex-wrap gap-1.5 overflow-x-hidden">
               {subjectsForRow.map((s) => (

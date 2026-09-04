@@ -19,16 +19,21 @@ export default async function OgretmenMufredatPage({
   const [{ data: subjects }, { data: courses }, { data: rawTopics }, { data: myAssignments }] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
-    supabase.from("topics").select("id, name, kazanim, grade_level, exam_types, subjects(name)").order("grade_level"),
+    supabase.from("topics").select("id, name, kazanim, grade_level, exam_types, subject_id, subjects(name)").order("grade_level"),
     supabase.from("teacher_subjects").select("subject_id").eq("teacher_id", effectiveTeacherId ?? ""),
   ]);
 
-  // Ogretmene brans atanmissa, konu ekleme formundaki ders secimi kendi
-  // branslariyla sinirlandirilir; hic atama yoksa herkes gorunmeye devam eder.
+  // Ogretmene brans atanmissa, hem konu ekleme formundaki ders secimi hem de
+  // asagidaki mufredat agaci (CurriculumBrowser) kendi branslariyla
+  // sinirlandirilir; hic atama yoksa herkes gorunmeye devam eder. Onceden
+  // sadece form filtreleniyordu, agac TUM derslerin konularini gosteriyordu -
+  // bu kullanicinin "her ogretmene sadece admin tarafindan atanan kendi
+  // branslari gosterilsin" talebiyle duzeltildi.
   const myBranchIds = new Set((myAssignments ?? []).map((a) => a.subject_id));
   const availableSubjects = myBranchIds.size > 0 ? (subjects ?? []).filter((s) => myBranchIds.has(s.id)) : subjects ?? [];
+  const scopedRawTopics = myBranchIds.size > 0 ? (rawTopics ?? []).filter((t) => myBranchIds.has(t.subject_id)) : rawTopics ?? [];
 
-  const topics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({
+  const topics: CurriculumTopicRow[] = scopedRawTopics.map((t) => ({
     id: t.id,
     name: t.name,
     kazanim: t.kazanim,

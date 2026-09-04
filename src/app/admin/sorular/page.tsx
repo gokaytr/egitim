@@ -8,6 +8,8 @@ import { ReferencePoolFiles } from "@/components/reference-pool-files";
 import { ReferencePoolAddPanel } from "@/components/reference-pool-add-panel";
 import { ReferencePoolBrowser } from "@/components/reference-pool-browser";
 import { QuestionTopicPanel, type PanelTopic } from "@/components/question-topic-panel";
+import { PanelSummary } from "@/components/panel-summary";
+import { getRecentQuestionActivity } from "@/lib/questions/recent";
 
 function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v ?? undefined;
@@ -28,6 +30,7 @@ export default async function SorularPage() {
     { data: referenceQuestions },
     { data: referenceFiles },
     { data: countRows },
+    { count: pendingQuestionCount },
   ] = await Promise.all([
     supabase.from("subjects").select("id, name").order("name"),
     supabase.from("courses").select("id, name").order("name"),
@@ -45,7 +48,10 @@ export default async function SorularPage() {
       .select("id, file_name, storage_path, mime_type, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("questions").select("topic_id").eq("is_reference_only", false),
+    supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_approved", false),
   ]);
+
+  const recentActivity = await getRecentQuestionActivity(supabase, null);
 
   const counts = new Map<string, number>();
   (countRows ?? []).forEach((q) => {
@@ -103,6 +109,18 @@ export default async function SorularPage() {
     <QuestionTopicPanel topics={panelTopics} counts={counts} subjects={subjects ?? []} isAdmin />
   );
 
+  const ozetTab = (
+    <PanelSummary
+      isAdmin
+      addHref="/admin/sorular?tab=genel"
+      approveHref="/admin/sorular?tab=genel"
+      addSubtitle="Elle, kopyala-yapıştır veya yapay zeka ile yeni soru ekle."
+      approveSubtitle="Onay bekleyen soruları incele ve kalite kontrolünden geçir."
+      pendingCount={pendingQuestionCount ?? 0}
+      recentActivity={recentActivity}
+    />
+  );
+
   const soruHavuzuTab = (
     <div className="flex flex-col gap-6">
       <ReferencePoolAddPanel />
@@ -144,6 +162,7 @@ export default async function SorularPage() {
         syncQueryParam="tab"
         tabs={[
           { key: "genel", label: "Genel Bakış", content: genelBakisTab, tone: "indigo" },
+          { key: "ozet", label: "Özet", content: ozetTab, dot: (pendingQuestionCount ?? 0) > 0 },
           { key: "havuz", label: "Soru Havuzu", content: soruHavuzuTab },
           { key: "mufredat", label: "Müfredat", content: mufredatTab },
         ]}
