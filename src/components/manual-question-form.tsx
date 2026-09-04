@@ -8,7 +8,25 @@ import { Card, Button, Input, Textarea, Select } from "@/components/ui";
 // kullanilir), eklenen soru dogrudan is_reference_only=true olarak
 // kaydedilir - yani ogrenciye hicbir zaman gosterilmez, sadece yapay
 // zekanin ornek alip egitilmesi icin saklanir (bkz. CLAUDE.md).
-export function ManualQuestionForm({ topicId, isReferenceOnly = false }: { topicId: string; isReferenceOnly?: boolean }) {
+//
+// autoApprove=false verilirse (ogretmen panelindeki "Soru Ekle / Onay"
+// akisinda kullanilir) soru is_approved=false olarak kaydedilir - boylece
+// ekleyen ogretmen, kullanicinin talebiyle, eklendikten hemen sonra ayni
+// ekranda goruntulenen "Onayla" butonuyla kendi soruşunu bilinçli bir
+// adimda onaylar (sessizce otomatik onaylanmaz).
+export function ManualQuestionForm({
+  topicId,
+  isReferenceOnly = false,
+  autoApprove = true,
+  onAdded,
+}: {
+  topicId: string;
+  isReferenceOnly?: boolean;
+  autoApprove?: boolean;
+  /** Soru basariyla eklendiginde cagrilir - ust bilesen (ör. konunun soru
+   * listesi) tazelensin diye. */
+  onAdded?: () => void;
+}) {
   const [manual, setManual] = useState({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,15 +50,22 @@ export function ManualQuestionForm({ topicId, isReferenceOnly = false }: { topic
       correct_option: manual.correct,
       explanation: manual.explanation,
       source: "teacher",
-      is_approved: true,
+      is_approved: isReferenceOnly ? true : autoApprove,
       is_reference_only: isReferenceOnly,
     });
 
     setLoading(false);
     if (error) setStatus(`Hata: ${error.message}`);
     else {
-      setStatus(isReferenceOnly ? "Soru havuzuna eklendi." : "Soru eklendi.");
+      setStatus(
+        isReferenceOnly
+          ? "Soru havuzuna eklendi."
+          : autoApprove
+            ? "Soru eklendi."
+            : "Soru eklendi — aşağıdaki listede \"Onayla\" butonuna basarak yayına alabilirsin."
+      );
       setManual({ body: "", a: "", b: "", c: "", d: "", correct: "A", explanation: "", imageUrl: "" });
+      onAdded?.();
     }
   }
 

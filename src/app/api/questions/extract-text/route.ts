@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// PDF/Word/metin dosyalarindan (JPEG/taranmis gorseller HARIC - onlar icin
-// OCR ya da ucretli AI gerekir, bu proje simdilik sadece metin destekliyor)
-// duz metin cikaran, disari hicbir API/AI cagirmayan (ucretsiz) route.
+// PDF/Word/Excel/metin dosyalarindan (JPEG/taranmis gorseller HARIC - onlar
+// icin OCR ya da ucretli AI gerekir, bu proje simdilik sadece metin
+// destekliyor) duz metin cikaran, disari hicbir API/AI cagirmayan (ucretsiz)
+// route.
 // Cikan metin, ayni "Soru:/A)/B).../Cevap:" formatinda ayristiriciya
 // (bulk-parser.ts) veya (Soru Havuzu'nda) yapay zeka destekli ham metin
 // ayristiricisina (reference-pool-ai-import.tsx) veriliyor.
@@ -13,6 +14,70 @@ async function extractFromDocx(buffer: Buffer): Promise<string> {
   const mammoth = await import("mammoth");
   const result = await mammoth.extractRawText({ buffer });
   return result.value;
+}
+
+// Excel (.xlsx) dosyalarindaki her SATIRI bir soruya cevirir - beklenen
+// baslik satiri: Konu, Soru, A, B, C, D, Cevap, Aciklama (buyuk/kucuk harf
+// ve Turkce karakter farki onemli degil). Cikan metin, digerleriyle AYNI
+// "Konu:/Soru:/A)/.../Cevap:/Aciklama:" bloklarina donusturulup ayni
+// ayristiriciya (bulk-parser.ts) veriliyor - boylece Excel, PDF/Word/
+// yapistirma ile tamamen ayni "tek ekleme yeri" mantigini paylasir.
+function normalizeHeader(h: string): string {
+  return h
+    .trim()
+    .toLowerCase()
+    .replace(/ı/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u")
+    .replace(/ç/g, "c");
+}
+
+async function extractFromXlsx(buffer: Buffer): Promise<string> {
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) return "";
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+
+  function pick(row: Record<string, unknown>, ...keys: string[]): string {
+    const normalizedKeys = new Set(keys.map(normalizeHeader));
+    for (const rawKey of Object.keys(row)) {
+      if (normalizedKeys.has(normalizeHeader(rawKey))) {
+        const v = row[rawKey];
+        return v == null ? "" : String(v).trim();
+      }
+    }
+    return "";
+  }
+
+  const blocks: string[] = [];
+  for (const row of rows) {
+    const soru = pick(row, "soru", "soru metni");
+    if (!soru) continue; // basliksiz/bos satirlari atla
+    const topic = pick(row, "konu");
+    const a = pick(row, "a", "a şıkkı");
+    const b = pick(row, "b", "b şıkkı");
+    const c = pick(row, "c", "c şıkkı");
+    const d = pick(row, "d", "d şıkkı");
+    const cevap = pick(row, "cevap", "doğru şık");
+    const aciklama = pick(row, "açıklama", "çözüm");
+
+    const lines: string[] = [];
+    if (topic) lines.push(`Konu: ${topic}`);
+    lines.push(`Soru: ${soru}`);
+    if (a) lines.push(`A) ${a}`);
+    if (b) lines.push(`B) ${b}`);
+    if (c) lines.push(`C) ${c}`);
+    if (d) lines.push(`D) ${d}`);
+    if (cevap) lines.push(`Cevap: ${cevap}`);
+    if (aciklama) lines.push(`Açıklama: ${aciklama}`);
+    blocks.push(lines.join("\n"));
+  }
+
+  return blocks.join("\n\n");
 }
 
 // ÖSYM tarzi sinav kagitlari genelde İKİ SÜTUN halinde dizilir - eski
@@ -139,13 +204,24 @@ export async function POST(req: Request) {
         console.warn("extract-text: sütun tabanlı PDF çıkarımı başarısız, basit çıkarıma dönülüyor", columnErr);
         text = await extractFromPdfFallback(buffer);
       }
+    } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      text = await extractFromXlsx(buffer);
+      if (!text.trim()) {
+        return NextResponse.json(
+          {
+            error:
+              "Excel dosyasında geçerli soru satırı bulunamadı. İlk satırın başlık (Konu, Soru, A, B, C, D, Cevap, Açıklama) olduğundan emin ol.",
+          },
+          { status: 400 }
+        );
+      }
     } else if (name.endsWith(".txt")) {
       text = buffer.toString("utf-8");
     } else {
       return NextResponse.json(
         {
           error:
-            "Desteklenmeyen dosya türü. Şimdilik .docx, .pdf ve .txt destekleniyor (JPEG/taranmış görseller için metin okuma henüz yok).",
+            "Desteklenmeyen dosya türü. Şimdilik .docx, .pdf, .xlsx ve .txt destekleniyor (JPEG/taranmış görseller için metin okuma henüz yok).",
         },
         { status: 400 }
       );

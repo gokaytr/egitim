@@ -247,6 +247,7 @@ export function QuestionTopicPanel({
   subjects,
   subjectIds,
   isAdmin,
+  allowAdd = true,
 }: {
   topics: PanelTopic[];
   counts: Map<string, number>;
@@ -257,6 +258,12 @@ export function QuestionTopicPanel({
   subjects: { id: string; name: string }[];
   subjectIds?: string[];
   isAdmin: boolean;
+  /** false verilirse "+ Soru Ekle" butonu/paneli hic gosterilmez, sadece
+   * konunun mevcut sorulari (ve onlarin onayla butonlari) gorunur - bu
+   * ogretmen panelinde "Genel Bakis" artik sadece GOZ ATMA icin, soru
+   * ekleme tek bir yerde (bkz. ogretmen/page.tsx "Soru Ekle / Onay"
+   * sekmesi) toplansin diye kullanicinin talebiyle eklendi. */
+  allowAdd?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
@@ -303,10 +310,13 @@ export function QuestionTopicPanel({
     setAddOpen(false);
   }
 
-  async function pickTopic(id: string) {
-    setTopicId(id);
-    setAddOpen(false);
-    setEditingId(null);
+  // pickTopic'ten ayri bir fonksiyon olarak cikarildi: konu secildiginde
+  // (diger UI durumlarini - addOpen/editingId - sifirlayarak) VE yeni bir
+  // soru eklendiginde (mevcut UI durumunu bozmadan, sadece listeyi
+  // tazeleyerek) ayni sorgu tekrar kullanilabilsin diye. Boylece "+ Soru
+  // Ekle" panelinden bir soru eklenince liste otomatik yenilenir ve yeni
+  // soru (onay bekliyorsa Onayla butonuyla birlikte) hemen gorunur.
+  async function loadQuestions(id: string) {
     setLoading(true);
     const { data } = await supabase
       .from("questions")
@@ -328,6 +338,13 @@ export function QuestionTopicPanel({
       }))
     );
     setLoading(false);
+  }
+
+  async function pickTopic(id: string) {
+    setTopicId(id);
+    setAddOpen(false);
+    setEditingId(null);
+    await loadQuestions(id);
   }
 
   async function approveQuestion(id: string) {
@@ -432,16 +449,27 @@ export function QuestionTopicPanel({
                 {added}/{target} soru
               </Badge>
             </div>
-            <Button variant="secondary" onClick={() => setAddOpen((v) => !v)}>
-              {addOpen ? "Kapat" : "+ Soru Ekle"}
-            </Button>
+            {allowAdd && (
+              <Button variant="secondary" onClick={() => setAddOpen((v) => !v)}>
+                {addOpen ? "Kapat" : "+ Soru Ekle"}
+              </Button>
+            )}
           </div>
 
-          {addOpen && (
+          {allowAdd && addOpen && (
             <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <ManualQuestionForm topicId={selectedTopic.id} />
-                <BulkQuestionImport topicId={selectedTopic.id} subjectIds={subjectIds} />
+                <ManualQuestionForm
+                  topicId={selectedTopic.id}
+                  autoApprove={isAdmin}
+                  onAdded={() => loadQuestions(selectedTopic.id)}
+                />
+                <BulkQuestionImport
+                  topicId={selectedTopic.id}
+                  subjectIds={subjectIds}
+                  autoApprove={isAdmin}
+                  onAdded={() => loadQuestions(selectedTopic.id)}
+                />
               </div>
               {isAdmin && (
                 <div className="mt-6 max-w-xl border-t border-slate-200 pt-6">

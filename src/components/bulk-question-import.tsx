@@ -34,6 +34,8 @@ export function BulkQuestionImport({
   topicId,
   subjectIds,
   isReferenceOnly = false,
+  autoApprove = true,
+  onAdded,
 }: {
   /** Ekranda o an secili konu - metinde "Konu:" basligi olmayan sorular icin varsayilan olarak kullanilir. */
   topicId: string;
@@ -41,6 +43,13 @@ export function BulkQuestionImport({
   subjectIds?: string[];
   /** true ise (sadece admin'in Soru Havuzu ekranindan kullanilir), eklenen tum sorular dogrudan is_reference_only=true olarak kaydedilir - ogrenciye hicbir zaman gosterilmez, sadece yapay zekanin egitilmesi icin saklanir. */
   isReferenceOnly?: boolean;
+  /** false verilirse (ogretmen panelindeki "Soru Ekle / Onay" akisinda)
+   * eklenen sorular is_approved=false olarak kaydedilir - ekleyen ogretmen
+   * ayni ekrandaki "Onayla" butonuyla bilincli bir adimda onaylar. */
+  autoApprove?: boolean;
+  /** Sorular basariyla kaydedildiginde cagrilir - ust bilesenin soru
+   * listesi tazelensin diye. */
+  onAdded?: () => void;
 }) {
   const [text, setText] = useState("");
   const [topics, setTopics] = useState<TopicOption[]>([]);
@@ -141,7 +150,7 @@ export function BulkQuestionImport({
       correct_option: q.correct_option,
       explanation: q.explanation,
       source: "teacher" as const,
-      is_approved: true,
+      is_approved: isReferenceOnly ? true : autoApprove,
       is_reference_only: isReferenceOnly,
     }));
 
@@ -152,11 +161,13 @@ export function BulkQuestionImport({
       return;
     }
     const skipped = resolved.length - savable.length;
+    const approvalNote = isReferenceOnly || autoApprove ? "" : " Aşağıdaki konu listesinden \"Onayla\" butonuna basarak yayına alabilirsin.";
     setStatus(
-      `${rows.length} soru ${isReferenceOnly ? "soru havuzuna" : ""} eklendi.${skipped > 0 ? ` (${skipped} soru konu bulunamadığı için eklenmedi.)` : ""}`
+      `${rows.length} soru ${isReferenceOnly ? "soru havuzuna" : ""} eklendi.${skipped > 0 ? ` (${skipped} soru konu bulunamadığı için eklenmedi.)` : ""}${approvalNote}`
     );
     setResolved([]);
     setText("");
+    onAdded?.();
   }
 
   const groupedByTopic = resolved.reduce<Record<string, ResolvedQuestion[]>>((acc, q) => {
@@ -170,8 +181,9 @@ export function BulkQuestionImport({
         {isReferenceOnly ? "Kopyala-Yapıştır / Dosyadan Toplu Soru Havuzuna Ekle" : "Kopyala-Yapıştır / Dosyadan Toplu Soru Ekle"}
       </h2>
       <p className="mb-3 text-sm text-slate-500">
-        Word (.docx), PDF (.pdf) veya .txt dosyası yükle, ya da sınavdan/Word&apos;den kopyaladığın soruları
-        aşağıya yapıştır. Birden fazla konuyu tek seferde eklemek için her konudan önce ayrı bir satıra
+        Soruları tek tek elle girmek yerine, Word (.docx), PDF (.pdf), Excel (.xlsx) veya .txt dosyası yükleyerek
+        ya da sınavdan/Word&apos;den kopyaladığın soruları aşağıya yapıştırarak <strong>toplu</strong> ekleyebilirsin.
+        Birden fazla konuyu tek seferde eklemek için her konudan önce ayrı bir satıra
         <strong> Konu: &lt;konu adı&gt;</strong> yaz — sistem soruları otomatik olarak doğru konuya dağıtır. Konu
         başlığı yazmazsan, yukarıdan seçtiğin konu kullanılır. Şimdilik yalnızca metin destekleniyor
         (taranmış/fotoğraflı sorular için görsel okuma henüz yok). Her soru için{" "}
@@ -201,6 +213,15 @@ export function BulkQuestionImport({
         </p>
       </details>
 
+      <details className="mb-3 text-xs text-slate-500">
+        <summary className="cursor-pointer font-medium text-indigo-600">Excel (.xlsx) dosyası nasıl hazırlanmalı?</summary>
+        <p className="mt-2">
+          İlk satır başlık satırı olsun: <strong>Konu, Soru, A, B, C, D, Cevap, Açıklama</strong>. Her satır bir
+          soru olur — &quot;Konu&quot; sütununu boş bırakırsan yukarıdan seçtiğin konu kullanılır,
+          &quot;Cevap&quot; sütununa doğru şıkkın harfini (A/B/C/D) yaz.
+        </p>
+      </details>
+
       <Textarea
         rows={12}
         placeholder="Soruları buraya yapıştır ya da aşağıdan dosya yükle..."
@@ -209,10 +230,10 @@ export function BulkQuestionImport({
       />
 
       <div className="mb-3 mt-3">
-        <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .txt)</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Dosya Yükle (.docx, .pdf, .xlsx, .txt)</label>
         <input
           type="file"
-          accept=".docx,.pdf,.txt"
+          accept=".docx,.pdf,.xlsx,.txt"
           onChange={handleFileChange}
           disabled={fileLoading}
           className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"

@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { SimpleTabs } from "@/components/simple-tabs";
 import { QuestionTopicPanel, type PanelTopic } from "@/components/question-topic-panel";
-import { PanelSummary } from "@/components/panel-summary";
+import { Badge } from "@/components/ui";
+import { RecentQuestionsCard } from "@/components/recent-questions-card";
 import { getRecentQuestionActivity } from "@/lib/questions/recent";
 import { resolveEffectiveTeacher } from "@/lib/teacher/effective-teacher";
 
@@ -12,9 +13,15 @@ function firstOf<T>(v: T | T[] | null | undefined): T | undefined {
 // Kullanicinin "ogretmen panelinde de ilk acilis admin paneli gibi olsun, bu
 // gorunen kisim (kartlar + son sorular) ikisinde de 2. sekme olsun" talebiyle
 // admin/sorular/page.tsx ile ayni yapiya getirildi: 1. sekme (Genel Bakis) =
-// dogrudan konu secici (QuestionTopicPanel), 2. sekme (Ozet) = eskiden bu
-// sayfanin tamami olan kartlar + Son Eklenen/Onaylanan Sorular. Eski
-// /ogretmen/sorular sayfasi buraya tasindi, o route artik sadece yonlendiriyor.
+// dogrudan konu secici (QuestionTopicPanel) - SADECE goz atma/onaylama icin,
+// soru EKLEME butonu burada yok (bkz. QuestionTopicPanel allowAdd={false}).
+// 2. sekme "Soru Ekle / Onay" ise TEK soru ekleme yeri: ayni konu secici
+// burada allowAdd={true} ile tekrar kullanilir, boylece ogretmen sinif/ders/
+// konu secip soruyu elle, kopyala-yapistirla ya da PDF/Word/Excel dosyasiyla
+// ekler ve hemen ayni ekrandaki "Onayla" butonuyla kendi soruşunu onaylar
+// (bkz. question-topic-panel.tsx: ManualQuestionForm/BulkQuestionImport'a
+// autoApprove={isAdmin} - ogretmen icin false, yani soru once "onay bekliyor"
+// olarak eklenir, sonra ayni ekranda tek tikla onaylanir).
 export default async function OgretmenDashboard({
   searchParams,
 }: {
@@ -77,27 +84,63 @@ export default async function OgretmenDashboard({
 
   const recentActivity = await getRecentQuestionActivity(supabase, subjectIds.length > 0 ? subjectIds : ["__none__"]);
 
+  const noBranchNotice = (
+    <p className="text-sm text-amber-700">
+      Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
+    </p>
+  );
+
   const genelBakisTab =
     subjectIds.length === 0 ? (
-      <p className="text-sm text-amber-700">
-        Size henüz bir branş atanmamış. Admin panelinden bir branş atanması gerekiyor.
-      </p>
+      noBranchNotice
     ) : (
-      <QuestionTopicPanel topics={topics} counts={counts} subjects={teacherSubjects} subjectIds={subjectIds} isAdmin={false} />
+      <QuestionTopicPanel
+        topics={topics}
+        counts={counts}
+        subjects={teacherSubjects}
+        subjectIds={subjectIds}
+        isAdmin={false}
+        allowAdd={false}
+      />
     );
 
-  const ozetTab = (
-    <PanelSummary
-      isAdmin={false}
-      branchNames={branchNames}
-      addHref="/ogretmen?tab=genel"
-      approveHref="/ogretmen?tab=genel"
-      addSubtitle="Elle veya kopyala-yapıştır ile yeni soru ekle."
-      approveSubtitle="Branşındaki onay bekleyen soruları incele ve kalite kontrolünden geçir."
-      pendingCount={pendingQuestionCount}
-      recentActivity={recentActivity}
-      currentUserId={effectiveTeacherId}
-    />
+  const soruEkleOnayTab = (
+    <div className="flex flex-col gap-6">
+      {branchNames.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-slate-700">Branşların:</span>
+          {branchNames.map((name) => (
+            <Badge key={name}>{name}</Badge>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+        Sınıf/sınav ve konuyu seç; soruyu elle, kopyala-yapıştırla ya da PDF, Word veya Excel dosyasıyla
+        ekleyebilirsin — eklediğin soruyu hemen aşağıda beliren <strong>Onayla</strong> butonuyla kendin
+        onaylayıp yayına alırsın.
+      </div>
+
+      {subjectIds.length === 0 ? (
+        noBranchNotice
+      ) : (
+        <QuestionTopicPanel
+          topics={topics}
+          counts={counts}
+          subjects={teacherSubjects}
+          subjectIds={subjectIds}
+          isAdmin={false}
+          allowAdd
+        />
+      )}
+
+      <RecentQuestionsCard
+        added={recentActivity.added}
+        approved={recentActivity.approved}
+        isAdmin={false}
+        currentUserId={effectiveTeacherId}
+      />
+    </div>
   );
 
   return (
@@ -114,7 +157,7 @@ export default async function OgretmenDashboard({
         syncQueryParam="tab"
         tabs={[
           { key: "genel", label: "Genel Bakış", content: genelBakisTab, tone: "indigo" },
-          { key: "ozet", label: "Özet", content: ozetTab, dot: pendingQuestionCount > 0 },
+          { key: "ozet", label: "Soru Ekle / Onay", content: soruEkleOnayTab, dot: pendingQuestionCount > 0, tone: "amber" },
         ]}
       />
     </div>
