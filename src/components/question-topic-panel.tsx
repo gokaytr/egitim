@@ -32,7 +32,7 @@ const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
 // Anasayfadaki kanonik sinav sirasiyla ayni (bkz. reference-pool-browser.tsx
 // EXAM_ORDER) - kullanicinin talebiyle bu satirlar sinif pillerinin SAGINDA,
 // ayni satirda sirali gosteriliyor (ör. "12. Sınıf ... KPSS AYT YKS ...").
-const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YDT", "YKS", "KPSS", "ALES"];
+const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YDT", "YKS", "DGS", "KPSS", "ALES", "YDS", "YOKDIL"];
 
 // "1. sinifa basinca fizik gorunmesin, her sinifin altinda olan dersler
 // gorunsun" talebiyle - Ders secimi artik sistemdeki TUM dersleri degil,
@@ -164,11 +164,45 @@ const EXAM_SUBJECT_NAMES: Record<string, string[]> = {
     "Din Kültürü ve Ahlak Bilgisi",
     "İngilizce",
   ],
-  // KPSS Genel Yetenek-Genel Kultur: Turkce, Matematik, Tarih, Cografya,
-  // T.C. Inkilap Tarihi ve Ataturkculuk.
-  KPSS: ["Türkçe", "Matematik", "Tarih", "Coğrafya", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  // KPSS Genel Yetenek-Genel Kultur (Turkce, Matematik, Tarih, Cografya,
+  // T.C. Inkilap Tarihi ve Ataturkculuk, Vatandaslik) + KPSS Alan Bilgisi
+  // (A Grubu - belirli universite bolumu mezunlarina yonelik, kullanicinin
+  // acik talebiyle eklendi): Hukuk, Iktisat, Maliye, Muhasebe, Isletme,
+  // Kamu Yonetimi, Calisma Ekonomisi, Istatistik, Uluslararasi Iliskiler.
+  // "Guncel Bilgiler" (Genel Kultur'un bir parcasi) bilincli olarak
+  // eklenmedi - surekli degisen guncel olaylara dayandigi icin kalici bir
+  // konu/soru bankasi mantigina uymuyor.
+  KPSS: [
+    "Türkçe",
+    "Matematik",
+    "Tarih",
+    "Coğrafya",
+    "T.C. İnkılap Tarihi ve Atatürkçülük",
+    "Vatandaşlık",
+    "Hukuk",
+    "İktisat",
+    "Maliye",
+    "Muhasebe",
+    "İşletme",
+    "Kamu Yönetimi",
+    "Çalışma Ekonomisi",
+    "İstatistik",
+    "Uluslararası İlişkiler",
+  ],
   // ALES: sozel + sayisal akil yurutme, Turkce/Matematik agirlikli.
   ALES: ["Türkçe", "Matematik"],
+  // DGS (Dikey Gecis Sinavi): on lisans mezunlarinin lisansa gecisi icin -
+  // TYT duzeyinde Turkce+Matematik agirlikli, ayri bir ders seti yok, bu
+  // yuzden ilgili Turkce/Matematik konulari da veride DGS ile etiketlendi.
+  DGS: ["Türkçe", "Matematik"],
+  // YDS/e-YDS (Yabanci Dil Bilgisi Seviye Tespit Sinavi): e-YDS, YDS'nin
+  // aynen ayni mufredatli bilgisayar tabanli surumu oldugu icin ayri bir
+  // enum degeri ACILMADI - konular tek "YDS" etiketi altinda birlestirildi.
+  YDS: ["İngilizce"],
+  // YOKDIL (Yuksekogretim Kurumlari Yabanci Dil Sinavi) - akademik/ileri
+  // duzey Ingilizce, YDS ile buyuk olcude ayni mufredati paylasir (bkz.
+  // Ingilizce dersindeki YDS/YOKDIL ortak etiketli konular).
+  YOKDIL: ["İngilizce"],
 };
 
 function allowedSubjectNames(row: RowSel): string[] {
