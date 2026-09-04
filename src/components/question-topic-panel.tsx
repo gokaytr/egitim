@@ -34,6 +34,42 @@ const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
 // ayni satirda sirali gosteriliyor (ör. "12. Sınıf ... KPSS AYT YKS ...").
 const EXAM_ROW_ORDER = ["BILSEM", "LGS", "TYT", "AYT", "YKS", "KPSS", "ALES"];
 
+// "1. sinifa basinca fizik gorunmesin, her sinifin altinda olan dersler
+// gorunsun" talebiyle - Ders secimi artik sistemdeki TUM dersleri degil,
+// gercek Turkiye mufredatinda o sinif/sinavda okutulan/sorulan dersleri
+// gosteriyor. Isimler subjects tablosundaki gercek ders adlariyla BIREBIR
+// eslesmeli (bkz. asagidaki subjects.name degerleri) - yeni bir ders
+// (subjects tablosuna) eklenirse bu iki liste de guncellenmeli, yoksa o
+// ders hicbir sinif/sinavin altinda gorunmez.
+const GRADE_SUBJECT_NAMES: Record<number, string[]> = {
+  1: ["Türkçe", "Matematik"],
+  2: ["Türkçe", "Matematik", "İngilizce"],
+  3: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri"],
+  4: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  5: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  6: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  7: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  8: ["Türkçe", "Matematik", "İngilizce", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  9: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
+  10: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
+  11: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi"],
+  12: ["Matematik", "İngilizce", "Fizik", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+};
+
+const EXAM_SUBJECT_NAMES: Record<string, string[]> = {
+  BILSEM: ["Türkçe", "Matematik", "Fen Bilimleri"],
+  LGS: ["Türkçe", "Matematik", "Fen Bilimleri", "İngilizce", "Din Kültürü ve Ahlak Bilgisi", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  TYT: ["Türkçe", "Matematik", "Fizik", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  AYT: ["Matematik", "Fizik"],
+  YKS: ["Türkçe", "Matematik", "Fizik", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi"],
+  KPSS: ["Türkçe", "Matematik", "T.C. İnkılap Tarihi ve Atatürkçülük"],
+  ALES: ["Türkçe", "Matematik"],
+};
+
+function allowedSubjectNames(row: RowSel): string[] {
+  return row.type === "grade" ? GRADE_SUBJECT_NAMES[row.value] ?? [] : EXAM_SUBJECT_NAMES[row.value] ?? [];
+}
+
 function rowMatches(row: RowSel, t: PanelTopic): boolean {
   return row.type === "grade" ? t.grade_level === row.value : (t.exam_types ?? []).includes(row.value);
 }
@@ -102,12 +138,14 @@ export function QuestionTopicPanel({
 
   const selectedTopic = topicId ? topicById.get(topicId) : undefined;
 
-  // Secili sinif/sinavda henuz konusu olmayan bir ders de listede kalsin
-  // diye burada topics'e gore filtrelemiyoruz - sistemdeki (ogretmen icin
-  // kendi atanmis) TUM dersler her zaman gosteriliyor.
+  // Secili sinif/sinavda henuz konusu/sorusu olmayan bir ders de listede
+  // kalsin diye topics'e gore filtrelemiyoruz - ama GRADE_SUBJECT_NAMES/
+  // EXAM_SUBJECT_NAMES'e gore o sinif/sinavda gercekten okutulan/sorulan
+  // dersler disinda hicbir sey gosterilmiyor (ör. 1. sinifta Fizik yok).
   const subjectsForRow = useMemo(() => {
     if (!row) return [];
-    return [...subjects].sort((a, b) => a.name.localeCompare(b.name, "tr"));
+    const allowed = new Set(allowedSubjectNames(row));
+    return subjects.filter((s) => allowed.has(s.name)).sort((a, b) => a.name.localeCompare(b.name, "tr"));
   }, [row, subjects]);
 
   const topicsForRowSubject = useMemo(() => {

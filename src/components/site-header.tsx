@@ -176,11 +176,6 @@ export function SiteHeader({
                 {l.label}
               </a>
             ))}
-            {!isLoggedIn && (
-              <Link href="/kayit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
-                Ücretsiz Başla
-              </Link>
-            )}
           </nav>
         </div>
       )}
