@@ -13,7 +13,6 @@ const NAV_PARENT = [
 
 export default async function OgrenciLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: subjects } = await supabase.from("subjects").select("id, name").order("name");
 
   // Koc Pusula sohbet balonu SADECE gercek ogrenci girisinde veya admin
   // bir test ogrenciyi onizlerken gorunur - veli onizlemesinde gosterilmez.
@@ -35,6 +34,37 @@ export default async function OgrenciLayout({ children }: { children: React.Reac
     callerProfile?.role === "admin" && isAdminPreview
       ? (await supabase.from("profiles").select("full_name, grade_level, exam_target").eq("id", effectiveStudentId).single()).data
       : callerProfile;
+
+  // Kullanicinin "solda ogrenci ile alakasi olmayan dersler gorunmesin"
+  // talebiyle: artik subjects tablosunun TAMAMI degil, sadece ogrencinin
+  // kendi sinif duzeyine (grade_level) VEYA hedef sinavina (exam_target)
+  // ait en az bir konusu olan dersler listeleniyor - orn. bir ilkokul
+  // ogrencisine Hukuk/Iktisat/Isletme gibi KPSS/ALES dersleri hic
+  // gorunmez. Profil bilgisi eksikse (grade_level/exam_target null) hic
+  // filtre uygulanamayacagi icin - yanlislikla bos liste gostermemek adina
+  // - eskisi gibi tum dersler gosterilir (zaten profileInfoMissing uyarisi
+  // ayarlara yonlendiriyor).
+  let subjects: { id: string; name: string }[] | null = null;
+  if (isStudentView && (effectiveProfile?.grade_level != null || effectiveProfile?.exam_target)) {
+    let relevantTopics = supabase.from("topics").select("subject_id");
+    if (effectiveProfile?.grade_level != null && effectiveProfile?.exam_target) {
+      relevantTopics = relevantTopics.or(
+        `grade_level.eq.${effectiveProfile.grade_level},exam_types.cs.{${effectiveProfile.exam_target}}`,
+      );
+    } else if (effectiveProfile?.grade_level != null) {
+      relevantTopics = relevantTopics.eq("grade_level", effectiveProfile.grade_level);
+    } else if (effectiveProfile?.exam_target) {
+      relevantTopics = relevantTopics.contains("exam_types", [effectiveProfile.exam_target]);
+    }
+    const { data: topicRows } = await relevantTopics;
+    const relevantSubjectIds = Array.from(new Set((topicRows ?? []).map((t) => t.subject_id)));
+    const { data: filteredSubjects } = relevantSubjectIds.length
+      ? await supabase.from("subjects").select("id, name").in("id", relevantSubjectIds).order("name")
+      : { data: [] };
+    subjects = filteredSubjects;
+  } else {
+    subjects = (await supabase.from("subjects").select("id, name").order("name")).data;
+  }
 
   // Google ile uye olan ogrencilerde sinif/hedef sinav bilgisi kayit
   // sirasinda alinamadigi icin bos kalabiliyor - bu durumda ogrenci
