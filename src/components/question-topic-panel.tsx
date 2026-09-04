@@ -532,9 +532,6 @@ export function QuestionTopicPanel({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <p className="text-sm font-semibold text-slate-800">{selectedTopic.name}</p>
-              <Badge tone={added >= target ? "green" : added > 0 ? "amber" : "default"}>
-                {added}/{target} soru
-              </Badge>
               {questions.length > 0 && (
                 <>
                   <button
@@ -555,6 +552,9 @@ export function QuestionTopicPanel({
                   {copyStatus && <span className="text-xs text-slate-500">{copyStatus}</span>}
                 </>
               )}
+              <Badge tone={added >= target ? "green" : added > 0 ? "amber" : "default"}>
+                {added}/{target} soru
+              </Badge>
             </div>
             {allowAdd && (
               <Button variant="secondary" onClick={() => setAddOpen((v) => !v)}>
