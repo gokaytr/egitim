@@ -43,7 +43,7 @@ export default async function OgretmenDashboard({
   const branchNames = teacherSubjects.map((s) => s.name);
 
   let topics: PanelTopic[] = [];
-  const counts = new Map<string, number>();
+  const counts = new Map<string, { total: number; approved: number }>();
   let pendingQuestionCount = 0;
 
   if (subjectIds.length > 0) {
@@ -52,11 +52,10 @@ export default async function OgretmenDashboard({
         .from("topics")
         .select("id, name, grade_level, subject_id, exam_types, target_question_count, subjects(name)")
         .in("subject_id", subjectIds),
-      supabase
-        .from("questions")
-        .select("topic_id, topics!inner(subject_id)")
-        .eq("is_reference_only", false)
-        .in("topics.subject_id", subjectIds),
+      // Admin panelindekiyle ayni sebeple (bkz. admin/sorular/page.tsx notu ve
+      // migration 0035) tek tek soru ceken sorgu yerine veritabaninda GROUP BY
+      // yapan RPC kullaniliyor - 1000 satir sinirina takilmiyor.
+      supabase.rpc("question_counts_by_topic", { subject_ids: subjectIds }),
       supabase
         .from("questions")
         .select("id, topics!inner(subject_id)", { count: "exact", head: true })
@@ -74,9 +73,9 @@ export default async function OgretmenDashboard({
       target_question_count: t.target_question_count,
     }));
 
-    (countRows ?? []).forEach((q) => {
-      if (!q.topic_id) return;
-      counts.set(q.topic_id, (counts.get(q.topic_id) ?? 0) + 1);
+    (countRows ?? []).forEach((r: { topic_id: string | null; total: number; approved: number }) => {
+      if (!r.topic_id) return;
+      counts.set(r.topic_id, { total: Number(r.total), approved: Number(r.approved) });
     });
 
     pendingQuestionCount = pendingCount ?? 0;

@@ -47,16 +47,22 @@ export default async function SorularPage() {
       .from("reference_pool_files")
       .select("id, file_name, storage_path, mime_type, created_at")
       .order("created_at", { ascending: false }),
-    supabase.from("questions").select("topic_id").eq("is_reference_only", false),
+    // Konu basina soru sayisi artik veritabaninda GROUP BY yapan bir RPC ile
+    // (question_counts_by_topic) okunuyor - eskiden her soruyu tek tek ceken
+    // sorgu, questions tablosu 1000 satiri gectiginde Supabase'in varsayilan
+    // sayfalama sinirina takilip bazi konularin sayacini oldugundan az
+    // gosteriyordu (bkz. migration 0035). RPC hem bu sinirdan kacinir hem de
+    // onayli sayiyi da tek seferde getirir.
+    supabase.rpc("question_counts_by_topic"),
     supabase.from("questions").select("id", { count: "exact", head: true }).eq("is_approved", false),
   ]);
 
   const recentActivity = await getRecentQuestionActivity(supabase, null);
 
-  const counts = new Map<string, number>();
-  (countRows ?? []).forEach((q) => {
-    if (!q.topic_id) return;
-    counts.set(q.topic_id, (counts.get(q.topic_id) ?? 0) + 1);
+  const counts = new Map<string, { total: number; approved: number }>();
+  (countRows ?? []).forEach((r: { topic_id: string | null; total: number; approved: number }) => {
+    if (!r.topic_id) return;
+    counts.set(r.topic_id, { total: Number(r.total), approved: Number(r.approved) });
   });
 
   const curriculumTopics: CurriculumTopicRow[] = (rawTopics ?? []).map((t) => ({

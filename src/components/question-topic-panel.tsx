@@ -259,7 +259,11 @@ export function QuestionTopicPanel({
   allowAdd = true,
 }: {
   topics: PanelTopic[];
-  counts: Map<string, number>;
+  /** Konu basina { total, approved } - bkz. migration 0035: veritabaninda
+   * GROUP BY yapan question_counts_by_topic RPC'sinden geliyor, boylece hem
+   * "kac soru eklendi" hem de "kaci onaylandi" (konu listesinde "Onaylandı"
+   * rozetini gostermek icin) tek seferde okunabiliyor. */
+  counts: Map<string, { total: number; approved: number }>;
   /** Ders secimi artik sadece secili sinif/sinavda konusu olan degil, TUM
    * dersleri gosteriyor (kullanicinin "tum siniflarin derslerini soru
    * olmasa da ekle" talebi) - boylece henuz konu/soru girilmemis bir ders
@@ -435,7 +439,7 @@ export function QuestionTopicPanel({
       })
       .join("\n\n");
     const prompt =
-      "\n\n---\nYukarıdaki sorular ve cevapları ile doğru mudur? Kontrol et; yanlış, hatalı veya belirsiz bir soru varsa hangisi olduğunu ve sebebini belirt.";
+      "\n\n---\nYukarıdaki soruları ve cevap anahtarını kontrol et. Sadece yanlış, hatalı veya belirsiz olan soruları listele; her biri için hangi soru olduğunu ve sorunun sebebini kısaca belirt. Doğru olan sorular hakkında yorum yapmana veya onları tek tek listelemene gerek yok.";
     try {
       await navigator.clipboard.writeText(header + body + prompt);
       setCopyStatus("Kopyalandı ✓");
@@ -449,8 +453,10 @@ export function QuestionTopicPanel({
     return <p className="text-sm text-slate-500">Henüz hiç konu (müfredat) eklenmemiş.</p>;
   }
 
-  const added = selectedTopic ? counts.get(selectedTopic.id) ?? 0 : 0;
+  const added = selectedTopic ? counts.get(selectedTopic.id)?.total ?? 0 : 0;
+  const approvedCount = selectedTopic ? counts.get(selectedTopic.id)?.approved ?? 0 : 0;
   const target = selectedTopic ? selectedTopic.target_question_count ?? DEFAULT_TARGET : 0;
+  const topicFullyApproved = added > 0 && approvedCount === added;
 
   return (
     <div className="flex flex-col gap-4">
@@ -504,8 +510,11 @@ export function QuestionTopicPanel({
           ) : (
             <div className="flex flex-col gap-1.5">
               {topicsForRowSubject.map((t) => {
-                const topicAdded = counts.get(t.id) ?? 0;
+                const topicCount = counts.get(t.id);
+                const topicAdded = topicCount?.total ?? 0;
+                const topicApproved = topicCount?.approved ?? 0;
                 const topicTarget = t.target_question_count ?? DEFAULT_TARGET;
+                const topicFullyApproved = topicAdded > 0 && topicApproved === topicAdded;
                 return (
                   <button
                     key={t.id}
@@ -516,9 +525,15 @@ export function QuestionTopicPanel({
                     }`}
                   >
                     <span>{t.name}</span>
-                    <Badge tone={topicAdded >= topicTarget ? "green" : topicAdded > 0 ? "amber" : "default"}>
-                      {topicAdded}/{topicTarget} soru
-                    </Badge>
+                    <span className="flex items-center gap-1.5">
+                      {/* Konu tekrar acilip kontrol edilmeden de "tamamen
+                          onaylandi mi" belli olsun diye - kullanicinin
+                          "tekrar bakmayalım" talebiyle eklendi. */}
+                      {topicFullyApproved && <Badge tone="green">✓ Onaylandı</Badge>}
+                      <Badge tone={topicAdded >= topicTarget ? "green" : topicAdded > 0 ? "amber" : "default"}>
+                        {topicAdded}/{topicTarget} soru
+                      </Badge>
+                    </span>
                   </button>
                 );
               })}
@@ -552,6 +567,7 @@ export function QuestionTopicPanel({
                   {copyStatus && <span className="text-xs text-slate-500">{copyStatus}</span>}
                 </>
               )}
+              {topicFullyApproved && <Badge tone="green">✓ Onaylandı</Badge>}
               <Badge tone={added >= target ? "green" : added > 0 ? "amber" : "default"}>
                 {added}/{target} soru
               </Badge>
@@ -603,11 +619,6 @@ export function QuestionTopicPanel({
                 return (
                   <li key={q.id} className="flex items-start gap-3 rounded-lg border border-slate-200 p-2.5 text-sm">
                     <div className="min-w-0 flex-1">
-                      {q.follows_new_policy && (
-                        <div className="mb-1">
-                          <Badge tone="amber">*</Badge>
-                        </div>
-                      )}
                       <p className="font-medium text-slate-900">
                         {i + 1}. {q.body}
                       </p>

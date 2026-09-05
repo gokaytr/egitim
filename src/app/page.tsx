@@ -55,36 +55,28 @@ const ROLE_PANEL_CTA: Record<string, string> = {
 // devam eder.
 export default async function Home() {
   const supabase = await createClient();
+  // Konu/soru sayisi RPC (public_topic_count/public_question_count) uzerinden
+  // okunuyor: topics_read_all ve questions_read_all RLS politikalari
+  // "auth.uid() is not null" sarti tasidigi icin GIRIS YAPMAMIS bir ziyaretci
+  // icin normal .select(...) sorgusu 0 donuyordu - anasayfadaki sayac (ve
+  // mobil gorunumu) bu yuzden herkese kapali gorunuyordu. Bu iki fonksiyon
+  // SECURITY DEFINER oldugu icin RLS'i bypass edip sadece TOPLAM sayiyi
+  // donuyor - asil soru/konu icerigi hala sadece giris yapan kullanicilara
+  // aciliyor, sadece bu iki rakam herkese aciliyor (bkz. migration
+  // 0035_soru_sayaci_performans_ve_genel_erisim.sql).
   const [
     { data: userData },
     { data: heroSettings },
     { data: tileSettings },
-    { count: topicCount },
-    { data: siteSettings },
+    { data: topicCount },
+    { data: questionCount },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("homepage_settings").select("hero_media_type, hero_media_url").eq("id", true).single(),
     supabase.from("homepage_tiles").select("tile_index, media_type, media_url"),
-    supabase.from("topics").select("id", { count: "exact", head: true }),
-    supabase.from("site_settings").select("require_question_approval").eq("id", true).single(),
+    supabase.rpc("public_topic_count"),
+    supabase.rpc("public_question_count"),
   ]);
-
-  // Sadece "onaylı" sorular sayilirsa (eski davranis), admin panelinden
-  // "sadece onayli sorular ogrenciye gorunsun" ayari kapaliyken (varsayilan)
-  // ogrenciye fiilen gorunen soru sayisiyla bu sayac uyusmuyordu - onay artik
-  // gorunurlugu degil sadece kalite kontrolunu belirtiyor (bkz. RLS
-  // "questions_read_all"). Bu yuzden sayac da ayni kurala uyuyor: reddedilen
-  // sorular her zaman disarida, onay ise sadece ayar acikken sayiliyor.
-  const requireApproval = siteSettings?.require_question_approval ?? false;
-  let questionCountQuery = supabase
-    .from("questions")
-    .select("id", { count: "exact", head: true })
-    .eq("is_reference_only", false)
-    .eq("is_rejected", false);
-  if (requireApproval) {
-    questionCountQuery = questionCountQuery.eq("is_approved", true);
-  }
-  const { count: questionCount } = await questionCountQuery;
 
   // Sistemdeki sinif sayisi sabit (1-12) - kullanicinin talebiyle sinav
   // rozetlerinin altina eklenmis olan, her sinifin soru sayisini gosteren
