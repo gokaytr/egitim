@@ -36,7 +36,6 @@ function reviewStatusOf(q: { is_approved: boolean; is_rejected: boolean }): Revi
 
 type RowSel = { type: "grade"; value: number } | { type: "exam"; value: string };
 
-const DEFAULT_TARGET = 60;
 const LOAD_LIMIT = 300;
 const GRADE_ROWS = Array.from({ length: 12 }, (_, i) => i + 1);
 // Anasayfadaki kanonik sinav sirasiyla ayni (bkz. reference-pool-browser.tsx
@@ -532,7 +531,6 @@ export function QuestionTopicPanel({
 
   const added = selectedTopic ? counts.get(selectedTopic.id)?.total ?? 0 : 0;
   const approvedCount = selectedTopic ? counts.get(selectedTopic.id)?.approved ?? 0 : 0;
-  const target = selectedTopic ? selectedTopic.target_question_count ?? DEFAULT_TARGET : 0;
   const topicFullyApproved = added > 0 && approvedCount === added;
 
   return (
@@ -593,7 +591,6 @@ export function QuestionTopicPanel({
                 const topicCount = counts.get(t.id);
                 const topicAdded = topicCount?.total ?? 0;
                 const topicApproved = topicCount?.approved ?? 0;
-                const topicTarget = t.target_question_count ?? DEFAULT_TARGET;
                 const topicFullyApproved = topicAdded > 0 && topicApproved === topicAdded;
                 return (
                   <button
@@ -609,9 +606,15 @@ export function QuestionTopicPanel({
                       {/* Konu tekrar acilip kontrol edilmeden de "tamamen
                           onaylandi mi" belli olsun diye - kullanicinin
                           "tekrar bakmayalım" talebiyle eklendi. */}
+                      {/* Bu rozet artik "eklenen/hedef" degil "onayli/toplam"
+                          gosteriyor - kullanicinin "73/60 yesil gorunuyor ama
+                          hepsi onayli degil, bu yanlis izlenim veriyor"
+                          geri bildirimiyle degistirildi. Hedefe ulasilmis
+                          olsa bile onaylanmamis soru varsa kirmizi kalir,
+                          boylece "hala is var" hemen belli olur. */}
                       {topicFullyApproved && <Badge tone="green">✓ Onaylandı</Badge>}
-                      <Badge tone={topicAdded >= topicTarget ? "green" : topicAdded > 0 ? "amber" : "default"}>
-                        {topicAdded}/{topicTarget} soru
+                      <Badge tone={topicAdded === 0 ? "default" : topicFullyApproved ? "green" : "red"}>
+                        {topicApproved}/{topicAdded} onaylı
                       </Badge>
                     </span>
                   </button>
@@ -648,8 +651,8 @@ export function QuestionTopicPanel({
                 </>
               )}
               {topicFullyApproved && <Badge tone="green">✓ Onaylandı</Badge>}
-              <Badge tone={added >= target ? "green" : added > 0 ? "amber" : "default"}>
-                {added}/{target} soru
+              <Badge tone={added === 0 ? "default" : topicFullyApproved ? "green" : "red"}>
+                {approvedCount}/{added} onaylı
               </Badge>
             </div>
             {allowAdd && (
