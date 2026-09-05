@@ -486,8 +486,15 @@ export function QuestionTopicPanel({
         return `${i + 1}. ${q.body}\n${opts}\nAçıklama: ${q.explanation ?? "(açıklama yok)"}`;
       })
       .join("\n\n");
+    // Kullanicinin talebiyle: ChatGPT/Grok/Gemini gibi farkli yapay
+    // zekalara bu metni yapistirdiginda, cevabin belirli bir cumleyle
+    // baslamasi isteniyor - boylece kullanici o cevabi dogrudan kopyalayip
+    // buraya (Claude'a) yapistirdiginda hangi konuya ait oldugu hemen
+    // belli oluyor, ayrica ayri bir aciklama yazmasina gerek kalmiyor.
+    const topicLabel = `${selectedTopic.grade_level != null ? `${selectedTopic.grade_level}. sınıf ` : ""}${selectedTopic.subject_name} ${selectedTopic.name}`;
     const prompt =
-      "\n\n---\nYukarıdaki soruları ve cevap anahtarını kontrol et. Sadece yanlış, hatalı veya belirsiz olan soruları listele; her biri için hangi soru olduğunu ve sorunun sebebini kısaca belirt. Doğru olan sorular hakkında yorum yapmana veya onları tek tek listelemene gerek yok.";
+      "\n\n---\nYukarıdaki soruları, MEB müfredatını da göz önünde bulundurarak incele ve öneride bulun. Sadece yanlış gördüğün, hatalı, belirsiz veya mükerrer (birbirinin tekrarı niteliğinde) olan sorular için cevap ver; her biri için hangi soru olduğunu ve sorunun sebebini kısaca belirt. Doğru olan sorular hakkında yorum yapmana veya onları tek tek listelemene gerek yok.\n\n" +
+      `Cevabına lütfen şu cümleyle başla: "${topicLabel} için inceleme şu şekildedir:"`;
     try {
       await navigator.clipboard.writeText(header + body + prompt);
       setCopyStatus("Kopyalandı ✓");
