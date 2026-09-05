@@ -305,6 +305,47 @@ export function QuestionTopicPanel({
     return subjects.filter((s) => allowed.has(s.name)).sort((a, b) => a.name.localeCompare(b.name, "tr"));
   }, [row, subjects]);
 
+  // Sinif/sinav ve ders pillerinin yanindaki "onayli/toplam" sayaclari -
+  // kullanicinin "hangi ders/sinifta hala is var, hangisi bitti belli
+  // olsun" talebiyle eklendi. Ekstra bir veritabani sorgusu YOK: zaten
+  // sayfa yuklenirken tek seferde cekilen `topics` ve `counts` (bkz.
+  // migration 0035 question_counts_by_topic RPC'si) üzerinden, tarayicida
+  // basit bir toplama ile hesaplaniyor - topics birkaç yuz satirlik kucuk
+  // bir liste oldugu icin bu islem onemsiz derecede ucuz, sistemi/veritabanini
+  // ek bir yuk bindirmiyor.
+  const rowCounts = useMemo(() => {
+    const map = new Map<string, { total: number; approved: number }>();
+    const add = (key: string, c: { total: number; approved: number }) => {
+      const prev = map.get(key) ?? { total: 0, approved: 0 };
+      map.set(key, { total: prev.total + c.total, approved: prev.approved + c.approved });
+    };
+    for (const t of topics) {
+      const c = counts.get(t.id);
+      if (!c) continue;
+      if (t.grade_level != null) add(`g-${t.grade_level}`, c);
+      for (const e of t.exam_types ?? []) add(`e-${e}`, c);
+    }
+    return map;
+  }, [topics, counts]);
+
+  const subjectCountsForRow = useMemo(() => {
+    const map = new Map<string, { total: number; approved: number }>();
+    if (!row) return map;
+    for (const t of topics) {
+      if (!rowMatches(row, t)) continue;
+      const c = counts.get(t.id);
+      if (!c) continue;
+      const prev = map.get(t.subject_id) ?? { total: 0, approved: 0 };
+      map.set(t.subject_id, { total: prev.total + c.total, approved: prev.approved + c.approved });
+    }
+    return map;
+  }, [row, topics, counts]);
+
+  function CountSuffix({ c }: { c?: { total: number; approved: number } }) {
+    if (!c || c.total === 0) return null;
+    return <span className="ml-1 font-normal opacity-70">{c.approved}/{c.total}</span>;
+  }
+
   const topicsForRowSubject = useMemo(() => {
     if (!row || !subjectId) return [];
     return topics.filter((t) => rowMatches(row, t) && t.subject_id === subjectId).sort((a, b) => a.name.localeCompare(b.name, "tr"));
@@ -466,11 +507,13 @@ export function QuestionTopicPanel({
           {GRADE_ROWS.map((g) => (
             <RowButton key={`g-${g}`} active={!!row && row.type === "grade" && row.value === g} onClick={() => pickRow({ type: "grade", value: g })}>
               {g}. Sınıf
+              <CountSuffix c={rowCounts.get(`g-${g}`)} />
             </RowButton>
           ))}
           {EXAM_ROW_ORDER.map((e) => (
             <RowButton key={`e-${e}`} active={!!row && row.type === "exam" && row.value === e} onClick={() => pickRow({ type: "exam", value: e })}>
               {e}
+              <CountSuffix c={rowCounts.get(`e-${e}`)} />
             </RowButton>
           ))}
         </div>
@@ -495,6 +538,7 @@ export function QuestionTopicPanel({
               {subjectsForRow.map((s) => (
                 <RowButton key={s.id} active={subjectId === s.id} onClick={() => pickSubject(s.id)}>
                   {s.name}
+                  <CountSuffix c={subjectCountsForRow.get(s.id)} />
                 </RowButton>
               ))}
             </div>
