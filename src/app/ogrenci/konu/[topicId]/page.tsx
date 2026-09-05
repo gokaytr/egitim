@@ -5,8 +5,7 @@ import { Card } from "@/components/ui";
 import { LessonContentView } from "@/components/lesson-content-view";
 import { getStudentQuizSettings } from "@/lib/student/quiz-settings";
 import { resolveEffectiveStudent } from "@/lib/student/effective-student";
-
-const TEST_LABELS: Record<number, string> = { 1: "Test 1 · Kolay", 2: "Test 2 · Orta", 3: "Test 3 · Zor" };
+import { getTestLabel } from "@/lib/questions/test-labels";
 
 export default async function KonuTestPage({
   params,
@@ -97,7 +96,7 @@ export default async function KonuTestPage({
             return (
               <Link key={n} href={`/ogrenci/konu/${topicId}?test=${n}`} className="block">
                 <Card className="h-full transition hover:border-indigo-300 hover:shadow-sm">
-                  <p className="font-semibold text-slate-900">{TEST_LABELS[n] ?? `Test ${n}`}</p>
+                  <p className="font-semibold text-slate-900">{getTestLabel(n)}</p>
                   <p className="mt-1 text-sm text-slate-500">{count} soru</p>
                 </Card>
               </Link>
@@ -113,7 +112,7 @@ export default async function KonuTestPage({
       ) : (
         <QuizRunner
           topicId={topicId}
-          topicName={isGrouped && selectedTest ? `${topic?.name ?? "Konu"} · ${TEST_LABELS[selectedTest] ?? `Test ${selectedTest}`}` : topic?.name ?? "Konu"}
+          topicName={isGrouped && selectedTest ? `${topic?.name ?? "Konu"} · ${getTestLabel(selectedTest)}` : topic?.name ?? "Konu"}
           questions={questions}
           quizSettings={quizSettings}
           gradeLevel={studentProfile?.grade_level}

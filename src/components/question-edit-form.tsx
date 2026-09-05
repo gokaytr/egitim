@@ -13,6 +13,7 @@ export type EditableQuestion = {
   correct_option: string;
   explanation: string | null;
   difficulty: QuestionDifficulty | null;
+  image_url?: string | null;
 };
 
 const OPTION_KEYS = ["A", "B", "C", "D"] as const;
@@ -34,6 +35,7 @@ export function QuestionEditForm({ question, onDone }: { question: EditableQuest
   const [correctOption, setCorrectOption] = useState(question.correct_option);
   const [explanation, setExplanation] = useState(question.explanation ?? "");
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(question.difficulty ?? "orta");
+  const [imageUrl, setImageUrl] = useState(question.image_url ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +55,7 @@ export function QuestionEditForm({ question, onDone }: { question: EditableQuest
         correct_option: correctOption,
         explanation: explanation.trim(),
         difficulty,
+        image_url: imageUrl.trim() || null,
       })
       .eq("id", question.id);
     setSaving(false);
@@ -103,6 +106,18 @@ export function QuestionEditForm({ question, onDone }: { question: EditableQuest
           value={explanation}
           onChange={(e) => setExplanation(e.target.value)}
           rows={2}
+          className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600">
+          Görsel URL&apos;i (opsiyonel — Gemini gibi bir yapay zekada üretip buraya yapıştır)
+        </label>
+        <input
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://..."
           className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"
         />
       </div>

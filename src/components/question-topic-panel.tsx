@@ -7,6 +7,7 @@ import { ManualQuestionForm } from "@/components/manual-question-form";
 import { BulkQuestionImport } from "@/components/bulk-question-import";
 import { AiQuestionGenerate } from "@/components/ai-question-generate";
 import { QuestionEditForm, type EditableQuestion } from "@/components/question-edit-form";
+import { getTestLabel } from "@/lib/questions/test-labels";
 
 export type PanelTopic = {
   id: string;
@@ -22,6 +23,7 @@ type PanelQuestion = EditableQuestion & {
   is_approved: boolean;
   is_rejected: boolean;
   follows_new_policy: boolean;
+  test_number: number | null;
 };
 
 type ReviewStatus = "pending" | "approved" | "rejected";
@@ -292,6 +294,7 @@ export function QuestionTopicPanel({
   const [bulkApproving, setBulkApproving] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [imagePromptCopiedId, setImagePromptCopiedId] = useState<string | null>(null);
 
   const selectedTopic = topicId ? topicById.get(topicId) : undefined;
 
@@ -385,9 +388,12 @@ export function QuestionTopicPanel({
     setLoading(true);
     const { data } = await supabase
       .from("questions")
-      .select("id, body, options, correct_option, explanation, difficulty, is_approved, is_rejected, follows_new_policy")
+      .select(
+        "id, body, options, correct_option, explanation, difficulty, is_approved, is_rejected, follows_new_policy, test_number, image_url"
+      )
       .eq("topic_id", id)
       .eq("is_reference_only", false)
+      .order("test_number", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false })
       .limit(LOAD_LIMIT);
     setQuestions(
@@ -401,6 +407,8 @@ export function QuestionTopicPanel({
         is_approved: !!q.is_approved,
         is_rejected: !!q.is_rejected,
         follows_new_policy: !!q.follows_new_policy,
+        test_number: (q.test_number as number) ?? null,
+        image_url: (q.image_url as string) ?? null,
       }))
     );
     setLoading(false);
@@ -488,6 +496,34 @@ export function QuestionTopicPanel({
       setCopyStatus("Kopyalanamadı, tarayıcı izni gerekebilir.");
     }
     setTimeout(() => setCopyStatus(null), 2500);
+  }
+
+  // Bu soruya gorsel hazirlamak icin Gemini/ChatGPT gibi bir gorsel uretme
+  // araciyla kullanilabilecek bir istem (prompt) metni olusturup panoya
+  // kopyalar - kullanicinin "gorseli ben eklemeyecegim, yapay zekaya
+  // sorulacak metni kopyalayip Gemini gibi bir yerde hazirlayip admin
+  // panelinden ekleyelim" talebiyle eklendi (bkz. yukaridaki "Gorsel
+  // URL'i" alani - uretilen gorselin linki oraya yapistiriliyor). Gercek
+  // gorsel uretimi burada YAPILMIYOR, sadece istem metni kopyalaniyor.
+  async function copyImagePrompt(q: PanelQuestion) {
+    const optionsText = Object.entries(q.options ?? {})
+      .map(([key, val]) => `${key}) ${val}`)
+      .join("\n");
+    const prompt = [
+      "Aşağıdaki soru için, çocuklara yönelik (ilkokul/ortaokul seviyesi), sade ve anlaşılır, sorunun içeriğini görsel olarak destekleyen bir eğitim illüstrasyonu üret. Metin/yazı içermesin, sadece görsel olsun.",
+      "",
+      `Soru: ${q.body}`,
+      optionsText ? `Şıklar:\n${optionsText}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setImagePromptCopiedId(q.id);
+      setTimeout(() => setImagePromptCopiedId((cur) => (cur === q.id ? null : cur)), 2500);
+    } catch {
+      setImagePromptCopiedId(null);
+    }
   }
 
   if (topics.length === 0) {
@@ -660,8 +696,22 @@ export function QuestionTopicPanel({
               {questions.map((q, i) => {
                 const reviewStatus = reviewStatusOf(q);
                 const busy = reviewingId === q.id;
+                // test_number'a gore konu birden fazla test grubuna
+                // ayrilmissa (bkz. migration 0033), her grubun basina iki
+                // dilli (TR/EN) bir baslik ekleniyor - kullanicinin
+                // "ogrenci/ogretmen/veli/admin hepsi test isimlerini gorsun"
+                // talebiyle, ogrenci tarafindaki ayni etiketler (bkz.
+                // src/lib/questions/test-labels.ts) burada da kullaniliyor.
+                const prevTestNumber = i > 0 ? questions[i - 1].test_number : undefined;
+                const showTestHeader = q.test_number != null && q.test_number !== prevTestNumber;
                 return (
-                  <li key={q.id} className="flex items-start gap-3 rounded-lg border border-slate-200 p-2.5 text-sm">
+                  <li key={q.id} className="contents">
+                    {showTestHeader && (
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-indigo-500 first:mt-0">
+                        {getTestLabel(q.test_number as number)}
+                      </p>
+                    )}
+                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 p-2.5 text-sm">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-slate-900">
                         {i + 1}. {q.body}
@@ -690,13 +740,30 @@ export function QuestionTopicPanel({
                           <p>{q.explanation}</p>
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(editingId === q.id ? null : q.id)}
-                        className="mt-2 touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
-                      >
-                        {editingId === q.id ? "Kapat" : "Düzenle"}
-                      </button>
+                      {q.image_url && (
+                        <p className="mt-2 text-xs text-slate-500">
+                          🖼️{" "}
+                          <a href={q.image_url} target="_blank" rel="noreferrer" className="underline">
+                            Görseli görüntüle
+                          </a>
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(editingId === q.id ? null : q.id)}
+                          className="touch-manipulation text-xs font-medium text-indigo-600 hover:underline"
+                        >
+                          {editingId === q.id ? "Kapat" : "Düzenle"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyImagePrompt(q)}
+                          className="touch-manipulation text-xs font-medium text-slate-600 hover:underline"
+                        >
+                          {imagePromptCopiedId === q.id ? "Kopyalandı ✓" : "Görsel için AI istemi kopyala"}
+                        </button>
+                      </div>
                       {editingId === q.id && (
                         <div className="mt-2">
                           <QuestionEditForm question={q} onDone={() => setEditingId(null)} />
@@ -751,6 +818,7 @@ export function QuestionTopicPanel({
                           {busy ? "…" : "✕ Reddedildi"}
                         </button>
                       )}
+                    </div>
                     </div>
                   </li>
                 );
